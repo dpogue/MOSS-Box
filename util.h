@@ -26,6 +26,14 @@
 //#include <sys/stat.h>
 //
 //#include "machine_arch.h"
+
+// This construct requires GCC5 or C++17
+#ifdef __has_include
+# if __has_include(<limits.h>)
+#  include <limits.h>
+# endif
+#endif
+
 #ifndef _UTIL_H_
 #define _UTIL_H_
 

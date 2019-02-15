@@ -157,8 +157,12 @@ int32_t recursive_mkdir(const char *pathname, mode_t mode) {
   char *p = NULL;
   char *d;
   size_t len;
-
-  snprintf(path, sizeof(path), "%s", pathname);
+  struct stat b_stat;
+  
+  if ((stat(pathname, &b_stat) == 0) && ((b_stat.st_mode & S_IFMT) == S_IFDIR)) {
+    return 0;
+  }
+  strncpy(path, pathname, sizeof(path));
   len = strlen(path);
   if (path[len - 1] == PATH_SEPARATOR[0]) {
     path[len - 1] = 0;
@@ -178,9 +182,9 @@ int32_t recursive_mkdir(const char *pathname, mode_t mode) {
     }
   }
   *d = '\0';
-  if (mkdir(path, mode) && (errno != EEXIST)) {
-    return -1;
-  }
+	if (mkdir(path, mode) == -1)
+		if (errno != EEXIST)
+			return errno;
   return 0;
 }
 
