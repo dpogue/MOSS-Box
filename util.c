@@ -173,18 +173,18 @@ int32_t recursive_mkdir(const char *pathname, mode_t mode) {
       while (*p && (*(p + 1) == PATH_SEPARATOR[0]))
         p++;
       *d = '\0';
-      if (mkdir(path, mode) && (errno != EEXIST)) {
-        return -1;
-      }
+      if (mkdir(path, mode) == -1)
+        if (errno != EEXIST)
+          return errno;
       *d = PATH_SEPARATOR[0];
     } else {
       *d = *p;
     }
   }
   *d = '\0';
-	if (mkdir(path, mode) == -1)
-		if (errno != EEXIST)
-			return errno;
+  if (mkdir(path, mode) == -1)
+    if (errno != EEXIST)
+      return errno;
   return 0;
 }
 
