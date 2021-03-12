@@ -253,7 +253,7 @@ public:
 	m_result.result_code = ERROR_BANNED;
 	return;
       }
-      pqxx::result::field F = R[0]["hash"];
+      pqxx::field F = R[0]["hash"];
       char hash[41];
       if (strlen(F.c_str()) != 40) {
 	m_result.result_code = ERROR_INVALID_PARAM;
@@ -554,8 +554,8 @@ public:
       int exptype;
       R[0]["v_type"].to(exptype);
       my_player.explorer_type = (customer_type_t)exptype;
-      pqxx::result::field Fn = R[0]["v_neighbors"];
-      pqxx::result::field Fp = R[0]["v_playerinfonode"];
+      pqxx::field Fn = R[0]["v_neighbors"];
+      pqxx::field Fp = R[0]["v_playerinfonode"];
       if (Fn.is_null() || Fp.is_null()) {
 	// this shouldn't happen but it's relatively minor thing
 	m_neighbors = 0;
@@ -674,7 +674,7 @@ public:
     // using the data.
     m_tell_who.clear();
     if (R.size() > 0) {
-      pqxx::result::field Fn = R[0]["v_child"];
+      pqxx::field Fn = R[0]["v_child"];
       if (Fn.is_null()) {
 	// this shouldn't happen
 	my_result = ERROR_NODE_NOT_FOUND;
@@ -989,7 +989,7 @@ public:
       vault_bitfield_t bit = (vault_bitfield_t)(1 << i);
       if (bits & bit) {
 	col = VaultNode::get_spec(ntype, bit);
-	pqxx::result::field F = R[0][col->fetch_name];
+	pqxx::field F = R[0][col->fetch_name];
 	if (F.is_null()) {
 	  if (col->fetch_required) {
 	    log_net(m_log, "Field 0x%08x was expected from vault node %d "
@@ -1411,7 +1411,7 @@ public:
     }
     else {
       my_result = NO_ERROR;
-      pqxx::result::field F = R[0]["v_agenode"];
+      pqxx::field F = R[0]["v_agenode"];
       if (F.is_null()) {
 	my_result = ERROR_INTERNAL;
       }
@@ -1494,7 +1494,7 @@ public:
     m_list.reserve(R.size());
     for (pqxx::result::const_iterator row = R.begin(); row != R.end(); row++) {
       VaultAgeList_AgeInfo age;
-      pqxx::result::field F = row["v_uuid"];
+      pqxx::field F = row["v_uuid"];
       if (F.is_null()
 	  || uuid_string_to_bytes(age.uuid, UUID_RAW_LEN, F.c_str(),
 				  strlen(F.c_str()), 1, 1)) {
@@ -1658,7 +1658,7 @@ public:
       m_result = ERROR_INTERNAL;
     }
     else {
-      pqxx::result::field F = R[0]["v_id"];
+      pqxx::field F = R[0]["v_id"];
       if (F.is_null()) {
 	m_result = ERROR_NO_SCORE;
       }
@@ -1733,7 +1733,7 @@ public:
       my_result = ERROR_INTERNAL;
     }
     else {
-      pqxx::result::field F = R[0]["v_id"];
+      pqxx::field F = R[0]["v_id"];
       F.to(my_score_id);
       if (my_score_id == 0) {
 	my_result = ERROR_SCORE_EXISTS;
@@ -1903,7 +1903,7 @@ public:
     }
     else {
       my_result = NO_ERROR;
-      pqxx::result::field F = R[0]["v_uuid"];
+      pqxx::field F = R[0]["v_uuid"];
       if (F.is_null()
 	  || uuid_string_to_bytes(my_uuid, UUID_RAW_LEN, F.c_str(),
 				  strlen(F.c_str()), 1, 1)) {
@@ -1972,7 +1972,7 @@ public:
       m_result = ERROR_INTERNAL;
     }
     else {
-      pqxx::result::field F = R[0]["v_gameid"];
+      pqxx::field F = R[0]["v_gameid"];
       if (F.is_null()) {
 	// game does not exist
 	m_result = ERROR_NODE_NOT_FOUND;
@@ -2295,7 +2295,7 @@ public:
     m_list.reserve(R.size());
     for (pqxx::result::const_iterator row = R.begin(); row != R.end(); row++) {
       MarkerGame_MarkerInfo marker;
-      pqxx::result::field F = row["v_id"];
+      pqxx::field F = row["v_id"];
       if (F.is_null()) {
 	marker.marker_id = -1;
       }
@@ -2368,7 +2368,7 @@ public:
     m_list.reserve(R.size());
     for (pqxx::result::const_iterator row = R.begin(); row != R.end(); row++) {
       MarkerGame_CapturedMarker marker;
-      pqxx::result::field F = row["v_id"];
+      pqxx::field F = row["v_id"];
       if (F.is_null()) {
 	marker.marker_id = -1;
       }
@@ -2512,7 +2512,7 @@ public:
     }
     else {
       m_result = NO_ERROR;
-      pqxx::result::field F = R[0]["v_agenode"];
+      pqxx::field F = R[0]["v_agenode"];
       if (F.is_null()) {
 	m_result = ERROR_INTERNAL;
       }
@@ -2567,7 +2567,7 @@ public:
     }
     else {
       my_result = NO_ERROR;
-      pqxx::result::field F = R[0]["v_online"];
+      pqxx::field F = R[0]["v_online"];
       if (F.is_null()) {
 	my_online = false;
       }
@@ -2724,7 +2724,7 @@ public:
     }
     else {
       my_result = NO_ERROR;
-      pqxx::result::field F = R[0][0];
+      pqxx::field F = R[0][0];
       if (F.is_null()
 	  || uuid_string_to_bytes(my_uuid, UUID_RAW_LEN, F.c_str(),
 				  strlen(F.c_str()), 1, 1)) {
@@ -2803,7 +2803,7 @@ public:
 			  "nontransaction which only sets local state after "
 			  "the entire DB interaction succeeds!");
     }
-    pqxx::result::field F = R[0]["v_sdl"];
+    pqxx::field F = R[0]["v_sdl"];
     if (F.is_null()) {
       // node simply not there, or no data
       m_result = NO_ERROR;
@@ -2857,7 +2857,7 @@ public:
 			  "nontransaction which only sets local state after "
 			  "the entire DB interaction succeeds!");
     }
-    pqxx::result::field F = R[0]["v_sdl"];
+    pqxx::field F = R[0]["v_sdl"];
     if (F.is_null()) {
       // node simply not there, or no data
       m_result = NO_ERROR;
@@ -2900,7 +2900,7 @@ public:
     qstr << "SELECT * FROM getuuidforsdl(" << m_node << ")";
     pqxx::result R(T.exec(qstr));
 
-    pqxx::result::field F = R[0][0];
+    pqxx::field F = R[0][0];
     if (F.is_null()) {
       // empty result
       m_result = ERROR_NODE_NOT_FOUND;
@@ -2944,7 +2944,7 @@ public:
       my_result = ERROR_INTERNAL;
     }
     else {
-      pqxx::result::field F = R[0]["v_parent"];
+      pqxx::field F = R[0]["v_parent"];
       if (!F.is_null()) {
 	F.to(my_parent);
 	if (my_parent == 0) {

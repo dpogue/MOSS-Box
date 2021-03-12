@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-#include <pg_config.h>
+//#include <pg_config.h>
 #include <postgres.h>
 #include <fmgr.h>
 
