@@ -38,20 +38,20 @@
 
 class GatekeeperServer: public Server {
 public:
-  GatekeeperServer(int the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address);
+  GatekeeperServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address);
   void setkey(void *keydata) {
     m_keydata = keydata;
   }
   virtual ~GatekeeperServer();
 
-  int type() const {
+  int32_t type() const {
     return TYPE_GATEKEEPER;
   }
   const char* type_name() const {
     return "gatekeeper";
   }
 
-  int init();
+  int32_t init();
   bool shutdown(reason_t reason);
 
   reason_t message_read(Connection *conn, NetworkMessage *in);
@@ -67,13 +67,13 @@ public:
 
   class GatekeeperConnection: public Server::Connection {
   public:
-    GatekeeperConnection(int the_fd, state_t &state, Logger *log) :
+    GatekeeperConnection(int32_t the_fd, state_t &state, Logger *log) :
         Connection(the_fd), m_state(state), m_log(log) {
       m_interval = KEEPALIVE_INTERVAL * 4;
       gettimeofday(&m_timeout, NULL);
       m_timeout.tv_sec += m_interval;
     }
-    NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+    NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   private:
     state_t &m_state;

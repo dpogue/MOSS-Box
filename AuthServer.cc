@@ -84,7 +84,7 @@
 #include "moss_serv.h"
 #include "AuthServer.h"
 
-AuthServer::AuthServer(int the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address) :
+AuthServer::AuthServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address) :
     Server(server_dir, is_a_thread), m_keydata(NULL), m_vault_addr(vault_address), m_vault(NULL), m_state(START), m_reqid(
         0), m_download_dir(NULL), m_download(NULL), m_is_visitor(true/*until authed*/), m_kinum(0) {
   memset(m_client_uuid, 0, 16);
@@ -120,7 +120,7 @@ AuthServer::~AuthServer() {
   // do not delete m_vault (it is in m_conns and deleted in ~Server)
 }
 
-int AuthServer::init() {
+int32_t AuthServer::init() {
   // set up vault/tracking server connection
   m_vault = connect_to_backend(&m_vault_addr);
   if (m_vault) {
@@ -157,7 +157,7 @@ bool AuthServer::shutdown(reason_t reason) {
 }
 
 NetworkMessage*
-AuthServer::AuthConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+AuthServer::AuthConnection::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   NetworkMessage *msg = NULL;
   bool became_owner = false;
 
@@ -188,7 +188,7 @@ AuthServer::AuthConnection::make_if_enough(const u_char *buf, size_t len, int *w
       // (just this once)
 #ifndef NO_ENCRYPTION
       set_encrypted();
-      decrypt((u_char*) buf, len);
+      decrypt((uint8_t*) buf, len);
 #endif
     }
     msg = AuthClientMessage::make_if_enough(buf, len, want_len, become_owner);
@@ -449,8 +449,8 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
 
             m_state = DOWNLOAD;
             m_download = new FileTransaction(msg->reqid(), m_log, is_manifest, true);
-            u_int ret = msg->name().strlen();
-            u_int len = ret + sizeof(".mbam");
+            uint32_t ret = msg->name().strlen();
+            uint32_t len = ret + sizeof(".mbam");
             char fname[len];
             strncpy(fname, msg->name().c_str(), ret);
             fname[ret] = '\0';
@@ -459,7 +459,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
               strncpy(fname + ret, ".mbam", len - ret);
             }
             // CRITICAL FOR SECURITY: make sure there are no .. elements
-            for (u_int i = 0; i < ret; i++) {
+            for (uint32_t i = 0; i < ret; i++) {
               if ((fname[i] == '.' && fname[i + 1] == '.') || fname[i] == '/' || fname[i] == '\\') {
                 if (!is_manifest && (fname[i] == '\\' || fname[i] == '/')) {
                   fname[i] = PATH_SEPARATOR[0];
@@ -538,7 +538,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
            * the list, rather than deny what is in a list).
            */
           const char *namestr = name.c_str();
-          u_int i = 0;
+          uint32_t i = 0;
           for (; i < name.strlen(); i++) {
             if (namestr[i] >= ' ' && namestr[i] <= '~') {
             } else {
@@ -547,7 +547,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
           }
           if (i < name.strlen()) {
             log_msgs(m_log, "Rejecting PlayerCreateRequest for name \"%s\"\n", msg->name().c_str());
-            u_char repbuf[8];
+            uint8_t repbuf[8];
             write32(repbuf, 0, m_reqid);
             write32(repbuf, 4, ERROR_NAME_INVALID);
             AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, kAuth2Cli_AcctSetPlayerReply);
@@ -575,7 +575,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
           case kCli2Auth_ScoreGetScores:
 #ifdef PELLET_SCORE_CACHE
       {
-        const u_char *score_buf = in->buffer();
+        const uint8_t *score_buf = in->buffer();
         kinum_t score_holder = (kinum_t)read32(score_buf, 6);
         if (score_holder == m_kinum) {
     UruString score_name(score_buf+10, in->message_len()-10,
@@ -693,11 +693,11 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
             // XXX see comments in get_random_data() about random numbers --
             // technically, these need to be unpredictable much more than
             // the RC4 key or even UUIDs
-            get_random_data((u_char*) &m_nonce, 4);
-            AuthServerMessage *reply = new AuthServerMessage((u_char*) &m_nonce, 4,
+            get_random_data((uint8_t*) &m_nonce, 4);
+            AuthServerMessage *reply = new AuthServerMessage((uint8_t*) &m_nonce, 4,
             kAuth2Cli_ClientRegisterReply);
             conn->enqueue(reply);
-            u_char repbuf[20];
+            uint8_t repbuf[20];
             write32(repbuf, NO_ERROR, ntohl(m_ipaddr));
             memcpy(repbuf + 4, MOSS_UUID, 16);
             reply = new AuthServerMessage(repbuf, 20, kAuth2Cli_ServerAddr);
@@ -735,7 +735,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
               m_download = NULL;
             }
             m_state = IN_STARTUP;
-            const u_char *playerbuf = in->buffer();
+            const uint8_t *playerbuf = in->buffer();
             m_reqid = read32(playerbuf, 2);
             kinum_t newkinum = read32(playerbuf, 6);
             log_msgs(m_log, "AcctSetPlayerRequest for %u\n", newkinum);
@@ -783,7 +783,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
             if (m_state != IN_STARTUP) {
               log_warn(m_log, "PlayerDeleteReqeust for %u at unexpected time "
                   "(state %s)\n", req_ki, state_string());
-              u_char no_delete[8];
+              uint8_t no_delete[8];
               write32(no_delete, 0, m_reqid);
               write32(no_delete, 4, ERROR_INVALID_PARAM);
               AuthServerMessage *reply = new AuthServerMessage(no_delete, 8,
@@ -804,8 +804,8 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
           // message so as not to give grief to the client
           {
             log_msgs(m_log, "SendFriendInviteRequest\n");
-            u_char repbuf[8];
-            const u_char *playerbuf = in->buffer();
+            uint8_t repbuf[8];
+            const uint8_t *playerbuf = in->buffer();
             uint32_t reqid = read32(playerbuf, 2);
             write32(repbuf, 0, reqid);
             write32(repbuf, 4, ERROR_NOT_SUPPORTED);
@@ -907,7 +907,7 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
           m_is_visitor = (msg->acct_type() == GUEST_CUSTOMER);
 
           // get download directory
-          u_int len = strlen(m_serv_dir) + 2;
+          uint32_t len = strlen(m_serv_dir) + 2;
           if (msg->dirname()->strlen() + 1 < sizeof("default")) {
             len += sizeof("default");
           } else {
@@ -918,7 +918,7 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
               msg->dirname()->strlen() > 0 ? msg->dirname()->c_str() : "default");
           if (msg->dirname()->strlen() > 0) {
             struct stat s;
-            int ret = stat(m_download_dir, &s);
+            int32_t ret = stat(m_download_dir, &s);
             if (ret < 0) {
               log_warn(m_log, "Expected \"secure download\" directory %s not found\n", m_download_dir);
               snprintf(m_download_dir, len, "%s%sdefault", m_serv_dir, PATH_SEPARATOR);
@@ -930,10 +930,10 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
 
           // get the key
           char keyfile[len + sizeof("/encryption.key")];
-          u_char keybuf[16];
+          uint8_t keybuf[16];
           memset(keybuf, 0, 16);
           snprintf(keyfile, len + sizeof("/encryption.key"), "%s%sencryption.key", m_download_dir, PATH_SEPARATOR);
-          int fd = open(keyfile, O_RDONLY, 0);
+          int32_t fd = open(keyfile, O_RDONLY, 0);
           if (fd < 0) {
             log_warn(m_log, "Error opening encryption key file %s: %s\n", keyfile, strerror(errno));
           } else {
@@ -986,7 +986,7 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
           log_msgs(m_log, "(backend) Validating KI number %u suceeded\n", response);
           m_state = VAULT_DOWNLOAD;
         }
-        u_char repbuf[8];
+        uint8_t repbuf[8];
         write32(repbuf, 0, m_reqid);
         write32(repbuf, 4, response);
         AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, kAuth2Cli_AcctSetPlayerReply);
@@ -1038,7 +1038,7 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
       }
       response = msg->result();
       log_msgs(m_log, "(backend) Player delete reply result=%u\n", msg->result());
-      u_char deletebuf[8];
+      uint8_t deletebuf[8];
       write32(deletebuf, 0, msg_reqid);
       write32(deletebuf, 4, response);
       AuthServerMessage *reply = new AuthServerMessage(deletebuf, 8, kAuth2Cli_PlayerDeleteReply);
@@ -1062,7 +1062,7 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
   }
   else {
     size_t score_len = reply->message_len() - 2;
-    u_int lastreq = read32(reply->buffer(), 2);
+    uint32_t lastreq = read32(reply->buffer(), 2);
     // we only want to cache responses matching a personal PelletDrop
     if (m_pelletreq == lastreq) {
       log_debug(m_log, "Caching pellet score\n");
@@ -1070,11 +1070,11 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
         size_t current_len = read32(m_pelletbuf, 12) + 16;
         if (current_len < score_len) {
     delete[] m_pelletbuf;
-    m_pelletbuf = new u_char[score_len];
+    m_pelletbuf = new uint8_t[score_len];
         }
       }
       else {
-        m_pelletbuf = new u_char[score_len];
+        m_pelletbuf = new uint8_t[score_len];
       }
       memcpy(m_pelletbuf, reply->buffer()+2, score_len);
     }

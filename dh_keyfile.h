@@ -60,10 +60,10 @@ void cleanup_dh_params(dh_params *params) {
 }
 
 #if OPENSSL_VERSION_NUMBER >= 0x00909000L
-static int cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it,
+static int32_t cb(int32_t operation, ASN1_VALUE **pval, const ASN1_ITEM *it,
         void *exarg)
 #else
-static int cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
+static int32_t cb(int32_t operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
 #endif
     {
   if (operation == ASN1_OP_NEW_PRE) {

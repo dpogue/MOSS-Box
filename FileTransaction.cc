@@ -51,9 +51,9 @@ FileTransaction::FileTransaction(uint32_t request_id, Logger *logger, bool is_ma
         0), m_backup_fill(0) {
 }
 
-int FileTransaction::init(const char *dirname, char *fname) {
-  int ret;
-  u_int len;
+int32_t FileTransaction::init(const char *dirname, char *fname) {
+  int32_t ret;
+  uint32_t len;
   struct stat s;
 
   len = strlen(dirname) + strlen(fname) + 2;
@@ -80,7 +80,7 @@ int FileTransaction::init(const char *dirname, char *fname) {
   }
   log_msgs(m_log, "File server transaction %u -> file %s\n", m_id, fname);
 
-  m_mapped = (u_char*) mmap(NULL, m_filesize, PROT_READ, MAP_FILE | MAP_PRIVATE, m_fd, 0);
+  m_mapped = (uint8_t*) mmap(NULL, m_filesize, PROT_READ, MAP_FILE | MAP_PRIVATE, m_fd, 0);
   if (m_mapped == MAP_FAILED) {
     log_err(m_log, "mmap() of %s failed: %s", fname, strerror(errno));
     // so mmap() failed, use backup
@@ -92,7 +92,7 @@ int FileTransaction::init(const char *dirname, char *fname) {
       // no chunks
       m_backup_len = m_filesize;
     }
-    m_backup_buf = new u_char[m_backup_len];
+    m_backup_buf = new uint8_t[m_backup_len];
     if (!m_backup_buf) {
       log_err(m_log, "Cannot allocate memory for %s backup_buf\n", fname);
       close(m_fd);
@@ -153,7 +153,7 @@ size_t FileTransaction::file_len() const {
   }
 }
 
-int FileTransaction::chunk_acked() {
+int32_t FileTransaction::chunk_acked() {
   // set offset to account for acknowledgement
   if (m_manifest) {
     m_offset += m_real_offset;
@@ -176,8 +176,8 @@ int FileTransaction::chunk_acked() {
   }
 
   if (!m_auth && m_manifest) {
-    u_int total_len, file_len, real_len;
-    u_char *buf;
+    uint32_t total_len, file_len, real_len;
+    uint8_t *buf;
 
     if (m_backup_buf) {
       if (m_backup_fill > m_real_offset) {
@@ -190,8 +190,8 @@ int FileTransaction::chunk_acked() {
       if (m_filesize - m_offset < file_len) {
         file_len = m_filesize - m_offset;
       }
-      int ret = read(m_fd, m_backup_buf + m_backup_fill, file_len);
-      if (ret < (int) file_len) {
+      int32_t ret = read(m_fd, m_backup_buf + m_backup_fill, file_len);
+      if (ret < (int32_t) file_len) {
         // the file changed since we got its size?
         log_err(m_log, "Transaction %u short read (%d)!\n", m_id, ret);
         m_status = ERROR_INTERNAL;
@@ -225,8 +225,8 @@ int FileTransaction::chunk_acked() {
     m_chunk_remaining = real_len;
   } else {
     if (m_backup_buf) {
-      int ret = read(m_fd, m_backup_buf, m_chunk_remaining);
-      if (ret < (int) m_chunk_remaining) {
+      int32_t ret = read(m_fd, m_backup_buf, m_chunk_remaining);
+      if (ret < (int32_t) m_chunk_remaining) {
         // the file changed since we got its size?
         log_err(m_log, "Transaction %u short read (%d)!\n", m_id, ret);
         m_status = ERROR_INTERNAL;
@@ -244,7 +244,7 @@ bool FileTransaction::file_complete() const {
 }
 
 bool FileTransaction::in_last_chunk() const {
-  u_int next_offset = m_offset;
+  uint32_t next_offset = m_offset;
   // set offset to account for acknowledgement
   if (m_manifest) {
     next_offset += m_real_offset;
@@ -254,7 +254,7 @@ bool FileTransaction::in_last_chunk() const {
   return next_offset >= m_filesize;
 }
 
-u_int FileTransaction::chunk_length() const {
+uint32_t FileTransaction::chunk_length() const {
   if (m_manifest) {
     return (m_chunk_remaining / 2) + 1;
   } else {
@@ -263,15 +263,15 @@ u_int FileTransaction::chunk_length() const {
 }
 
 // only used for auth file downloads
-u_int FileTransaction::chunk_offset() const {
+uint32_t FileTransaction::chunk_offset() const {
   return m_offset;
 }
 
 // returns how many iovecs were filled in
-u_int FileTransaction::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int *start_at) {
+uint32_t FileTransaction::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t *start_at) {
   if (!m_auth && m_manifest) {
-    u_int buflen, iov_off = 0, tmp_offset = 0, file_len;
-    u_char *the_buf;
+    uint32_t buflen, iov_off = 0, tmp_offset = 0, file_len;
+    uint8_t *the_buf;
 
     if (m_backup_buf) {
       the_buf = m_backup_buf;
@@ -325,13 +325,13 @@ u_int FileTransaction::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int *start
   }
 }
 
-u_int FileTransaction::iovecs_written_bytes(u_int u_byte_ct, u_int start_at, bool *chunk_done) {
+uint32_t FileTransaction::iovecs_written_bytes(uint32_t u_byte_ct, uint32_t start_at, bool *chunk_done) {
   // I do not feel like rewriting the code to not depend on byte_ct being
   // signed, because there will be so much more code that way.
-  int byte_ct = (int) u_byte_ct;
+  int32_t byte_ct = (int32_t) u_byte_ct;
   if (!m_auth && m_manifest) {
-    u_int buflen, tmp_offset = 0, file_len;
-    u_char *buf;
+    uint32_t buflen, tmp_offset = 0, file_len;
+    uint8_t *buf;
 
     if (m_backup_buf) {
       buf = m_backup_buf;
@@ -376,10 +376,10 @@ u_int FileTransaction::iovecs_written_bytes(u_int u_byte_ct, u_int start_at, boo
   }
 }
 
-u_int FileTransaction::fill_buffer(u_char *buffer, size_t len, u_int *start_at, bool *chunk_done) {
+uint32_t FileTransaction::fill_buffer(uint8_t *buffer, size_t len, uint32_t *start_at, bool *chunk_done) {
   if (!m_auth && m_manifest) {
-    u_int buflen, tmp_offset = 0, file_len, written = 0, len_to_write;
-    u_char *the_buf;
+    uint32_t buflen, tmp_offset = 0, file_len, written = 0, len_to_write;
+    uint8_t *the_buf;
 
     if (m_backup_buf) {
       the_buf = m_backup_buf;
@@ -425,7 +425,7 @@ u_int FileTransaction::fill_buffer(u_char *buffer, size_t len, u_int *start_at, 
       *chunk_done = true;
       return 0;
     }
-    u_int len_to_write = m_chunk_remaining - *start_at;
+    uint32_t len_to_write = m_chunk_remaining - *start_at;
     if (len_to_write > len) {
       len_to_write = len;
     }

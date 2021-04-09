@@ -97,8 +97,8 @@ Server::reason_t BackendServer::handle_auth(Connection *c, BackendMessage *in) {
 
       AuthAcctLogin_AcctQuery_Result login_result;
       login_result.result_code = ERROR_INTERNAL;
-      u_char *buf = NULL;
-      u_int buflen = 0;
+      uint8_t *buf = NULL;
+      uint32_t buflen = 0;
       AuthAcctLogin_FromBackendMessage *reply = NULL;
 
 #ifdef USE_POSTGRES
@@ -140,12 +140,12 @@ Server::reason_t BackendServer::handle_auth(Connection *c, BackendMessage *in) {
 
       // now verify the password
       if (login_result.result_code == NO_ERROR) {
-        u_char new_hash[20];
-        u_char *use_hash = new_hash;
+        uint8_t new_hash[20];
+        uint8_t *use_hash = new_hash;
         if (msg->authtype() == AuthAcctLogin_ToBackendMessage::PLAIN_HASH) {
           use_hash = login_result.hash;
           // now, byte-swap the computed hash (why oh why?)
-          u_char tmp;
+          uint8_t tmp;
 #define HASH_SWAP(a, b) tmp = (a); (a) = (b); (b) = tmp;
           HASH_SWAP(use_hash[0], use_hash[3]);
           HASH_SWAP(use_hash[1], use_hash[2]);
@@ -160,7 +160,7 @@ Server::reason_t BackendServer::handle_auth(Connection *c, BackendMessage *in) {
 #undef HASH_SWAP
         } else {
           // compute a new hash
-          u_char inbuf[28];
+          uint8_t inbuf[28];
           write32le(inbuf, 0, msg->client_nonce());
           write32le(inbuf, 4, msg->server_nonce());
           memcpy(inbuf + 8, login_result.hash, 20);
@@ -226,7 +226,7 @@ Server::reason_t BackendServer::handle_auth(Connection *c, BackendMessage *in) {
         }
 #endif /* USE_PQXX */
         if (login_result.result_code == NO_ERROR && plist.size() > 0) {
-          buf = new u_char[plist.size() * (((64 + 12) * 2) + 18)];
+          buf = new uint8_t[plist.size() * (((64 + 12) * 2) + 18)];
           for (std::list<AuthAcctLogin_PlayerQuery_Player>::iterator player = plist.begin(); player != plist.end();
               player++) {
             write32(buf, buflen, kAuth2Cli_AcctPlayerInfo);
@@ -263,7 +263,7 @@ Server::reason_t BackendServer::handle_auth(Connection *c, BackendMessage *in) {
       // totally faked up
       reply = new AuthAcctLogin_FromBackendMessage(in->get_id1(),
       in->get_id2(), msg->reqid(), NO_ERROR,
-      (u_char*)"123456789abcdef0", PAYING_CUSTOMER,
+      (uint8_t*)"123456789abcdef0", PAYING_CUSTOMER,
       new UruString("admin", false), NULL, 0, false);
 #endif /* USE_POSTGRES */
 
@@ -383,7 +383,7 @@ Server::reason_t BackendServer::handle_auth(Connection *c, BackendMessage *in) {
     {
       AuthChangePassword_ToBackendMessage *msg = (AuthChangePassword_ToBackendMessage*) in;
 
-      const u_char *hash = msg->hash();
+      const uint8_t *hash = msg->hash();
       char text_version[41];
       snprintf(text_version, 41, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
           "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6],
@@ -564,12 +564,12 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       }
 #endif
 
-      u_char *refs_buf = new u_char[14 + (13 * refs_list.size())];
+      uint8_t *refs_buf = new uint8_t[14 + (13 * refs_list.size())];
       write16(refs_buf, 0, kAuth2Cli_VaultNodeRefsFetched);
       write32(refs_buf, 2, msg->reqid());
       write32(refs_buf, 6, refs_result);
       write32(refs_buf, 10, refs_list.size());
-      u_int ref_at = 14;
+      uint32_t ref_at = 14;
       for (std::vector<VaultFetchRefs_VaultRef>::const_iterator ref_el = refs_list.begin(); ref_el != refs_list.end();
           ref_el++) {
         write32(refs_buf, ref_at, ref_el->parent);
@@ -631,8 +631,8 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
         log_err(m_log, "More than one result was returned for "
             "PlayerInfo VaultNodeFind (reqid %u)\n", msg->reqid());
         if (m_log) {
-          u_int nlen = findnode->message_len();
-          u_char *nbuf = new u_char[nlen];
+          uint32_t nlen = findnode->message_len();
+          uint8_t *nbuf = new uint8_t[nlen];
           bool msg_done;
           findnode->fill_buffer(nbuf, nlen, 0, &msg_done);
           m_log->dump_contents(Logger::LOG_ERR, nbuf, nlen);
@@ -640,8 +640,8 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
         }
         find_result = NO_ERROR;
       }
-      u_int msglen = 14 + (4 * find_list.size());
-      u_char *find_buf = new u_char[msglen];
+      uint32_t msglen = 14 + (4 * find_list.size());
+      uint8_t *find_buf = new uint8_t[msglen];
       write16(find_buf, 0, kAuth2Cli_VaultNodeFindReply);
       write32(find_buf, 2, msg->reqid());
       if (find_result != NO_ERROR) {
@@ -655,7 +655,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       } else {
         write32(find_buf, 6, NO_ERROR);
         write32(find_buf, 10, find_list.size());
-        for (u_int i = 0; i < find_list.size(); i++) {
+        for (uint32_t i = 0; i < find_list.size(); i++) {
           write32(find_buf, 14 + (4 * i), find_list[i]);
         }
       }
@@ -742,7 +742,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
 #endif
 #if !defined(OLD_PROTOCOL) || defined(OLD_PROTOCOL4)
       // send the reply to the client
-      u_char *save_buf = new u_char[10];
+      uint8_t *save_buf = new uint8_t[10];
       write16(save_buf, 0, kAuth2Cli_VaultSaveNodeReply);
       write32(save_buf, 2, msg->reqid());
       write32(save_buf, 6, save_result);
@@ -752,7 +752,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       if (save_result == NO_ERROR) {
 #ifdef STANDALONE
   // for now just bounce it back to the original (only!) client
-  u_char *changed_buf = new u_char[22];
+  uint8_t *changed_buf = new uint8_t[22];
   write16(changed_buf, 0, kAuth2Cli_VaultNodeChanged);
   write32(changed_buf, 2, msg->node_id());
   memcpy(changed_buf+6, msg->requuid(), 16);
@@ -767,7 +767,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
 
         // now push SDL to game servers
         if (msg->data()->type() == VaultNode::SDLNode) {
-          const u_char *sdl_data = msg->data()->const_data_ptr(Blob_1);
+          const uint8_t *sdl_data = msg->data()->const_data_ptr(Blob_1);
           if (sdl_data && read32(sdl_data, 0) > 0) {
             // XXX there needs to be a distinction between player node updates
             // and AllAgeGlobalSDLNodes updates, but since currently the
@@ -816,7 +816,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
               // toggle a Relto page while in someone else's Relto!
               status_code_t getuuid_result = ERROR_INTERNAL;
 #ifdef USE_PQXX
-              u_char ageuuid[UUID_RAW_LEN];
+              uint8_t ageuuid[UUID_RAW_LEN];
               try {
                 my->C->perform(GetAgeUUIDFor(msg->node_id(), ageuuid, getuuid_result));
               } catch (const pqxx::in_doubt_error &e) {
@@ -903,7 +903,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
         c_node = 0;
       }
       // send the reply to the client
-      u_char *create_buf = new u_char[14];
+      uint8_t *create_buf = new uint8_t[14];
       write16(create_buf, 0, kAuth2Cli_VaultNodeCreated);
       write32(create_buf, 2, msg->reqid());
       write32(create_buf, 6, c_result);
@@ -953,7 +953,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       if (add_result == NO_ERROR) {
 #ifdef STANDALONE
   // for now just bounce it back to the original (only!) client
-  u_char *added_buf = new u_char[14];
+  uint8_t *added_buf = new uint8_t[14];
   write16(added_buf, 0, kAuth2Cli_VaultNodeAdded);
   write32(added_buf, 2, msg->parent());
   write32(added_buf, 6, msg->child());
@@ -967,7 +967,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
 #endif
       }
 #if !defined(OLD_PROTOCOL) || defined(OLD_PROTOCOL4)
-      u_char *add_buf = new u_char[10];
+      uint8_t *add_buf = new uint8_t[10];
       write16(add_buf, 0, kAuth2Cli_VaultAddNodeReply);
       write32(add_buf, 2, msg->reqid());
       write32(add_buf, 6, add_result);
@@ -982,7 +982,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       VaultRefChange_ToBackendMessage *msg = (VaultRefChange_ToBackendMessage*) in;
 
       status_code_t rem_result = NO_ERROR;
-      int removed = 0;
+      int32_t removed = 0;
 
 #ifdef USE_PQXX
       try {
@@ -1031,7 +1031,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       if (rem_result == NO_ERROR && removed > 0) {
 #ifdef STANDALONE
   // for now just bounce it back to the original (only!) client
-  u_char *remd_buf = new u_char[10];
+  uint8_t *remd_buf = new uint8_t[10];
   write16(remd_buf, 0, kAuth2Cli_VaultNodeRemoved);
   write32(remd_buf, 2, msg->parent());
   write32(remd_buf, 6, msg->child());
@@ -1044,7 +1044,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
 #endif
       }
 #if !defined(OLD_PROTOCOL) || defined(OLD_PROTOCOL4)
-      u_char *rem_buf = new u_char[10];
+      uint8_t *rem_buf = new uint8_t[10];
       write16(rem_buf, 0, kAuth2Cli_VaultRemoveNodeReply);
       write32(rem_buf, 2, msg->reqid());
       write32(rem_buf, 6, rem_result);
@@ -1084,7 +1084,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       }
 #endif
 
-      u_char *initage_buf = new u_char[18];
+      uint8_t *initage_buf = new uint8_t[18];
       write16(initage_buf, 0, kAuth2Cli_VaultInitAgeReply);
       write32(initage_buf, 2, msg->reqid());
       write32(initage_buf, 6, init_result);
@@ -1116,25 +1116,25 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
         log_warn(m_log, "SQL error in VaultAgeList: %s\n", e.what());
       }
 #endif
-      u_int list_size = 0;
+      uint32_t list_size = 0;
       if (list_result == NO_ERROR) {
         list_size = age_list.size();
       }
-      u_char *agelist_buf = new u_char[14 + (2464 * list_size)];
+      uint8_t *agelist_buf = new uint8_t[14 + (2464 * list_size)];
       write16(agelist_buf, 0, kAuth2Cli_PublicAgeList);
       write32(agelist_buf, 2, msg->reqid());
       write32(agelist_buf, 6, list_result);
       write32(agelist_buf, 10, age_list.size());
       if (list_result == NO_ERROR) {
         memset(agelist_buf + 14, 0, 2464 * list_size);
-        u_int age_at = 14;
+        uint32_t age_at = 14;
         for (std::vector<VaultAgeList_AgeInfo>::iterator age_el = age_list.begin(); age_el != age_list.end();
             age_el++) {
           memcpy(agelist_buf + age_at, age_el->uuid, UUID_RAW_LEN);
           age_at += 16;
 #define WRITE_STR(urustr)           \
   do {                \
-    u_int str_len = urustr.send_len(false, true, false);    \
+    uint32_t str_len = urustr.send_len(false, true, false);    \
     memcpy(agelist_buf+age_at,          \
      urustr.get_str(false, true, false, false),   \
      (str_len < 126 ? str_len : 126));      \
@@ -1221,7 +1221,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
         // we only need to send the update to the affected player
         ConnectionEntity *auth = find_by_kinum(msg->player(), TYPE_AUTH);
         if (auth) {
-          u_char *added_buf = new u_char[14];
+          uint8_t *added_buf = new uint8_t[14];
           write16(added_buf, 0, kAuth2Cli_VaultNodeAdded);
           write32(added_buf, 2, inboxid);
           write32(added_buf, 6, msg->nodeid());
@@ -1265,7 +1265,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       if (public_result == NO_ERROR) {
 #ifdef STANDALONE
   // for now just bounce it back to the original (only!) client
-  u_char *changed_buf = new u_char[22];
+  uint8_t *changed_buf = new uint8_t[22];
   write16(changed_buf, 0, kAuth2Cli_VaultNodeChanged);
   write32(changed_buf, 2, msg->age_nodeid());
   gen_uuid(changed_buf+6, 0);
@@ -1376,7 +1376,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
             scr_result == NO_ERROR ? "" : " (failed)");
       }
 
-      u_char *scr_buf = new u_char[18];
+      uint8_t *scr_buf = new uint8_t[18];
       write16(scr_buf, 0, kAuth2Cli_ScoreCreateReply);
       write32(scr_buf, 2, msg->reqid());
       write32(scr_buf, 6, scr_result);
@@ -1408,7 +1408,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       log_msgs(m_log, "VAULT_SCORE_ADD %d to score %u%s\n", msg->delta(), msg->score_id(),
           sadd_result == NO_ERROR ? "" : " failed");
 
-      u_char *sadd_buf = new u_char[10];
+      uint8_t *sadd_buf = new uint8_t[10];
       write16(sadd_buf, 0, kAuth2Cli_ScoreAddPointsReply);
       write32(sadd_buf, 2, msg->reqid());
       write32(sadd_buf, 6, sadd_result);
@@ -1438,7 +1438,7 @@ Server::reason_t BackendServer::handle_vault(Connection *c, BackendMessage *in) 
       log_msgs(m_log, "VAULT_SCORE_XFER %d from score %u to score %u%s\n", msg->delta(), msg->dest_id(), msg->score_id(),
           sxfer_result == NO_ERROR ? "" : " failed");
 
-      u_char *sxfer_buf = new u_char[10];
+      uint8_t *sxfer_buf = new uint8_t[10];
       write16(sxfer_buf, 0, kAuth2Cli_ScoreTransferPointsReply);
       write32(sxfer_buf, 2, msg->reqid());
       write32(sxfer_buf, 6, sxfer_result);
@@ -1627,7 +1627,7 @@ Server::reason_t BackendServer::handle_track(Connection *c, BackendMessage *in) 
           if (m_next_file >= m_dispatchers.size()) {
             m_next_file = 0;
           }
-          u_int stop_at = MIN(m_next_file, m_dispatchers.size());
+          uint32_t stop_at = MIN(m_next_file, m_dispatchers.size());
           do {
             if (m_dispatchers[m_next_file]->m_handles_file_service) {
               disp = m_dispatchers[m_next_file];
@@ -1643,7 +1643,7 @@ Server::reason_t BackendServer::handle_track(Connection *c, BackendMessage *in) 
           if (m_next_auth >= m_dispatchers.size()) {
             m_next_auth = 0;
           }
-          u_int stop_at = MIN(m_next_auth, m_dispatchers.size());
+          uint32_t stop_at = MIN(m_next_auth, m_dispatchers.size());
           do {
             if (m_dispatchers[m_next_auth]->m_handles_auth_service) {
               disp = m_dispatchers[m_next_auth];
@@ -1693,7 +1693,7 @@ Server::reason_t BackendServer::handle_track(Connection *c, BackendMessage *in) 
       if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
         char uuid[UUID_STR_LEN];
         format_uuid(msg->age_uuid(), uuid);
-        log_warn(m_log, "TRACK_START_GAME (reply): age UUID %s problem: %d\n", uuid, (int )msg->problem());
+        log_warn(m_log, "TRACK_START_GAME (reply): age UUID %s problem: %d\n", uuid, (int32_t )msg->problem());
       }
 
       if (msg->problem() != TrackStartAge_ToBackendMessage::NONE) {
@@ -1773,8 +1773,8 @@ Server::reason_t BackendServer::handle_track(Connection *c, BackendMessage *in) 
         log_warn(m_log, "DB request error getting age name for UUID %s\n", uuid);
       } else {
         db_result = ERROR_INTERNAL;
-        u_char *sdlbuf = NULL;
-        u_int sdllen = 0;
+        uint8_t *sdlbuf = NULL;
+        uint32_t sdllen = 0;
         // Send the age's vault SDL first; the client does not write
         // timestamps to vault SDL, which means MOSS takes changes as newer
         // than anything else, but when creating a hood, the client writes
@@ -2060,7 +2060,7 @@ Server::reason_t BackendServer::handle_track(Connection *c, BackendMessage *in) 
 #endif
                 if (egg_status == NO_ERROR && parent != 0) {
                   // tell the client about the change
-                  u_char *added_buf = new u_char[14];
+                  uint8_t *added_buf = new uint8_t[14];
                   write16(added_buf, 0, kAuth2Cli_VaultNodeAdded);
                   write32(added_buf, 2, parent);
                   write32(added_buf, 6, child);
@@ -2093,12 +2093,12 @@ Server::reason_t BackendServer::handle_track(Connection *c, BackendMessage *in) 
     {
       TrackMsgForward_BackendMessage *msg = (TrackMsgForward_BackendMessage*) in;
 
-      u_int recip_offset = msg->recips_offset();
-      const u_char *msg_body = msg->fwd_msg();
-      u_int msg_len = msg->fwd_msg_len();
+      uint32_t recip_offset = msg->recips_offset();
+      const uint8_t *msg_body = msg->fwd_msg();
+      uint32_t msg_len = msg->fwd_msg_len();
       // the message should be correctness-checked by the game server though
       if (recip_offset < msg_len) {
-        u_int recip_ct = msg_body[recip_offset++];
+        uint32_t recip_ct = msg_body[recip_offset++];
         // look for players in the list not at the game server this message
         // came from
         HashKey key(msg->get_id1(), msg->get_id2());
@@ -2294,7 +2294,7 @@ Server::reason_t BackendServer::handle_marker(Connection *c, BackendMessage *in)
           }
         }
       } else { /* game does not already exist */
-        u_char game_uuid[UUID_RAW_LEN];
+        uint8_t game_uuid[UUID_RAW_LEN];
 #ifdef USE_PQXX
         try {
           my->C->perform(
@@ -2637,7 +2637,7 @@ Server::reason_t BackendServer::handle_marker(Connection *c, BackendMessage *in)
   return NO_SHUTDOWN;
 }
 
-int BackendServer::init() {
+int32_t BackendServer::init() {
   m_timers = new TimerQueue();
   m_conns.push_back(m_timers);
   try {
@@ -2677,7 +2677,7 @@ int BackendServer::init() {
 }
 
 Server::reason_t BackendServer::message_read(Server::Connection *c, NetworkMessage *msg) {
-  int msg_type = msg->type();
+  int32_t msg_type = msg->type();
 
   if (msg_type == -1) {
     // unrecognized message
@@ -2860,7 +2860,7 @@ bool BackendServer::shutdown(Server::reason_t reason) {
   return true;
 }
 
-void BackendServer::add_client_conn(int fd, u_char first) {
+void BackendServer::add_client_conn(int32_t fd, uint8_t first) {
   BackendConnection *conn = new BackendConnection(fd);
   m_conns.push_back(conn);
   conn->m_readbuf->buffer()[0] = first;
@@ -2886,7 +2886,7 @@ void BackendServer::Waiter::callback() {
   }
 }
 
-KillClient_BackendMessage::kill_reason_t BackendServer::handle_age_request(const u_char *age_uuid, UruString *filename,
+KillClient_BackendMessage::kill_reason_t BackendServer::handle_age_request(const uint8_t *age_uuid, UruString *filename,
     bool force_new, uint32_t user_id1, uint32_t user_id2, uint32_t reqid) {
   // get the user info for this connection ID
   HashKey key(user_id1, user_id2);
@@ -3036,7 +3036,7 @@ KillClient_BackendMessage::kill_reason_t BackendServer::handle_age_request(const
       if (m_next_dispatcher >= m_dispatchers.size()) {
         m_next_dispatcher = 0;
       }
-      u_int stop_at = MIN(m_next_dispatcher, m_dispatchers.size());
+      uint32_t stop_at = MIN(m_next_dispatcher, m_dispatchers.size());
       do {
         if (m_dispatchers[m_next_dispatcher]->m_accepting_new_game_servers) {
           DispatcherInfo *disp = m_dispatchers[m_next_dispatcher];
@@ -3112,7 +3112,7 @@ status_code_t BackendServer::set_player_offline(kinum_t ki, const char *why) {
 }
 
 void BackendServer::propagate_to_interested(BackendServer::prop_type_t t, uint32_t nodeid, uint32_t child, uint32_t ownerid,
-    const u_char *transuuid, bool check_age) {
+    const uint8_t *transuuid, bool check_age) {
   bool tell_all = false;
   // this is the game server, if the node is for a running age
   ConnectionEntity *game = NULL;
@@ -3142,7 +3142,7 @@ void BackendServer::propagate_to_interested(BackendServer::prop_type_t t, uint32
   }
 
   status_code_t age = (check_age ? ERROR_INTERNAL : ERROR_NODE_NOT_FOUND);
-  u_char age_uuid[UUID_RAW_LEN];
+  uint8_t age_uuid[UUID_RAW_LEN];
 #ifdef USE_PQXX
   // check if it's an age-related node
   if (check_age) {
@@ -3193,12 +3193,12 @@ void BackendServer::propagate_to_interested(BackendServer::prop_type_t t, uint32
 
   if (list_size > 0 || game || tell_all) {
     // set up the message to the client
-    u_char *changed_buf;
+    uint8_t *changed_buf;
     size_t changed_len;
     switch (t) {
     case CHANGED:
       changed_len = 22;
-      changed_buf = new u_char[changed_len];
+      changed_buf = new uint8_t[changed_len];
       write16(changed_buf, 0, kAuth2Cli_VaultNodeChanged);
       write32(changed_buf, 2, nodeid);
       if (transuuid) {
@@ -3209,7 +3209,7 @@ void BackendServer::propagate_to_interested(BackendServer::prop_type_t t, uint32
       break;
     case ADDED:
       changed_len = 14;
-      changed_buf = new u_char[changed_len];
+      changed_buf = new uint8_t[changed_len];
       write16(changed_buf, 0, kAuth2Cli_VaultNodeAdded);
       write32(changed_buf, 2, nodeid);
       write32(changed_buf, 6, child);
@@ -3217,7 +3217,7 @@ void BackendServer::propagate_to_interested(BackendServer::prop_type_t t, uint32
       break;
     case REMOVED:
       changed_len = 10;
-      changed_buf = new u_char[changed_len];
+      changed_buf = new uint8_t[changed_len];
       write16(changed_buf, 0, kAuth2Cli_VaultNodeRemoved);
       write32(changed_buf, 2, nodeid);
       write32(changed_buf, 6, child);
@@ -3258,7 +3258,7 @@ void BackendServer::propagate_to_interested(BackendServer::prop_type_t t, uint32
 }
 
 void BackendServer::propagate_player_delete_to_interested(std::multimap<kinum_t, uint32_t> &notify, uint32_t child) {
-  u_char msgbuf[10];
+  uint8_t msgbuf[10];
   write16(msgbuf, 0, kAuth2Cli_VaultNodeRemoved);
   write32(msgbuf, 6, child);
 
@@ -3269,7 +3269,7 @@ void BackendServer::propagate_player_delete_to_interested(std::multimap<kinum_t,
   if (m_log && m_log->would_log_at(Logger::LOG_DEBUG)) {
     log_debug(m_log, "propagate_player_delete_to_interested sending %u notifies\n", notify.size());
     log_debug(m_log, "who,parent: ");
-    u_int counter = 0;
+    uint32_t counter = 0;
     for (mapiter = notify.begin(); mapiter != notify.end(); mapiter++) {
       if (++counter >= 10) {
         log_raw(Logger::LOG_DEBUG, m_log, "(and more)");
@@ -3277,7 +3277,7 @@ void BackendServer::propagate_player_delete_to_interested(std::multimap<kinum_t,
       }
       kinum_t who = (*mapiter).first;
       uint32_t parent = (*mapiter).second;
-      log_raw(Logger::LOG_DEBUG, m_log, "%u,%u ", (u_int) who, parent);
+      log_raw(Logger::LOG_DEBUG, m_log, "%u,%u ", (uint32_t) who, parent);
     }
     log_raw(Logger::LOG_DEBUG, m_log, "\n");
   }
@@ -3313,7 +3313,7 @@ BackendServer::find_by_kinum(kinum_t ki, uint32_t type) {
 }
 
 BackendServer::ConnectionEntity*
-BackendServer::find_by_uuid(const u_char *uuid, uint32_t type) {
+BackendServer::find_by_uuid(const uint8_t *uuid, uint32_t type) {
   std::map<HashKey, ConnectionEntity*>::iterator iter;
   for (iter = m_hash_table.begin(); iter != m_hash_table.end(); iter++) {
     ConnectionEntity *candidate = iter->second;

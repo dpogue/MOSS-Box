@@ -69,11 +69,11 @@ public:
         free(m_name);
     }
     char *m_name;
-    u_int m_count;
+    uint32_t m_count;
 #define SDL_OPT_VAULT   1
 #define SDL_DISP_RED    2
 #define SDL_DISP_HIDDEN 4
-    int m_options;
+    int32_t m_options;
   };
 
   class Variable: public DescObj {
@@ -85,12 +85,12 @@ public:
     virtual ~Variable() {
     }
     typedef union {
-      int v_int;
+      int32_t v_int;
       float v_float;
       bool v_bool;
       char v_string[32];
       PlKey v_plkey;
-      u_char *v_creatable; // first four bytes is following length
+      uint8_t *v_creatable; // first four bytes is following length
       struct timeval v_time;
       int8_t v_byte;
       int16_t v_short;
@@ -133,10 +133,10 @@ public:
   const char* name() const {
     return m_name;
   }
-  u_int version() const {
+  uint32_t version() const {
     return m_version;
   }
-  static SDLDesc* find_by_name(const char *name, const std::list<SDLDesc*> &l, u_int version = 0);
+  static SDLDesc* find_by_name(const char *name, const std::list<SDLDesc*> &l, uint32_t version = 0);
   const std::vector<Variable*>& vars() const {
     return m_vars;
   }
@@ -148,18 +148,18 @@ public:
   static void parse_file(std::list<SDLDesc*> &sdls, std::ifstream &file);
   // returns non-zero for an error: < 0 for an error, > 0 for dirname
   // not present (or not a directory)
-  static int parse_directory(Logger *log, std::list<SDLDesc*> &sdls, std::string &dirname, bool is_common,
+  static int32_t parse_directory(Logger *log, std::list<SDLDesc*> &sdls, std::string &dirname, bool is_common,
       bool not_present_is_error);
 
 protected:
   char *m_name;
-  u_int m_version;
+  uint32_t m_version;
 
   std::vector<Variable*> m_vars;
   std::vector<Struct*> m_structs;
 
-  static SDLDesc* read_desc(std::ifstream &file, u_int &lineno, std::list<SDLDesc*> &descs);
-  void set_version(u_int v) {
+  static SDLDesc* read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDLDesc*> &descs);
+  void set_version(uint32_t v) {
     m_version = v;
   }
   void add_var(Variable *v) {
@@ -173,11 +173,11 @@ protected:
 
 private:
   static sdl_type_t string_to_type(std::string &s);
-  static u_int name_and_count(std::string &namestr, u_int lineno);
+  static uint32_t name_and_count(std::string &namestr, uint32_t lineno);
 };
 
 // utility functions
-u_int do_message_compression(u_char *buf);
+uint32_t do_message_compression(uint8_t *buf);
 
 class SDLState {
 public:
@@ -187,17 +187,17 @@ public:
 
   class StateObj {
   public:
-    StateObj(u_int index) :
+    StateObj(uint32_t index) :
         m_index(index), m_flags(Default), m_count(0) {
     }
-    u_int m_index;
-    u_int m_flags;
+    uint32_t m_index;
+    uint32_t m_flags;
     struct timeval m_ts;
-    u_int m_count;
+    uint32_t m_count;
   };
   class Variable: public StateObj {
   public:
-    Variable(u_int index, const SDLDesc::sdl_type_t type) :
+    Variable(uint32_t index, const SDLDesc::sdl_type_t type) :
         StateObj(index), m_type(type), m_value(NULL) {
     }
     ~Variable();
@@ -212,7 +212,7 @@ public:
   };
   class Struct: public StateObj {
   public:
-    Struct(u_int index, const SDLDesc *parent) :
+    Struct(uint32_t index, const SDLDesc *parent) :
         StateObj(index), m_desc(parent), m_child(NULL) {
     }
     ~Struct() {
@@ -236,25 +236,25 @@ public:
   // Read in a full SDL message. Returns the number of bytes used, or
   // -(bytes used) if the SDL is not recognized.
   // throws parse_error, truncated_message
-  int read_msg(const u_char *buf, size_t bufsize, const std::list<SDLDesc*> &descs);
+  int32_t read_msg(const uint8_t *buf, size_t bufsize, const std::list<SDLDesc*> &descs);
   // Returns how many (uncompressed) bytes the entire message requires.
   // When written the message may be smaller due to compression.
-  u_int send_len() const;
+  uint32_t send_len() const;
   // Write out a full SDL message. Returns -1 if the buffer is too small.
-  int write_msg(u_char *buf, size_t bufsize, bool no_compress = false);
+  int32_t write_msg(uint8_t *buf, size_t bufsize, bool no_compress = false);
 
   // set the SDLDesc that goes with the SDLState being created
   void set_desc(const SDLDesc *desc);
   // Returns < 0 if the SDL is not recognized. Otherwise returns how many
   // bytes were read.
   // throws truncated_message
-  int read_in(const u_char *buf, size_t bufsize, const std::list<SDLDesc*> &descs);
+  int32_t read_in(const uint8_t *buf, size_t bufsize, const std::list<SDLDesc*> &descs);
   // Returns how many (uncompressed) bytes the body of the message requires
   // (not including the plKey or the lengths/compression flag).
-  u_int body_len() const;
+  uint32_t body_len() const;
   // Returns < 0 if the buffer is not big enough, otherwise how many bytes
   // were written.
-  int write_out(u_char *buf, size_t bufsize) const;
+  int32_t write_out(uint8_t *buf, size_t bufsize) const;
 
   /*
    * These methods manage the persistent SDL for everything in an age.
@@ -305,9 +305,9 @@ protected:
   std::vector<Struct*> m_structs;
 
 private:
-  int recursive_parse(const u_char *buf, size_t bufsize);
-  int recursive_write(u_char *buf, size_t bufsize) const;
-  u_int recursive_len() const;
+  int32_t recursive_parse(const uint8_t *buf, size_t bufsize);
+  int32_t recursive_write(uint8_t *buf, size_t bufsize) const;
+  uint32_t recursive_len() const;
 };
 
 /*
@@ -326,8 +326,8 @@ public:
     char *m_name;
     bool m_owned; // XXX ownership is not per-page in MOUL
     kinum_t m_owner; // so these two are probably unneeded
-    u_int m_pagenum;
-    u_int m_conditional_load;
+    uint32_t m_pagenum;
+    uint32_t m_conditional_load;
   };
 
   ~AgeDesc();
@@ -336,21 +336,21 @@ public:
   static AgeDesc* parse_file(std::ifstream &file);
 
   // accessors
-  u_int linger_time() const {
+  uint32_t linger_time() const {
     return m_linger;
   }
-  int seq_prefix() const {
+  int32_t seq_prefix() const {
     return m_seq_prefix;
   }
 
 protected:
   std::vector<Page*> m_pages;
-  u_int m_start_date_time;
+  uint32_t m_start_date_time;
   float m_daylen;
-  u_int m_capacity; // used for what??
-  u_int m_linger;
-  int m_seq_prefix;
-  int m_release;
+  uint32_t m_capacity; // used for what??
+  uint32_t m_linger;
+  int32_t m_seq_prefix;
+  int32_t m_release;
 
   AgeDesc() :
       m_linger(180/*default*/) {

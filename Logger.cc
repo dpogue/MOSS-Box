@@ -51,7 +51,7 @@ Logger::Logger(const char *system, const char *filename, level_t level) :
 }
 
 void Logger::setup_logger(const char *system, const char *filename) {
-  m_refct = new u_int[1];
+  m_refct = new uint32_t[1];
   *m_refct = 1;
   m_logf = fopen(filename, "a+");
   m_mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
@@ -62,7 +62,7 @@ void Logger::setup_logger(const char *system, const char *filename) {
       m_logf = NULL;
     }
   }
-  int len = strlen(system) + sizeof(" DEBUG : ") + 17 + 1;
+  int32_t len = strlen(system) + sizeof(" DEBUG : ") + 17 + 1;
   m_log_prefix = new char[len];
   if (m_log_prefix) {
     snprintf(m_log_prefix, len, "timestamp0.123456 DEBUG %s: ", system);
@@ -82,7 +82,7 @@ Logger::Logger(const char *system, Logger *to_share, level_t level) :
     m_mutex = to_share->m_mutex;
     m_logf = to_share->m_logf;
   }
-  int len = strlen(system) + sizeof(" DEBUG : ") + 17;
+  int32_t len = strlen(system) + sizeof(" DEBUG : ") + 17;
   m_log_prefix = new char[len];
   if (m_log_prefix) {
     snprintf(m_log_prefix, len, "timestamp0.123456 DEBUG %s: ", system);
@@ -190,7 +190,7 @@ const char* Logger::get_prefix(Logger::level_t level) {
     return lstr;
   }
 
-  int len = sizeof(" DEBUG") + 17;
+  int32_t len = sizeof(" DEBUG") + 17;
   struct timeval t;
   gettimeofday(&t, NULL);
   len = snprintf(m_log_prefix, len, "%10ld.%06ld %s", t.tv_sec, t.tv_usec, lstr);
@@ -202,8 +202,8 @@ void Logger::release_lock() {
   pthread_mutex_unlock(m_mutex);
 }
 
-void Logger::dump_contents(level_t level, const u_char *buf, size_t len) {
-  u_int i;
+void Logger::dump_contents(level_t level, const uint8_t *buf, size_t len) {
+  uint32_t i;
 
   if (len <= 0) {
     return;
@@ -222,7 +222,7 @@ void Logger::dump_contents(level_t level, const u_char *buf, size_t len) {
       fprintf(outf, " %02x", buf[i]);
       if (i % 16 == 15) {
         fprintf(outf, "    ");
-        for (u_int j = i - 15; j <= i; j++) {
+        for (uint32_t j = i - 15; j <= i; j++) {
           // print ASCII version
           if (j % 16 == 8) {
             fprintf(outf, " ");
@@ -237,14 +237,14 @@ void Logger::dump_contents(level_t level, const u_char *buf, size_t len) {
       }
     }
     if (i % 16 != 0) {
-      for (u_int j = 0; j < (16 - (i % 16)); j++) {
+      for (uint32_t j = 0; j < (16 - (i % 16)); j++) {
         fprintf(outf, "   ");
       }
       if (i % 16 < 8) {
         fprintf(outf, " ");
       }
       fprintf(outf, "    ");
-      for (u_int j = i - (i % 16); j < i; j++) {
+      for (uint32_t j = i - (i % 16); j < i; j++) {
         if (j % 16 == 8) {
           fprintf(outf, " ");
         }

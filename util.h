@@ -92,7 +92,7 @@ extern "C" {
 /*
  * This formats a "little-endian" UUID (byteswaps the first 8 bytes).
  */
-inline void format_uuid(const u_char *buf, char *uuid) {
+inline void format_uuid(const uint8_t *buf, char *uuid) {
   snprintf(uuid, UUID_STR_LEN, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x", read32(buf, 0), read16(buf, 4),
       read16(buf, 6), buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]);
 }
@@ -104,7 +104,7 @@ inline void format_uuid(const u_char *buf, char *uuid) {
  * is placed in the buffer. If as_text is false, 16 bytes are placed in the
  * buffer, byteswapped to little-endian (as transmitted on the wire).
  */
-void gen_uuid(u_char *buf, int as_text);
+void gen_uuid(uint8_t *buf, int32_t as_text);
 
 /*
  * This function converts a string representing a UUID (with or without
@@ -115,22 +115,22 @@ void gen_uuid(u_char *buf, int as_text);
  * results in bytes in the following order:
  * 44 33 22 11 66 55 88 77 99 00 aa bb cc dd ee ff
  */
-int uuid_string_to_bytes(u_char *buf, u_int buflen, const char *uuid_string, u_int uuid_string_len, int have_dashes,
-    int byteswap);
+int32_t uuid_string_to_bytes(uint8_t *buf, uint32_t buflen, const char *uuid_string, uint32_t uuid_string_len, int32_t have_dashes,
+    int32_t byteswap);
 
 /*
  * This function converts 16 bytes to a string form of the UUID, placing it
  * in the buffer 'buf' and null-terminating it.
  */
-int uuid_bytes_to_string(u_char *buf, u_int buflen, const u_char *uuid_bytes, u_int uuid_bytes_len, int want_dashes,
-    int byteswap);
+int32_t uuid_bytes_to_string(uint8_t *buf, uint32_t buflen, const uint8_t *uuid_bytes, uint32_t uuid_bytes_len, int32_t want_dashes,
+    int32_t byteswap);
 
 /*
  * Utilities.
  */
-int recursive_mkdir(const char *pathname, mode_t mode);
+int32_t recursive_mkdir(const char *pathname, mode_t mode);
 void do_random_seed();
-void get_random_data(u_char *buf, u_int buflen);
+void get_random_data(uint8_t *buf, uint32_t buflen);
 /*
  * This is a wrapper for (hopefully) thread-safe name resolution. It returns
  * NULL on success, and an error string on failure.

@@ -65,32 +65,32 @@
  * endianness.
  */
 #ifdef NEED_STRICT_ALIGNMENT
-inline uint16_t read16(const void *buf, int off) {
-  const u_char *lbuf = (const u_char*)buf;
+inline uint16_t read16(const void *buf, int32_t off) {
+  const uint8_t *lbuf = (const uint8_t*)buf;
   return (lbuf[off] | (lbuf[off+1] << 8));
 }
-inline uint32_t read32(const void *buf, int off) {
-  const u_char *lbuf = (const u_char*)buf;
+inline uint32_t read32(const void *buf, int32_t off) {
+  const uint8_t *lbuf = (const uint8_t*)buf;
   return ((lbuf[off]) | (lbuf[off+1] << 8) |
     (lbuf[off+2] << 16) | (lbuf[off+3] << 24));
 }
-inline void write16(void *buf, int off, uint16_t val) {
-  u_char *lbuf = (u_char*)buf;
+inline void write16(void *buf, int32_t off, uint16_t val) {
+  uint8_t *lbuf = (uint8_t*)buf;
   lbuf[off] = val & 0xFF;
   lbuf[off+1] = (val >> 8) & 0xFF;
 }
-inline void write32(void *buf, int off, uint32_t val) {
-  u_char *lbuf = (u_char*)buf;
+inline void write32(void *buf, int32_t off, uint32_t val) {
+  uint8_t *lbuf = (uint8_t*)buf;
   lbuf[off] = val & 0xFF;
   lbuf[off+1] = (val >> 8) & 0xFF;
   lbuf[off+2] = (val >> 16) & 0xFF;
   lbuf[off+3] = (val >> 24) & 0xFF;
 }
-inline uint16_t read16le(const void *buf, int off) {
+inline uint16_t read16le(const void *buf, int32_t off) {
   uint16_t res;
-  u_char *rbuf = (u_char*)buf;
+  uint8_t *rbuf = (uint8_t*)buf;
   if (((unsigned long)(rbuf+off)) % 2) {
-    u_char *lbuf = (u_char*)&res;
+    uint8_t *lbuf = (uint8_t*)&res;
     lbuf[0] = rbuf[off];
     lbuf[1] = rbuf[off+1];
   }
@@ -99,11 +99,11 @@ inline uint16_t read16le(const void *buf, int off) {
   }
   return res;
 }
-inline uint32_t read32le(const void *buf, int off) {
+inline uint32_t read32le(const void *buf, int32_t off) {
   uint32_t res;
-  u_char *rbuf = (u_char*)buf;
+  uint8_t *rbuf = (uint8_t*)buf;
   if (((unsigned long)(rbuf+off)) % 4) {
-    u_char *lbuf = (u_char*)&res;
+    uint8_t *lbuf = (uint8_t*)&res;
     lbuf[0] = rbuf[off];
     lbuf[1] = rbuf[off+1];
     lbuf[2] = rbuf[off+2];
@@ -114,10 +114,10 @@ inline uint32_t read32le(const void *buf, int off) {
   }
   return res;
 }
-inline void write16le(void *buf, int off, uint16_t val) {
-  u_char *lbuf = (u_char*)buf;
+inline void write16le(void *buf, int32_t off, uint16_t val) {
+  uint8_t *lbuf = (uint8_t*)buf;
   if (((unsigned long)(lbuf+off)) % 2) {
-    u_char *rbuf = (u_char*)&val;
+    uint8_t *rbuf = (uint8_t*)&val;
     lbuf[off] = rbuf[0];
     lbuf[off+1] = rbuf[1];
   }
@@ -125,10 +125,10 @@ inline void write16le(void *buf, int off, uint16_t val) {
     *(uint16_t*)(lbuf+off) = val;
   }
 }
-inline void write32le(void *buf, int off, uint32_t val) {
-  u_char *lbuf = (u_char*)buf;
+inline void write32le(void *buf, int32_t off, uint32_t val) {
+  uint8_t *lbuf = (uint8_t*)buf;
   if (((unsigned long)(lbuf+off)) % 4) {
-    u_char *rbuf = (u_char*)&val;
+    uint8_t *rbuf = (uint8_t*)&val;
     lbuf[off] = rbuf[0];
     lbuf[off+1] = rbuf[1];
     lbuf[off+2] = rbuf[2];
@@ -139,33 +139,33 @@ inline void write32le(void *buf, int off, uint32_t val) {
   }
 }
 #else /* ! NEED_STRICT_ALIGNMENT */
-inline uint16_t read16(const void *buf, int off) {
-  uint16_t res = *(uint16_t*) (((u_char*) buf) + off);
+inline uint16_t read16(const void *buf, int32_t off) {
+  uint16_t res = *(uint16_t*) (((uint8_t*) buf) + off);
   return le16toh(res);
 }
-inline uint32_t read32(const void *buf, int off) {
-  uint32_t res = *(uint32_t*) (((u_char*) buf) + off);
+inline uint32_t read32(const void *buf, int32_t off) {
+  uint32_t res = *(uint32_t*) (((uint8_t*) buf) + off);
   return le32toh(res);
 }
-inline void write16(void *buf, int off, uint16_t res) {
-  *(uint16_t*) (((u_char*) buf) + off) = htole16(res);
+inline void write16(void *buf, int32_t off, uint16_t res) {
+  *(uint16_t*) (((uint8_t*) buf) + off) = htole16(res);
 }
-inline void write32(void *buf, int off, uint32_t res) {
-  *(uint32_t*) (((u_char*) buf) + off) = htole32(res);
+inline void write32(void *buf, int32_t off, uint32_t res) {
+  *(uint32_t*) (((uint8_t*) buf) + off) = htole32(res);
 }
-inline uint16_t read16le(const void *buf, int off) {
-  uint16_t res = *(uint16_t*) (((u_char*) buf) + off);
+inline uint16_t read16le(const void *buf, int32_t off) {
+  uint16_t res = *(uint16_t*) (((uint8_t*) buf) + off);
   return res;
 }
-inline uint32_t read32le(const void *buf, int off) {
-  uint32_t res = *(uint32_t*) (((u_char*) buf) + off);
+inline uint32_t read32le(const void *buf, int32_t off) {
+  uint32_t res = *(uint32_t*) (((uint8_t*) buf) + off);
   return res;
 }
-inline void write16le(void *buf, int off, uint16_t val) {
-  *(uint16_t*) (((u_char*) buf) + off) = val;
+inline void write16le(void *buf, int32_t off, uint16_t val) {
+  *(uint16_t*) (((uint8_t*) buf) + off) = val;
 }
-inline void write32le(void *buf, int off, uint32_t val) {
-  *(uint32_t*) (((u_char*) buf) + off) = val;
+inline void write32le(void *buf, int32_t off, uint32_t val) {
+  *(uint32_t*) (((uint8_t*) buf) + off) = val;
 }
 #endif /* NEED_STRICT_ALIGNMENT */
 
@@ -176,33 +176,33 @@ inline void write32le(void *buf, int off, uint32_t val) {
  * If the server needs to use doubles it will have to specially swap them.
  */
 #ifdef NEED_STRICT_ALIGNMENT
-inline double read_double(const void *buf, int off) {
+inline double read_double(const void *buf, int32_t off) {
   double res;
-  u_char *rbuf = (u_char*)buf;
+  uint8_t *rbuf = (uint8_t*)buf;
   if (((unsigned long)(rbuf+off)) % 8) {
-    memcpy((u_char*)&res, rbuf, 8);
+    memcpy((uint8_t*)&res, rbuf, 8);
   }
   else {
     res = *(double*)(rbuf+off);
   }
   return res;
 }
-inline void write_double(void *buf, int off, double val) {
-  u_char *lbuf = (u_char*)buf;
+inline void write_double(void *buf, int32_t off, double val) {
+  uint8_t *lbuf = (uint8_t*)buf;
   if (((unsigned long)(lbuf+off)) % 8) {
-    memcpy(lbuf, (u_char*)&val, 8);
+    memcpy(lbuf, (uint8_t*)&val, 8);
   }
   else {
     *(double*)(lbuf+off) = val;
   }
 }
 #else
-inline double read_double(const void *buf, int off) {
-  double res = *(double*) (((u_char*) buf) + off);
+inline double read_double(const void *buf, int32_t off) {
+  double res = *(double*) (((uint8_t*) buf) + off);
   return res;
 }
-inline void write_double(void *buf, int off, double val) {
-  *(double*) (((u_char*) buf) + off) = val;
+inline void write_double(void *buf, int32_t off, double val) {
+  *(double*) (((uint8_t*) buf) + off) = val;
 }
 #endif /* NEED_STRICT_ALIGNMENT */
 #ifdef WORDS_BIGENDIAN

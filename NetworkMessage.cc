@@ -31,13 +31,13 @@
 #include "constants.h"
 #include "NetworkMessage.h"
 
-extern const int NetworkMessage::zero = 0;
+extern const int32_t NetworkMessage::zero = 0;
 
-NetworkMessage* NegotiationMessage::make_if_enough(const u_char *buf, size_t len, int type) {
+NetworkMessage* NegotiationMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t type) {
   if (len < 1) {
     return NULL;
   }
-  u_int msg_len = buf[0] - 1; // first byte eaten by dispatcher
+  uint32_t msg_len = buf[0] - 1; // first byte eaten by dispatcher
   if (msg_len > 65/* max Negotiation (nonce) length - 1*/) {
     throw overlong_message(msg_len);
   }
@@ -88,17 +88,17 @@ size_t NegotiationMessage::message_len() const {
   }
 }
 
-NonceResponse::NonceResponse(const u_char *msg_buf, size_t len) :
+NonceResponse::NonceResponse(const uint8_t *msg_buf, size_t len) :
     NetworkMessage(TYPE_NONCE_RESPONSE) {
 
-  m_buf = new u_char[len + 2];
+  m_buf = new uint8_t[len + 2];
   m_buflen = len + 2;
-  m_buf[0] = (u_char) m_type;
+  m_buf[0] = (uint8_t) m_type;
   m_buf[1] = m_buflen;
   memcpy(m_buf + 2, msg_buf, len);
 }
 
-u_int NonceResponse::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
+uint32_t NonceResponse::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
   if (iov_ct < 1 || start_at >= m_buflen) {
     return 0;
   }
@@ -107,7 +107,7 @@ u_int NonceResponse::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at
   return 1;
 }
 
-u_int NonceResponse::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t NonceResponse::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   if (byte_ct >= m_buflen - start_at) {
     *msg_done = true;
     return byte_ct - (m_buflen - start_at);
@@ -117,7 +117,7 @@ u_int NonceResponse::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *m
   }
 }
 
-u_int NonceResponse::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
+uint32_t NonceResponse::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
   if (len <= 0 || start_at >= m_buflen) {
     *msg_done = true;
     return 0;

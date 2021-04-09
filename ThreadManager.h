@@ -89,7 +89,7 @@ public:
       }
     }
   }
-  void signal_thread(Server *server, int signal) {
+  void signal_thread(Server *server, int32_t signal) {
     std::map<Server*, pthread_t>::iterator iter = m_threads.find(server);
     if (iter != m_threads.end()) {
       pthread_kill(iter->second, signal);
@@ -105,7 +105,7 @@ public:
   }
   void child_exit() {
     pid_t pid;
-    int status;
+    int32_t status;
 
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
       std::map<pid_t,Server::Connection*>::iterator iter = m_children.find(pid);
@@ -152,7 +152,7 @@ public:
 #ifdef FORK_ENABLE
     std::map<pid_t,Server::Connection*>::iterator l_iter;
     for (l_iter = m_children.begin(); l_iter != m_children.end(); l_iter++) {
-      int status;
+      int32_t status;
       waitpid(l_iter->first, &status, 0);
 #ifdef FORK_GAME_TOO
       // probably have to delete l_iter->second here

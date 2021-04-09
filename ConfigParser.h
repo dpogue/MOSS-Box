@@ -44,14 +44,14 @@ public:
    * during read_config(). An attempt to register an existing name results
    * in a non-zero return value indicating failure.
    */
-  int register_config(const char *name, int *value, int the_default);
-  int register_config(const char *name, char **value, const char *the_default);
-  int register_config(const char *name, bool *value, bool the_default);
+  int32_t register_config(const char *name, int32_t *value, int32_t the_default);
+  int32_t register_config(const char *name, char **value, const char *the_default);
+  int32_t register_config(const char *name, bool *value, bool the_default);
 
   /*
    * For things that cannot be changed at a reload, unregister.
    */
-  int unregister_config(const char *name);
+  int32_t unregister_config(const char *name);
 
   /*
    * Read the contents of a config file and change any registered values
@@ -59,7 +59,7 @@ public:
    * is set to true. A return value < 0 means the file open failed.
    * Throws the parse_error exception.
    */
-  int read_config(const char *filename, bool complain = false);
+  int32_t read_config(const char *filename, bool complain = false);
 
   /*
    * Constructor/destructor.
@@ -72,7 +72,7 @@ public:
    * value and its contents must be free()d. NULL will be returned if there
    * is a malloc failure.
    */
-  static char** split_string(const char *str, u_int *count);
+  static char** split_string(const char *str, uint32_t *count);
 
 protected:
   typedef enum {
@@ -98,8 +98,8 @@ protected:
   std::list<Entry*> m_options;
 
   // helpers for read_config
-  int check_line(char *linebuf, bool complain);
-  void file_error(u_int lineno, int error);
+  int32_t check_line(char *linebuf, bool complain);
+  void file_error(uint32_t lineno, int32_t error);
 };
 
 #endif /* _CONFIG_PARSER_H_ */

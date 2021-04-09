@@ -55,7 +55,7 @@ public:
   virtual ~FileTransaction();
 
   // returns non-zero if the file does not exist or is unreadable
-  int init(const char *dirname, char *fname);
+  int32_t init(const char *dirname, char *fname);
 
   uint32_t request_id() const {
     return m_id;
@@ -67,42 +67,42 @@ public:
 
   // tells the FileTransaction that the current chunk was acked; returns
   // nonzero for a read error
-  int chunk_acked();
+  int32_t chunk_acked();
   // asks if there are any more chunks
   bool file_complete() const;
   // as if we are currently writing the last chunk
   bool in_last_chunk() const;
   // length of current chunk
-  u_int chunk_length() const;
+  uint32_t chunk_length() const;
   // offset of current chunk
-  u_int chunk_offset() const;
+  uint32_t chunk_offset() const;
 
   // returns how many iovecs were filled in, -1 for an error
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int *start_at);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t *start_at);
   // returns how many bytes from byte_ct were left over, -1 for an error
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *chunk_done);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *chunk_done);
   // returns how many bytes were filled into the buffer, -1 for an error
-  u_int fill_buffer(u_char *buffer, size_t len, u_int *start_at, bool *chunk_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t *start_at, bool *chunk_done);
 
 protected:
   Logger *m_log;
   uint32_t m_id; // host order
   bool m_manifest;
   bool m_auth;
-  u_int m_file_ct;
+  uint32_t m_file_ct;
 
-  int m_fd;
+  int32_t m_fd;
   size_t m_filesize;
-  u_char *m_mapped;
+  uint8_t *m_mapped;
 
   status_code_t m_status;
-  u_int m_offset;
-  u_int m_chunk_remaining;
-  u_int m_real_offset; // for manifests only
+  uint32_t m_offset;
+  uint32_t m_chunk_remaining;
+  uint32_t m_real_offset; // for manifests only
 
-  u_char *m_backup_buf;
+  uint8_t *m_backup_buf;
   size_t m_backup_len;
-  u_int m_backup_fill;
+  uint32_t m_backup_fill;
 };
 
 #endif /* _FILE_TRANSACTION_H_ */

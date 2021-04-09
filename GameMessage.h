@@ -42,16 +42,16 @@ class GameMessage: public NetworkMessage {
 public:
   // want_len should be filled in to the total length of the message, if
   // known, otherwise it should be set to -1
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   virtual ~GameMessage() {
   }
 
 protected:
-  GameMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  GameMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       NetworkMessage(msg_buf, msg_len, msg_type) {
   }
-  GameMessage(int type) :
+  GameMessage(int32_t type) :
       NetworkMessage(type) {
   }
 };
@@ -61,9 +61,9 @@ public:
   /*
    * This class copies the buffer passed in.
    */
-  GamePingMessage(const u_char *msg_buf, size_t len) :
+  GamePingMessage(const uint8_t *msg_buf, size_t len) :
       GameMessage(kGame2Cli_PingReply) {
-    m_buf = new u_char[len];
+    m_buf = new uint8_t[len];
     m_buflen = len;
     memcpy(m_buf, msg_buf, len);
   }
@@ -77,9 +77,9 @@ public:
     return true;
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 #ifdef DEBUG_ENABLE
   virtual bool persistable() const { return true; } // copies buffer
@@ -88,7 +88,7 @@ public:
 
 class GameJoinRequest: public GameMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   virtual bool check_useable() const {
     return true;
@@ -107,7 +107,7 @@ public:
   uint32_t server_id() const {
     return m_serverid;
   }
-  const u_char* uuid() const {
+  const uint8_t* uuid() const {
     return m_uuid;
   }
   kinum_t kinum() const {
@@ -117,10 +117,10 @@ public:
 protected:
   uint32_t m_reqid;
   uint32_t m_serverid;
-  u_char m_uuid[UUID_RAW_LEN]; // client UUID
+  uint8_t m_uuid[UUID_RAW_LEN]; // client UUID
   kinum_t m_ki;
 
-  GameJoinRequest(uint32_t reqid, uint32_t serverid, const u_char *uuid, kinum_t ki) :
+  GameJoinRequest(uint32_t reqid, uint32_t serverid, const uint8_t *uuid, kinum_t ki) :
       GameMessage(kCli2Game_JoinAgeRequest), m_reqid(reqid), m_serverid(serverid), m_ki(ki) {
     memcpy(m_uuid, uuid, UUID_RAW_LEN);
   }
@@ -141,9 +141,9 @@ public:
       delete[] m_buf;
   }
 
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 protected:
   uint32_t m_reqid;
   status_code_t m_result;
@@ -156,7 +156,7 @@ public:
 
 class SharedGameMessage: public GameMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   virtual ~SharedGameMessage() {
     if (m_sbuf) {
@@ -165,13 +165,13 @@ public:
     pthread_mutex_destroy(&m_mutex);
   }
 
-  virtual const u_char* buffer() const {
+  virtual const uint8_t* buffer() const {
     return (m_sbuf ? m_sbuf->buffer() : NULL);
   }
 
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
   /* 
    * These messages are refcounted; some may be kept around in the game
@@ -179,8 +179,8 @@ public:
    * multiple clients).
    */
   // returns new refcount
-  virtual int add_ref() {
-    int ret;
+  virtual int32_t add_ref() {
+    int32_t ret;
 
     // XXX use atomic instructions instead?
     pthread_mutex_lock(&m_mutex);
@@ -188,8 +188,8 @@ public:
     pthread_mutex_unlock(&m_mutex);
     return ret;
   }
-  virtual int del_ref() {
-    int ret;
+  virtual int32_t del_ref() {
+    int32_t ret;
 
     pthread_mutex_lock(&m_mutex);
     ret = --m_refct;
@@ -207,9 +207,9 @@ public:
 protected:
   Buffer *m_sbuf;
   pthread_mutex_t m_mutex;
-  int m_refct;
+  int32_t m_refct;
 
-  SharedGameMessage(int type, const u_char *buf, size_t len, bool become_owner) :
+  SharedGameMessage(int32_t type, const uint8_t *buf, size_t len, bool become_owner) :
       GameMessage(type), m_sbuf(NULL), m_refct(1) {
     if (pthread_mutex_init(&m_mutex, NULL)) {
       throw std::bad_alloc();
@@ -221,7 +221,7 @@ protected:
     }
   }
   // constructor for making new messages server-side
-  SharedGameMessage(int type) :
+  SharedGameMessage(int32_t type) :
       GameMessage(type), m_sbuf(NULL), m_refct(1) {
     if (pthread_mutex_init(&m_mutex, NULL)) {
       throw std::bad_alloc();
@@ -240,7 +240,7 @@ public:
 
 class PropagateBufferMessage: public SharedGameMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   virtual ~PropagateBufferMessage() {
   }
@@ -251,7 +251,7 @@ public:
   uint16_t subtype() const {
     return m_subtype;
   }
-  u_int body_offset() const;
+  uint32_t body_offset() const;
   kinum_t kinum() const;
   // this must be called each time before queuing the message on a queue --
   // note only needs to be called once if the message is put on more than one
@@ -261,7 +261,7 @@ public:
 protected:
   uint16_t m_subtype;
 
-  PropagateBufferMessage(uint16_t subtype, const u_char *buf, size_t len, bool become_owner) :
+  PropagateBufferMessage(uint16_t subtype, const uint8_t *buf, size_t len, bool become_owner) :
       SharedGameMessage(kCli2Game_PropagateBuffer, buf, len, become_owner), m_subtype(subtype) {
   }
   /*
@@ -272,16 +272,16 @@ protected:
       SharedGameMessage(kGame2Cli_PropagateBuffer) {
   }
   // this returns the offset given a set of flags
-  static u_int body_offset(uint32_t flags);
+  static uint32_t body_offset(uint32_t flags);
   // this fills in the header in the message's buffer
   // REQUIRES: m_sbuf exists and is big enough for the header
-  u_int format_header(uint16_t subtype, u_int message_len, uint32_t flags, kinum_t ki = 0);
+  uint32_t format_header(uint16_t subtype, uint32_t message_len, uint32_t flags, kinum_t ki = 0);
 };
 
 class GameMgrMessage: public SharedGameMessage {
 public:
   // for receiving messages
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
   virtual bool check_useable() const;
 
   virtual ~GameMgrMessage() {
@@ -307,7 +307,7 @@ public:
 
   // use this only if is_setup() is true; otherwise the message might not
   // even be this long!
-  const u_char* setup_uuid() const {
+  const uint8_t* setup_uuid() const {
     if (m_msgtype == 0) {
       return m_sbuf->buffer() + header_len;
     } else {
@@ -315,7 +315,7 @@ public:
     }
   }
   // use only if is_setup() is true
-  u_int setup_data() const {
+  uint32_t setup_data() const {
     if (m_msgtype == 0) {
       return header_len + UUID_RAW_LEN + 4;
     } else {
@@ -323,7 +323,7 @@ public:
     }
   }
   // use only if is_setup() is false
-  u_int body_data() const {
+  uint32_t body_data() const {
     return header_len;
   }
 
@@ -337,7 +337,7 @@ protected:
   uint32_t m_gameid;
 
   // for received messages
-  GameMgrMessage(const u_char *buf, size_t len, bool become_owner);
+  GameMgrMessage(const uint8_t *buf, size_t len, bool become_owner);
   /*
    * Functions for making new messages server-side
    */
@@ -345,10 +345,10 @@ protected:
   GameMgrMessage(uint32_t msgtype, uint32_t reqid, uint32_t gameid) :
       SharedGameMessage(kGame2Cli_GameMgrMsg), m_msgtype(msgtype), m_reqid(reqid), m_gameid(gameid) {
   }
-  static const u_int header_len = 22;
+  static const uint32_t header_len = 22;
   // this fills in the common header in the message's buffer
   // REQUIRES: m_sbuf exists and is big enough for the header
-  u_int format_header(size_t body_len);
+  uint32_t format_header(size_t body_len);
 };
 
 class PlNetMsgGroupOwner: public PropagateBufferMessage {
@@ -366,7 +366,7 @@ public:
 class PlNetMsgInitialAgeStateSent: public PropagateBufferMessage {
 public:
   // constructor sets the NetMsg header timestamp
-  PlNetMsgInitialAgeStateSent(u_int howmany);
+  PlNetMsgInitialAgeStateSent(uint32_t howmany);
 };
 
 class PlNetMsgMembersMsg: public PropagateBufferMessage {
@@ -381,17 +381,17 @@ public:
   // finalize() also sets the NetMsg header timestamp
   void finalize(bool list_or_update);
 protected:
-  //static const int kAccountUUID = 0x0001;
-  static const int kPlayerID = 0x0002;
-  //static const int kTempPlayerID = 0x0004;
-  static const int kCCRLevel = 0x0008;
-  //static const int kProtectedLogin = 0x0010;
-  //static const int kBuildType = 0x0020;
-  static const int kPlayerName = 0x0040;
-  //static const int kSrcAddr = 0x0080;
-  //static const int kSrcPort = 0x0100;
-  //static const int kReserved = 0x0200;
-  //static const int kClientKey = 0x0400;
+  //static const int32_t kAccountUUID = 0x0001;
+  static const int32_t kPlayerID = 0x0002;
+  //static const int32_t kTempPlayerID = 0x0004;
+  static const int32_t kCCRLevel = 0x0008;
+  //static const int32_t kProtectedLogin = 0x0010;
+  //static const int32_t kBuildType = 0x0020;
+  static const int32_t kPlayerName = 0x0040;
+  //static const int32_t kSrcAddr = 0x0080;
+  //static const int32_t kSrcPort = 0x0100;
+  //static const int32_t kReserved = 0x0200;
+  //static const int32_t kClientKey = 0x0400;
   struct info {
     kinum_t ki;
     UruString *name;
@@ -413,7 +413,7 @@ public:
   uint16_t msg_type() const;
   // the return value of this includes body_offset()
   // soo many layers, maybe the cake everyone is talking about is a layer cake!
-  u_int msg_offset() const;
+  uint32_t msg_offset() const;
 
 protected:
   // for constructing new messages server-side
@@ -427,8 +427,8 @@ protected:
   //
   // (note that only a small amount of data is msg_type specific, hence all
   // the arguments)
-  void build_msg(uint32_t propagate_flags, kinum_t propagate_ki, const u_char *msg_buf, size_t msg_len, uint16_t msg_type,
-      uint32_t msg_flags, u_char end_thing, PlKey *object = NULL, PlKey **subobjects = NULL, u_int subobject_count = 0,
+  void build_msg(uint32_t propagate_flags, kinum_t propagate_ki, const uint8_t *msg_buf, size_t msg_len, uint16_t msg_type,
+      uint32_t msg_flags, uint8_t end_thing, PlKey *object = NULL, PlKey **subobjects = NULL, uint32_t subobject_count = 0,
       bool no_compress = false);
 };
 
@@ -442,7 +442,7 @@ class PlNetMsgLoadClone: public PlNetMsgGameMessage {
 public:
   // this copies the buffer
   // constructor sets the NetMsg header timestamp
-  PlNetMsgLoadClone(const u_char *clonebuf, size_t clonelen, PlKey &obj_name, kinum_t kinum, bool is_load, u_int player);
+  PlNetMsgLoadClone(const uint8_t *clonebuf, size_t clonelen, PlKey &obj_name, kinum_t kinum, bool is_load, uint32_t player);
   // notes: these are the possible clone messages and how they look
   // client->server link in   load: 1 end thing: 0
   // client->server link out    - not in MOUL -
@@ -468,7 +468,7 @@ public:
 
 class GameMgr_Setup_Reply: public GameMgrMessage {
 public:
-  GameMgr_Setup_Reply(uint32_t gameid, uint32_t reqid, kinum_t clientid, const u_char *uuid);
+  GameMgr_Setup_Reply(uint32_t gameid, uint32_t reqid, kinum_t clientid, const uint8_t *uuid);
 };
 
 class GameMgr_Simple_Message: public GameMgrMessage {
@@ -480,23 +480,23 @@ public:
 class GameMgr_OneByte_Message: public GameMgrMessage {
 public:
   // for sending simple messages with one byte of game-specific body
-  GameMgr_OneByte_Message(uint32_t gameid, uint32_t mgr_type, u_char data);
+  GameMgr_OneByte_Message(uint32_t gameid, uint32_t mgr_type, uint8_t data);
 };
 
 class GameMgr_FourByte_Message: public GameMgrMessage {
 public:
-  // for sending simple messages with one int of game-specific body
+  // for sending simple messages with one int32_t of game-specific body
   GameMgr_FourByte_Message(uint32_t gameid, uint32_t mgr_type, uint32_t data);
 };
 
 class GameMgr_VarSync_VarCreated_Message: public GameMgrMessage {
 public:
-  GameMgr_VarSync_VarCreated_Message(uint32_t gameid, u_int idx, UruString &name, double value);
+  GameMgr_VarSync_VarCreated_Message(uint32_t gameid, uint32_t idx, UruString &name, double value);
 };
 
 class GameMgr_Marker_GameCreated_Message: public GameMgrMessage {
 public:
-  GameMgr_Marker_GameCreated_Message(uint32_t gameid, const u_char *uuid);
+  GameMgr_Marker_GameCreated_Message(uint32_t gameid, const uint8_t *uuid);
 };
 
 class GameMgr_Marker_GameNameChanged_Message: public GameMgrMessage {
@@ -511,16 +511,16 @@ public:
 
   virtual ~GameMgr_Marker_MarkerAdded_Message();
 
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 protected:
   const Marker_BackendMessage::marker_data_t *m_data; // do not delete
   UruString m_marker_name;
   UruString m_age_name;
   BackendMessage *m_backing_msg;
-  u_char *m_zeros;
+  uint8_t *m_zeros;
 };
 
 class GameMgr_Marker_MarkerCaptured_Message: public GameMgrMessage {
@@ -535,7 +535,7 @@ public:
 
 class GameMgr_BlueSpiral_ClothOrder_Message: public GameMgrMessage {
 public:
-  GameMgr_BlueSpiral_ClothOrder_Message(uint32_t gameid, const u_char *order);
+  GameMgr_BlueSpiral_ClothOrder_Message(uint32_t gameid, const uint8_t *order);
 };
 
 class GameMgr_Heek_PlayGame_Message: public GameMgrMessage {
@@ -556,7 +556,7 @@ public:
 
 class GameMgr_Heek_WinLose_Message: public GameMgrMessage {
 public:
-  GameMgr_Heek_WinLose_Message(uint32_t gameid, bool win, u_char choice);
+  GameMgr_Heek_WinLose_Message(uint32_t gameid, bool win, uint8_t choice);
 };
 
 class GameMgr_Heek_Lights_Message: public GameMgrMessage {
@@ -564,7 +564,7 @@ public:
   typedef enum {
     On = 0, Off = 1, Flash = 2
   } type_t;
-  GameMgr_Heek_Lights_Message(uint32_t gameid, u_int light, type_t type);
+  GameMgr_Heek_Lights_Message(uint32_t gameid, uint32_t light, type_t type);
 };
 
 #endif /* _GAME_MESSAGE_H_ */

@@ -142,13 +142,13 @@ static const int_colspec_t colspecs[] = { { NodeID, VaultNode::UINT }, { CreateT
     VaultNode::STRING }, { Text_1, VaultNode::STRING }, { Text_2, VaultNode::STRING }, { Blob_1, VaultNode::BLOB }, {
     Blob_2, VaultNode::BLOB } };
 
-bool VaultNode::check_len_by_bitfields(const u_char *buf, size_t len) {
+bool VaultNode::check_len_by_bitfields(const uint8_t *buf, size_t len) {
   uint32_t bits1, bits2;
   bits1 = read32(buf, 4);
   bits2 = read32(buf, 8);
 
-  u_int offset = 12;
-  for (u_int i = 0; i < 32; i++) {
+  uint32_t offset = 12;
+  for (uint32_t i = 0; i < 32; i++) {
     if (bits1 & colspecs[i].bit) {
       switch (colspecs[i].type) {
       case INT:
@@ -183,14 +183,14 @@ VaultNode::VaultNode() :
   memset((char*) m_fields1, 0, sizeof(m_fields1));
 }
 
-VaultNode::VaultNode(const u_char *inbuf, bool copy_data) :
+VaultNode::VaultNode(const uint8_t *inbuf, bool copy_data) :
     m_length(8), m_bits1(read32(inbuf, 4)), m_bits2(read32(inbuf, 8)), m_owns_bufs(copy_data) {
   memset((char*) m_fields1, 0, sizeof(m_fields1));
 
   uint32_t buflen;
-  u_int offset = 12;
+  uint32_t offset = 12;
 
-  for (u_int i = 0; i < 32; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (m_bits1 & colspecs[i].bit) {
       switch (colspecs[i].type) {
       case INT:
@@ -200,10 +200,10 @@ VaultNode::VaultNode(const u_char *inbuf, bool copy_data) :
         break;
       case UUID:
         if (copy_data) {
-          m_fields1[i].bufval = new u_char[UUID_RAW_LEN];
+          m_fields1[i].bufval = new uint8_t[UUID_RAW_LEN];
           memcpy(m_fields1[i].bufval, inbuf + offset, UUID_RAW_LEN);
         } else {
-          m_fields1[i].bufval = const_cast<u_char*>(inbuf + offset);
+          m_fields1[i].bufval = const_cast<uint8_t*>(inbuf + offset);
         }
         offset += 16;
         break;
@@ -211,10 +211,10 @@ VaultNode::VaultNode(const u_char *inbuf, bool copy_data) :
       case BLOB:
         buflen = read32(inbuf, offset);
         if (copy_data) {
-          m_fields1[i].bufval = new u_char[buflen + 4];
+          m_fields1[i].bufval = new uint8_t[buflen + 4];
           memcpy(m_fields1[i].bufval, inbuf + offset, buflen + 4);
         } else {
-          m_fields1[i].bufval = const_cast<u_char*>(inbuf + offset);
+          m_fields1[i].bufval = const_cast<uint8_t*>(inbuf + offset);
         }
         offset += buflen + 4;
       default:
@@ -229,7 +229,7 @@ VaultNode::VaultNode(const u_char *inbuf, bool copy_data) :
 
 VaultNode::~VaultNode() {
   if (m_owns_bufs) {
-    for (u_int i = 0; i < 32; i++) {
+    for (uint32_t i = 0; i < 32; i++) {
       if ((colspecs[i].type != INT) && (colspecs[i].type != UINT) && (m_bits1 & colspecs[i].bit) && m_fields1[i].bufval) {
         delete[] m_fields1[i].bufval;
       }
@@ -275,7 +275,7 @@ uint32_t VaultNode::all_bits_for_type(vault_nodetype_t type) {
 
 const VaultNode::ColumnSpec* VaultNode::get_spec(vault_nodetype_t type, vault_bitfield_t bit) {
   ColumnSpec *spec = NULL;
-  u_int count = 0;
+  uint32_t count = 0;
 
   switch (type) {
   case PlayerNode:
@@ -432,7 +432,7 @@ const VaultNode::ColumnSpec* VaultNode::get_spec(vault_nodetype_t type, vault_bi
   if (!spec) {
     return NULL;
   }
-  for (u_int i = 0; i < count; i++) {
+  for (uint32_t i = 0; i < count; i++) {
     if (spec[i].bit == bit) {
       return spec + i;
     }
@@ -445,7 +445,7 @@ VaultNode::vault_nodetype_t VaultNode::type() const {
 }
 
 uint32_t& VaultNode::num_ref(vault_bitfield_t bit) {
-  for (u_int i = 0; i < 32; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
       if (colspecs[i].type != INT && colspecs[i].type != UINT) {
         // non-integer field!
@@ -464,15 +464,15 @@ uint32_t& VaultNode::num_ref(vault_bitfield_t bit) {
       "as an integer");
 }
 
-u_char* VaultNode::uuid_ptr(vault_bitfield_t bit) {
-  for (u_int i = 0; i < 32; i++) {
+uint8_t* VaultNode::uuid_ptr(vault_bitfield_t bit) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
       if (colspecs[i].type != UUID) {
         // non-UUID field!
         break;
       }
       if (!m_fields1[i].bufval) {
-        m_fields1[i].bufval = new u_char[UUID_RAW_LEN];
+        m_fields1[i].bufval = new uint8_t[UUID_RAW_LEN];
       }
       if (!(m_bits1 & colspecs[i].bit)) {
         m_bits1 |= colspecs[i].bit;
@@ -485,15 +485,15 @@ u_char* VaultNode::uuid_ptr(vault_bitfield_t bit) {
   return NULL;
 }
 
-u_char* VaultNode::data_ptr(vault_bitfield_t bit, u_int len) {
-  for (u_int i = 0; i < 32; i++) {
+uint8_t* VaultNode::data_ptr(vault_bitfield_t bit, uint32_t len) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
       if (colspecs[i].type != STRING && colspecs[i].type != BLOB) {
         // non-blob/string field!
         break;
       }
       if (!m_fields1[i].bufval) {
-        m_fields1[i].bufval = new u_char[len + 4];
+        m_fields1[i].bufval = new uint8_t[len + 4];
         if (!(m_bits1 & colspecs[i].bit)) {
           // should always be true
           m_bits1 |= colspecs[i].bit;
@@ -501,7 +501,7 @@ u_char* VaultNode::data_ptr(vault_bitfield_t bit, u_int len) {
         }
       } else {
         // not a normal code path
-        u_int old_len = read32(m_fields1[i].bufval, 0);
+        uint32_t old_len = read32(m_fields1[i].bufval, 0);
         if (m_bits1 & colspecs[i].bit) {
           // should always be true
           m_length -= old_len + 4;
@@ -512,7 +512,7 @@ u_char* VaultNode::data_ptr(vault_bitfield_t bit, u_int len) {
         if (old_len < len) {
           delete[] m_fields1[i].bufval;
           m_fields1[i].bufval = NULL;
-          m_fields1[i].bufval = new u_char[len + 4];
+          m_fields1[i].bufval = new uint8_t[len + 4];
         }
       }
       write32(m_fields1[i].bufval, 0, len);
@@ -524,7 +524,7 @@ u_char* VaultNode::data_ptr(vault_bitfield_t bit, u_int len) {
 }
 
 const uint32_t VaultNode::num_val(vault_bitfield_t bit) const {
-  for (u_int i = 0; i < 32; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
       if (colspecs[i].type != INT && colspecs[i].type != UINT) {
         // non-integer field!
@@ -539,8 +539,8 @@ const uint32_t VaultNode::num_val(vault_bitfield_t bit) const {
       "as an integer");
 }
 
-const u_char* VaultNode::const_uuid_ptr(vault_bitfield_t bit) const {
-  for (u_int i = 0; i < 32; i++) {
+const uint8_t* VaultNode::const_uuid_ptr(vault_bitfield_t bit) const {
+  for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
       if (colspecs[i].type != UUID) {
         // non-UUID field!
@@ -553,8 +553,8 @@ const u_char* VaultNode::const_uuid_ptr(vault_bitfield_t bit) const {
   return NULL;
 }
 
-const u_char* VaultNode::const_data_ptr(vault_bitfield_t bit) const {
-  for (u_int i = 0; i < 32; i++) {
+const uint8_t* VaultNode::const_data_ptr(vault_bitfield_t bit) const {
+  for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
       if (colspecs[i].type != STRING && colspecs[i].type != BLOB) {
         // non-blob/string field!
@@ -604,9 +604,9 @@ const char* VaultNode::tablename_for_type(vault_nodetype_t type) {
   }
 }
 
-u_int VaultNode::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
+uint32_t VaultNode::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
   uint32_t to_include = all_bits_for_type(type()) & m_bits1;
-  u_int wrlen, done = 0;
+  uint32_t wrlen, done = 0;
 
   if (start_at < 12) {
     write32(m_header, 0, m_length);
@@ -619,7 +619,7 @@ u_int VaultNode::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
   } else {
     start_at -= 12;
   }
-  for (u_int i = 0; i < 32; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (done >= iov_ct) {
       break;
     }
@@ -667,7 +667,7 @@ u_int VaultNode::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
   return done;
 }
 
-u_int VaultNode::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t VaultNode::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   if (byte_ct + start_at < m_length + 4) {
     *msg_done = false;
     return 0;
@@ -677,9 +677,9 @@ u_int VaultNode::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_d
   }
 }
 
-u_int VaultNode::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) const {
+uint32_t VaultNode::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) const {
   uint32_t to_include = all_bits_for_type(type()) & m_bits1;
-  u_int wrlen, done = 0;
+  uint32_t wrlen, done = 0;
   *msg_done = true;
 
   if (start_at < 4) {
@@ -691,7 +691,7 @@ u_int VaultNode::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *m
     if (wrlen == 4) {
       write32(buffer, 0, m_length);
     } else {
-      u_char temp[4];
+      uint8_t temp[4];
       write32(temp, 0, m_length);
       memcpy(buffer, temp + start_at, wrlen);
     }
@@ -709,7 +709,7 @@ u_int VaultNode::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *m
     if (wrlen == 4) {
       write32(buffer, done, to_include);
     } else {
-      u_char temp[4];
+      uint8_t temp[4];
       write32(temp, 0, to_include);
       memcpy(buffer + done, temp + start_at, wrlen);
     }
@@ -734,7 +734,7 @@ u_int VaultNode::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *m
   } else {
     start_at -= 4;
   }
-  for (u_int i = 0; i < 32; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
     if (to_include & colspecs[i].bit) {
       switch (colspecs[i].type) {
       case INT:

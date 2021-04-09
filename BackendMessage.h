@@ -45,7 +45,7 @@ class BackendMessage: public NetworkMessage {
 public:
   // want_len should be filled in to the total length of the message, if
   // known, otherwise it should be set to -1
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   virtual ~BackendMessage() {
     pthread_mutex_destroy(&m_mutex);
@@ -65,13 +65,13 @@ public:
     return read32(m_header, 12);
   }
 
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
   // returns new refcount
-  virtual int add_ref() {
-    int ret;
+  virtual int32_t add_ref() {
+    int32_t ret;
 
     // XXX use atomic instructions instead?
     pthread_mutex_lock(&m_mutex);
@@ -79,8 +79,8 @@ public:
     pthread_mutex_unlock(&m_mutex);
     return ret;
   }
-  virtual int del_ref() {
-    int ret;
+  virtual int32_t del_ref() {
+    int32_t ret;
 
     pthread_mutex_lock(&m_mutex);
     ret = --m_refct;
@@ -89,7 +89,7 @@ public:
   }
 
 protected:
-  BackendMessage(int msg_type) :
+  BackendMessage(int32_t msg_type) :
       NetworkMessage(msg_type), m_refct(1), m_total_len(0) {
 
     if (pthread_mutex_init(&m_mutex, NULL)) {
@@ -102,7 +102,7 @@ protected:
   // this should always be called before the message is put on any queues;
   // in a constructor is a good place; for post-receive messages we have
   // the data in the constructor so this shouldn't be called
-  void setup_header(uint32_t id1, uint32_t id2, u_int content_len) {
+  void setup_header(uint32_t id1, uint32_t id2, uint32_t content_len) {
     m_total_len = content_len + 16;
     write32(m_header, 0, m_total_len);
     write32(m_header, 4, m_type);
@@ -110,7 +110,7 @@ protected:
     write32(m_header, 12, id2);
   }
 
-  BackendMessage(int msg_type, const u_char *inbuf, size_t in_len) :
+  BackendMessage(int32_t msg_type, const uint8_t *inbuf, size_t in_len) :
       NetworkMessage(msg_type), m_refct(1), m_total_len(0) {
 
     if (pthread_mutex_init(&m_mutex, NULL)) {
@@ -124,16 +124,16 @@ protected:
   }
 
   // this is called by fill_iovecs and fill_buffer
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen) {
     *msg_done = true;
     return 0;
   }
 
   pthread_mutex_t m_mutex;
-  int m_refct;
-  u_char m_header[16];
-  int m_total_len;
+  int32_t m_refct;
+  uint8_t m_header[16];
+  int32_t m_total_len;
 
 #ifdef DEBUG_ENABLE
   // we have to do some different bookkeeping here; since backend messages
@@ -163,7 +163,7 @@ public:
   Hello_BackendMessage(uint32_t id1, uint32_t id2, uint32_t peer_info, bool to_server = true);
 
   // post-receive
-  Hello_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  Hello_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   uint32_t peer_info() const {
@@ -173,7 +173,7 @@ public:
 protected:
   uint32_t m_peer_info; // little-endian
 
-  u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer, size_t buflen);
+  uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer, size_t buflen);
 };
 
 // the KillClient message signals to frontend servers that the client
@@ -190,7 +190,7 @@ public:
   KillClient_BackendMessage(uint32_t id1, uint32_t id2, kill_reason_t why, kinum_t player_ki = 0);
 
   // post-receive
-  KillClient_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  KillClient_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   kill_reason_t why() const {
@@ -204,7 +204,7 @@ protected:
   uint32_t m_reason; // little-endian
   uint32_t m_ki; // little-endian
 
-  u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer, size_t buflen);
+  uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer, size_t buflen);
 };
 
 class AuthAcctLogin_ToBackendMessage: public BackendMessage {
@@ -216,10 +216,10 @@ public:
 
   // pre-send
   // note, this keeps a pointer to name and will delete it
-  AuthAcctLogin_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, const UruString &name, const u_char *hash,
+  AuthAcctLogin_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, const UruString &name, const uint8_t *hash,
       authtype_t authtype, uint32_t server_nonce = 0, uint32_t client_nonce = 0);
   // post-receive
-  AuthAcctLogin_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthAcctLogin_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthAcctLogin_ToBackendMessage() {
     if (m_name)
@@ -235,7 +235,7 @@ public:
   UruString* name() const {
     return m_name;
   }
-  const u_char* hash() const {
+  const uint8_t* hash() const {
     return m_pwhash;
   }
   authtype_t authtype() const {
@@ -252,12 +252,12 @@ public:
 protected:
   uint32_t m_reqid; // little-endian
   UruString *m_name;
-  u_char m_pwhash[20];
+  uint8_t m_pwhash[20];
   uint32_t m_authtype; // little-endian
   uint32_t m_server; // little-endian
   uint32_t m_client; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -265,12 +265,12 @@ class AuthAcctLogin_FromBackendMessage: public BackendMessage {
 public:
   // pre-send
   // note, this keeps a pointer to dirname and will delete it
-  AuthAcctLogin_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, status_code_t result, const u_char *acct_uuid =
-      NULL, customer_type_t acct_type = GUEST_CUSTOMER, UruString *dirname = NULL, u_char *p_info = NULL,
-      u_int p_info_len = 0, bool become_owner = false);
+  AuthAcctLogin_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, status_code_t result, const uint8_t *acct_uuid =
+      NULL, customer_type_t acct_type = GUEST_CUSTOMER, UruString *dirname = NULL, uint8_t *p_info = NULL,
+      uint32_t p_info_len = 0, bool become_owner = false);
 
   // post-receive
-  AuthAcctLogin_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthAcctLogin_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthAcctLogin_FromBackendMessage() {
     if (m_dirname)
@@ -286,7 +286,7 @@ public:
   status_code_t result() const {
     return (status_code_t) le32toh(m_result);
   }
-  const u_char* acct_uuid() const {
+  const uint8_t* acct_uuid() const {
     return m_uuid;
   }
   customer_type_t acct_type() const {
@@ -295,31 +295,31 @@ public:
   UruString* dirname() const {
     return m_dirname;
   }
-  const u_char* player_info() const {
+  const uint8_t* player_info() const {
     return m_buf;
   }
-  u_int player_info_len() const {
+  uint32_t player_info_len() const {
     return m_buflen;
   }
 
 protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_result; // little-endian
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
   uint32_t m_acct_type; // little-endian
   UruString *m_dirname;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class AuthKIValidate_ToBackendMessage: public BackendMessage {
 public:
   // pre-send
-  AuthKIValidate_ToBackendMessage(uint32_t id1, uint32_t id2, const u_char *acct_uuid, kinum_t kinum);
+  AuthKIValidate_ToBackendMessage(uint32_t id1, uint32_t id2, const uint8_t *acct_uuid, kinum_t kinum);
 
   // post-receive
-  AuthKIValidate_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthKIValidate_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthKIValidate_ToBackendMessage() {
   }
@@ -328,15 +328,15 @@ public:
   kinum_t kinum() const {
     return (kinum_t) le32toh(m_kinum);
   }
-  const u_char* acct_uuid() const {
+  const uint8_t* acct_uuid() const {
     return m_uuid;
   }
 
 protected:
   uint32_t m_kinum; // little-endian
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -346,7 +346,7 @@ public:
   AuthKIValidate_FromBackendMessage(uint32_t id1, uint32_t id2, kinum_t kinum, status_code_t result);
 
   // post-receive
-  AuthKIValidate_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthKIValidate_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthKIValidate_FromBackendMessage() {
   }
@@ -363,7 +363,7 @@ protected:
   uint32_t m_kinum; // little-endian
   uint32_t m_result; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -373,7 +373,7 @@ public:
   AuthPlayerLogout_BackendMessage(uint32_t id1, uint32_t id2, kinum_t kinum);
 
   // post-receive
-  AuthPlayerLogout_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthPlayerLogout_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthPlayerLogout_BackendMessage() {
   }
@@ -386,18 +386,18 @@ public:
 protected:
   uint32_t m_kinum; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class AuthChangePassword_ToBackendMessage: public BackendMessage {
 public:
   // pre-send
-  AuthChangePassword_ToBackendMessage(uint32_t id1, uint32_t id2, const u_char *uuid, uint32_t reqid, const UruString &name,
-      const u_char *hash);
+  AuthChangePassword_ToBackendMessage(uint32_t id1, uint32_t id2, const uint8_t *uuid, uint32_t reqid, const UruString &name,
+      const uint8_t *hash);
 
   // post-receive
-  AuthChangePassword_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthChangePassword_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthChangePassword_ToBackendMessage() {
     if (m_name)
@@ -407,7 +407,7 @@ public:
   }
 
   // accessors
-  const u_char* acct_uuid() const {
+  const uint8_t* acct_uuid() const {
     return m_uuid;
   }
   uint32_t reqid() const {
@@ -416,17 +416,17 @@ public:
   UruString* name() const {
     return m_name;
   }
-  const u_char* hash() const {
+  const uint8_t* hash() const {
     return m_pwhash;
   }
 
 protected:
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
   uint32_t m_reqid; // little-endian
   UruString *m_name;
-  u_char m_pwhash[20];
+  uint8_t m_pwhash[20];
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -436,7 +436,7 @@ public:
   AuthChangePassword_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, status_code_t result);
 
   // post-receive
-  AuthChangePassword_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  AuthChangePassword_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~AuthChangePassword_FromBackendMessage() {
   }
@@ -453,18 +453,18 @@ protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_result; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultPlayerCreate_ToBackendMessage: public BackendMessage {
 public:
   // pre-send
-  VaultPlayerCreate_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, u_char *acct_uuid, const UruString &name,
+  VaultPlayerCreate_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, uint8_t *acct_uuid, const UruString &name,
       const UruString &gender);
 
   // post-receive
-  VaultPlayerCreate_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  VaultPlayerCreate_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~VaultPlayerCreate_ToBackendMessage() {
     if (m_name)
@@ -485,7 +485,7 @@ public:
   UruString* gender() const {
     return m_gender;
   }
-  const u_char* acct_uuid() const {
+  const uint8_t* acct_uuid() const {
     return m_uuid;
   }
 
@@ -493,9 +493,9 @@ protected:
   uint32_t m_reqid; // little-endian
   UruString *m_name;
   UruString *m_gender;
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -506,7 +506,7 @@ public:
       customer_type_t acct_type = GUEST_CUSTOMER, UruString *name = NULL, UruString *gender = NULL);
 
   // post-receive
-  VaultPlayerCreate_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  VaultPlayerCreate_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~VaultPlayerCreate_FromBackendMessage() {
     if (m_name)
@@ -545,7 +545,7 @@ protected:
   UruString *m_name;
   UruString *m_gender;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -555,7 +555,7 @@ public:
   VaultPlayerDelete_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, kinum_t ki);
 
   // post-receive
-  VaultPlayerDelete_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  VaultPlayerDelete_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~VaultPlayerDelete_ToBackendMessage() {
   }
@@ -572,7 +572,7 @@ protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_kinum; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -582,7 +582,7 @@ public:
   VaultPlayerDelete_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, status_code_t result);
 
   // post-receive
-  VaultPlayerDelete_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  VaultPlayerDelete_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~VaultPlayerDelete_FromBackendMessage() {
   }
@@ -599,7 +599,7 @@ protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_result; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -617,14 +617,14 @@ protected:
  */
 class VaultPassthrough_BackendMessage: public BackendMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   // pre-send
-  VaultPassthrough_BackendMessage(uint32_t id1, uint32_t id2, const u_char *inbuf, size_t in_len, bool to_server,
+  VaultPassthrough_BackendMessage(uint32_t id1, uint32_t id2, const uint8_t *inbuf, size_t in_len, bool to_server,
       bool become_owner = false);
 
   // post-receive
-  VaultPassthrough_BackendMessage(const u_char *inbuf, size_t in_len, bool to_server, bool become_owner = false);
+  VaultPassthrough_BackendMessage(const uint8_t *inbuf, size_t in_len, bool to_server, bool become_owner = false);
 
   virtual ~VaultPassthrough_BackendMessage() {
     if (m_buf)
@@ -640,23 +640,23 @@ public:
   }
 
 protected:
-  u_int m_vault_offset;
+  uint32_t m_vault_offset;
   int16_t m_msgtype; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 
   // for subclasses
   // setup_header() call will still be required, obviously
-  VaultPassthrough_BackendMessage(int type, int msgtype = 0);
+  VaultPassthrough_BackendMessage(int32_t type, int32_t msgtype = 0);
   // assumes 16-byte header is present in inbuf & in_len
-  VaultPassthrough_BackendMessage(int type, const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultPassthrough_BackendMessage(int32_t type, const uint8_t *inbuf, size_t in_len, bool become_owner);
 };
 
 class VaultFetchRefs_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultFetchRefs_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultFetchRefs_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   // accessors
   uint32_t reqid() const {
@@ -671,14 +671,14 @@ protected:
   uint32_t m_node; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultNode_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultNode_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultNode_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   virtual ~VaultNode_ToBackendMessage();
 
@@ -689,7 +689,7 @@ public:
   uint32_t node_id() const {
     return le32toh(m_id);
   } // Save only
-  const u_char* requuid() const {
+  const uint8_t* requuid() const {
     return m_uuid;
   } // Save only
   const VaultNode* data() const {
@@ -699,11 +699,11 @@ public:
 protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_id; // little-endian
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
   VaultNode *m_node;
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -712,7 +712,7 @@ protected:
 class VaultNodeFetch_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultNodeFetch_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultNodeFetch_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   // accessors
   uint32_t reqid() const {
@@ -727,7 +727,7 @@ protected:
   uint32_t m_node; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -743,14 +743,14 @@ protected:
   uint32_t m_result; // little-endian
   VaultNode *m_node;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultRefChange_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultRefChange_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultRefChange_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   // accessors
   bool is_add() const;
@@ -775,14 +775,14 @@ protected:
   uint32_t m_owner; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultInitAge_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultInitAge_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultInitAge_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   virtual ~VaultInitAge_ToBackendMessage() {
     if (m_filename)
@@ -799,10 +799,10 @@ public:
   uint32_t reqid() const {
     return le32toh(m_reqid);
   }
-  const u_char* create_uuid() const {
+  const uint8_t* create_uuid() const {
     return m_createuuid;
   }
-  const u_char* parent_uuid() const {
+  const uint8_t* parent_uuid() const {
     return m_parentuuid;
   }
   UruString* age_filename() const {
@@ -826,8 +826,8 @@ public:
 
 protected:
   uint32_t m_reqid; // little-endian
-  u_char m_createuuid[UUID_RAW_LEN];
-  u_char m_parentuuid[UUID_RAW_LEN];
+  uint8_t m_createuuid[UUID_RAW_LEN];
+  uint8_t m_parentuuid[UUID_RAW_LEN];
   UruString *m_filename;
   UruString *m_instance;
   UruString *m_username;
@@ -836,14 +836,14 @@ protected:
   int32_t m_id; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultAgeList_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultAgeList_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultAgeList_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   virtual ~VaultAgeList_ToBackendMessage() {
     if (m_filename)
@@ -863,14 +863,14 @@ protected:
   UruString *m_filename;
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultNodeSend_BackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultNodeSend_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultNodeSend_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   // accessors
   kinum_t player() const {
@@ -885,14 +885,14 @@ protected:
   uint32_t m_nodeid; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultSetAgePublic_BackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultSetAgePublic_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultSetAgePublic_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   // accessors
   uint32_t age_nodeid() const {
@@ -904,17 +904,17 @@ public:
 
 protected:
   uint32_t m_nodeid; // little-endian
-  u_char m_public;
+  uint8_t m_public;
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultScoreGet_ToBackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultScoreGet_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultScoreGet_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   virtual ~VaultScoreGet_ToBackendMessage() {
     if (m_name)
@@ -938,7 +938,7 @@ protected:
   UruString *m_name;
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -956,14 +956,14 @@ protected:
   uint32_t m_code; // little-endian
   uint32_t m_msglen; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultScoreCreate_BackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultScoreCreate_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  VaultScoreCreate_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   virtual ~VaultScoreCreate_BackendMessage() {
     if (m_name)
@@ -995,14 +995,14 @@ protected:
   uint32_t m_value; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultScoreAddPoints_BackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultScoreAddPoints_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  VaultScoreAddPoints_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   uint32_t reqid() const {
@@ -1021,14 +1021,14 @@ protected:
   int32_t m_delta; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class VaultScoreXferPoints_BackendMessage: public VaultPassthrough_BackendMessage {
 public:
   // post-receive
-  VaultScoreXferPoints_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  VaultScoreXferPoints_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   uint32_t reqid() const {
@@ -1051,7 +1051,7 @@ protected:
   int32_t m_delta; // little-endian
 
   // should not be called
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1061,13 +1061,13 @@ public:
   TrackPing_BackendMessage(uint32_t id1, uint32_t id2);
 
   // post-receive
-  TrackPing_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackPing_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 };
 
 // obsolete
 class TrackDispatcherHello_BackendMessage: public BackendMessage {
 public:
-  TrackDispatcherHello_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackDispatcherHello_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
   uint32_t restrict_type() const {
     return le32toh(m_restrict_type);
   }
@@ -1078,7 +1078,7 @@ protected:
 // obsolete
 class TrackDispatcherBye_BackendMessage: public BackendMessage {
 public:
-  TrackDispatcherBye_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackDispatcherBye_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 };
 
 class TrackServiceTypes_BackendMessage: public BackendMessage {
@@ -1094,7 +1094,7 @@ public:
       const char *resolve_address);
 
   // post-receive
-  TrackServiceTypes_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackServiceTypes_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~TrackServiceTypes_BackendMessage() {
     if (m_hostname)
@@ -1138,13 +1138,13 @@ public:
   }
 
 protected:
-  u_char m_auth, m_file, m_game, m_addrtype;
+  uint8_t m_auth, m_file, m_game, m_addrtype;
   uint32_t m_address; // BIG-endian (network order)
   UruString *m_hostname;
   uint32_t m_request_pushes; // little-endian
   uint32_t m_restrict_type; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1154,7 +1154,7 @@ public:
   TrackFindService_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, uint32_t reqid2, bool want_file);
 
   // post-receive
-  TrackFindService_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackFindService_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   uint32_t reqid() const {
@@ -1170,9 +1170,9 @@ public:
 protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_reqid2; // little-endian
-  u_char m_want_file;
+  uint8_t m_want_file;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1191,7 +1191,7 @@ public:
   TrackFindService_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, uint32_t reqid2, bool is_file);
 
   // post-receive
-  TrackFindService_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackFindService_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~TrackFindService_FromBackendMessage() {
     if (m_hostname)
@@ -1221,25 +1221,25 @@ public:
 protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_reqid2; // little-endian
-  u_char m_is_file;
-  u_char m_addrtype;
+  uint8_t m_is_file;
+  uint8_t m_addrtype;
   uint32_t m_address; // BIG-endian (network order)
   UruString *m_hostname;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class TrackGameHello_BackendMessage: public BackendMessage {
 public:
   // pre-send
-  TrackGameHello_BackendMessage(uint32_t id1, uint32_t id2, const u_char *uuid, uint32_t server_id, uint32_t connect_ipaddr);
+  TrackGameHello_BackendMessage(uint32_t id1, uint32_t id2, const uint8_t *uuid, uint32_t server_id, uint32_t connect_ipaddr);
 
   // post-receive
-  TrackGameHello_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackGameHello_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
-  const u_char* age_uuid() const {
+  const uint8_t* age_uuid() const {
     return m_uuid;
   }
   uint32_t server_id() const {
@@ -1250,11 +1250,11 @@ public:
   }
 
 protected:
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
   uint32_t m_id; // little-endian
   uint32_t m_ipaddr; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1264,7 +1264,7 @@ public:
   TrackGameBye_ToBackendMessage(uint32_t id1, uint32_t id2, bool final);
 
   // post-receive
-  TrackGameBye_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackGameBye_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
   // accessors
   bool final() const {
     return (m_final != 0);
@@ -1273,7 +1273,7 @@ public:
 protected:
   uint32_t m_final;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1283,7 +1283,7 @@ public:
   TrackGameBye_FromBackendMessage(uint32_t id1, uint32_t id2);
 
   // post-receive
-  TrackGameBye_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackGameBye_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 };
 
 class TrackGamePlayerInfo_BackendMessage: public BackendMessage {
@@ -1292,7 +1292,7 @@ public:
   TrackGamePlayerInfo_BackendMessage(uint32_t id1, uint32_t id2, kinum_t kinum, bool present);
 
   // post-receive
-  TrackGamePlayerInfo_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackGamePlayerInfo_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   kinum_t kinum() const {
@@ -1304,19 +1304,19 @@ public:
 
 protected:
   uint32_t m_kinum; // little-endian
-  u_char m_present;
+  uint8_t m_present;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class TrackMsgForward_BackendMessage: public BackendMessage {
 public:
   // pre-send
-  TrackMsgForward_BackendMessage(uint32_t id1, uint32_t id2, NetworkMessage *msg_to_fwd, u_int recips_at);
+  TrackMsgForward_BackendMessage(uint32_t id1, uint32_t id2, NetworkMessage *msg_to_fwd, uint32_t recips_at);
 
   // post-receive
-  TrackMsgForward_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  TrackMsgForward_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   virtual ~TrackMsgForward_BackendMessage();
 
@@ -1324,17 +1324,17 @@ public:
   uint32_t recips_offset() const {
     return le32toh(m_recip_offset);
   }
-  u_int fwd_msg_len() const {
+  uint32_t fwd_msg_len() const {
     return message_len() - 20;
   }
-  const u_char* fwd_msg() const;
+  const uint8_t* fwd_msg() const;
 
 protected:
   uint32_t m_recip_offset; // little-endian
   NetworkMessage *m_msg;
-  u_int m_msg_offset;
+  uint32_t m_msg_offset;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1353,10 +1353,10 @@ public:
   // pre-send
   // this constructor has to copy the buffer
   TrackSDLUpdate_BackendMessage(uint32_t id1, uint32_t id2, kinum_t from_ki, uint32_t from_id1, uint32_t from_id2,
-      const u_char *sdl_buf, size_t sdl_len, sdl_type_t update_type);
+      const uint8_t *sdl_buf, size_t sdl_len, sdl_type_t update_type);
 
   // post-receive
-  TrackSDLUpdate_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner);
+  TrackSDLUpdate_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner);
 
   virtual ~TrackSDLUpdate_BackendMessage() {
     if (m_buf)
@@ -1373,7 +1373,7 @@ public:
   uint32_t from_id2() const {
     return le32toh(m_from_id2);
   }
-  const u_char* sdl_buf() const {
+  const uint8_t* sdl_buf() const {
     return m_buf + m_data_off;
   }
   uint32_t sdl_len() const {
@@ -1386,21 +1386,21 @@ public:
 protected:
   uint32_t m_kinum; // little-endian
   uint32_t m_from_id1, m_from_id2; // little-endian
-  u_int m_data_off;
+  uint32_t m_data_off;
   uint32_t m_datalen; // little-endian
   uint32_t m_sdl_type; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class TrackNextGameID_BackendMessage: public BackendMessage {
 public:
   // pre-send
-  TrackNextGameID_BackendMessage(uint32_t id1, uint32_t id2, bool server, u_int howmany, u_int start = 0);
+  TrackNextGameID_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t howmany, uint32_t start = 0);
 
   // post-receive
-  TrackNextGameID_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner);
+  TrackNextGameID_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner);
 
   virtual ~TrackNextGameID_BackendMessage() {
   }
@@ -1423,7 +1423,7 @@ protected:
   uint32_t m_number; // little-endian
   uint32_t m_start; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1431,10 +1431,10 @@ class TrackAgeRequest_ToBackendMessage: public BackendMessage {
 public:
   // pre-send
   TrackAgeRequest_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, const UruString &agename,
-      const u_char *ageuuid);
+      const uint8_t *ageuuid);
 
   // post-receive
-  TrackAgeRequest_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackAgeRequest_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~TrackAgeRequest_ToBackendMessage() {
     if (m_filename)
@@ -1448,27 +1448,27 @@ public:
   UruString* filename() const {
     return m_filename;
   }
-  const u_char* age_uuid() const {
+  const uint8_t* age_uuid() const {
     return m_uuid;
   }
 
 protected:
   uint32_t m_reqid; // little-endian
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
   UruString *m_filename;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class TrackAgeRequest_FromBackendMessage: public BackendMessage {
 public:
   // pre-send
-  TrackAgeRequest_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, status_code_t result, const u_char *uuid =
+  TrackAgeRequest_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid, status_code_t result, const uint8_t *uuid =
       NULL, uint32_t server_id = 0, uint32_t age_node = 0, uint32_t ipaddr = 0);
 
   // post-receive
-  TrackAgeRequest_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackAgeRequest_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   uint32_t reqid() const {
@@ -1477,29 +1477,29 @@ public:
   status_code_t result() const {
     return (status_code_t) le32toh(m_result);
   }
-  const u_char* msg_body() const {
+  const uint8_t* msg_body() const {
     return m_body;
   }
-  u_int body_len() const {
+  uint32_t body_len() const {
     return 28U;
   }
 
 protected:
   uint32_t m_reqid; // little-endian
   uint32_t m_result; // little-endian
-  u_char m_body[28];
+  uint8_t m_body[28];
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
 class TrackStartAge_FromBackendMessage: public BackendMessage {
 public:
   // pre-send
-  TrackStartAge_FromBackendMessage(uint32_t id1, uint32_t id2, UruString *agename, const u_char *ageuuid);
+  TrackStartAge_FromBackendMessage(uint32_t id1, uint32_t id2, UruString *agename, const uint8_t *ageuuid);
 
   // post-receive
-  TrackStartAge_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackStartAge_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~TrackStartAge_FromBackendMessage() {
     if (m_filename)
@@ -1510,15 +1510,15 @@ public:
   UruString* filename() const {
     return m_filename;
   }
-  const u_char* age_uuid() const {
+  const uint8_t* age_uuid() const {
     return m_ageuuid;
   }
 
 protected:
-  u_char m_ageuuid[UUID_RAW_LEN];
+  uint8_t m_ageuuid[UUID_RAW_LEN];
   UruString *m_filename;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1535,13 +1535,13 @@ public:
   } problem_t;
 
   // pre-send
-  TrackStartAge_ToBackendMessage(uint32_t id1, uint32_t id2, const u_char *ageuuid, problem_t problem);
+  TrackStartAge_ToBackendMessage(uint32_t id1, uint32_t id2, const uint8_t *ageuuid, problem_t problem);
 
   // post-receive
-  TrackStartAge_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackStartAge_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
-  const u_char* age_uuid() const {
+  const uint8_t* age_uuid() const {
     return m_ageuuid;
   }
   problem_t problem() const {
@@ -1549,10 +1549,10 @@ public:
   }
 
 protected:
-  u_char m_ageuuid[UUID_RAW_LEN];
+  uint8_t m_ageuuid[UUID_RAW_LEN];
   uint32_t m_problem; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1561,16 +1561,16 @@ class TrackAddPlayer_FromBackendMessage: public BackendMessage {
 public:
   // pre-send
   TrackAddPlayer_FromBackendMessage(uint32_t id1, uint32_t id2, kinum_t kinum, const UruString &player_name,
-      const u_char *uuid);
+      const uint8_t *uuid);
 
   // post-receive
-  TrackAddPlayer_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackAddPlayer_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   kinum_t kinum() const {
     return (kinum_t) le32toh(m_kinum);
   }
-  const u_char* acct_uuid() const {
+  const uint8_t* acct_uuid() const {
     return m_uuid;
   }
   UruString* player_name() {
@@ -1584,10 +1584,10 @@ public:
 
 protected:
   uint32_t m_kinum; // little-endian
-  u_char m_uuid[UUID_RAW_LEN];
+  uint8_t m_uuid[UUID_RAW_LEN];
   UruString *m_name;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1597,7 +1597,7 @@ public:
   TrackAddPlayer_ToBackendMessage(uint32_t id1, uint32_t id2, kinum_t kinum, status_code_t result);
 
   // post-receive
-  TrackAddPlayer_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  TrackAddPlayer_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   // accessors
   kinum_t kinum() const {
@@ -1611,7 +1611,7 @@ protected:
   uint32_t m_kinum; // little-endian
   uint32_t m_result; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1626,7 +1626,7 @@ public:
   } marker_data_t;
   // sizeof(marker_data_t) is 32 bytes on 64-bit machines, which is *not*
   // the size when sent
-  static const u_int marker_data_len = 28;
+  static const uint32_t marker_data_len = 28;
 
   // accessors
   uint32_t requester() const {
@@ -1639,10 +1639,10 @@ public:
   void change_to_server();
 
 protected:
-  Marker_BackendMessage(int type, uint32_t requester, uint32_t localid) :
+  Marker_BackendMessage(int32_t type, uint32_t requester, uint32_t localid) :
       BackendMessage(type), m_requester(requester), m_localid(localid) {
   }
-  Marker_BackendMessage(int type, const u_char *inbuf, size_t in_len) :
+  Marker_BackendMessage(int32_t type, const uint8_t *inbuf, size_t in_len) :
       BackendMessage(type, inbuf, in_len), m_requester(read32le(inbuf, 16)), m_localid(read32le(inbuf, 20)) {
   }
   uint32_t m_requester; // little-endian
@@ -1653,10 +1653,10 @@ class MarkerGetGame_BackendMessage: public Marker_BackendMessage {
 public:
   // pre-send
   MarkerGetGame_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t gameid, bool exists,
-      uint32_t player_or_localid, char type, const u_char *uuid, UruString *name);
+      uint32_t player_or_localid, char type, const uint8_t *uuid, UruString *name);
 
   // post-receive
-  MarkerGetGame_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGetGame_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   bool exists() const {
@@ -1668,7 +1668,7 @@ public:
   char game_type() const {
     return m_game_type;
   }
-  const u_char* template_uuid() const {
+  const uint8_t* template_uuid() const {
     return m_template;
   }
   UruString* name() const {
@@ -1683,12 +1683,12 @@ public:
   }
 
 protected:
-  u_char m_game_exists;
+  uint8_t m_game_exists;
   char m_game_type;
-  u_char m_template[UUID_RAW_LEN];
+  uint8_t m_template[UUID_RAW_LEN];
   UruString *m_name;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1697,10 +1697,10 @@ public:
   // pre-send
   // note: these "double"s are all little-endian order, never host order
   MarkerAdd_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t gameid, uint32_t localid, double x, double y,
-      double z, const UruString &name, const UruString &age, int number = -1);
+      double z, const UruString &name, const UruString &age, int32_t number = -1);
 
   // post-receive
-  MarkerAdd_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerAdd_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   const marker_data_t* const data() {
@@ -1716,7 +1716,7 @@ public:
     return m_agename;
   }
   // for use in backend (enables message reuse)
-  void set_number(int marker) {
+  void set_number(int32_t marker) {
     m_data->number = htole32(marker);
   }
 
@@ -1734,7 +1734,7 @@ protected:
   UruString *m_name;
   UruString *m_agename;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1747,7 +1747,7 @@ public:
   void finalize();
 
   // post-receive
-  MarkersAll_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  MarkersAll_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~MarkersAll_BackendMessage() {
     if (m_name)
@@ -1778,7 +1778,7 @@ public:
 protected:
   uint32_t m_listlen; // little-endian
 
-  u_int m_index; // for bookkeeping, so host order
+  uint32_t m_index; // for bookkeeping, so host order
   // pre-send data storage
   struct marker_info {
     marker_data_t data;
@@ -1788,12 +1788,12 @@ protected:
   };
   std::vector<struct marker_info> m_list;
   // post-receive data access
-  const u_char *m_bufp;
+  const uint8_t *m_bufp;
   marker_data_t *m_current;
   UruString *m_name;
   UruString *m_agename;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1805,7 +1805,7 @@ public:
   void finalize();
 
   // post-receive
-  MarkersCaptured_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner = false);
+  MarkersCaptured_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner = false);
 
   virtual ~MarkersCaptured_BackendMessage() {
     if (m_buf)
@@ -1816,17 +1816,17 @@ public:
   size_t size() const {
     return le32toh(m_listlen);
   }
-  const u_char* list() const {
+  const uint8_t* list() const {
     return m_bufp;
   }
 
 protected:
   uint32_t m_listlen; // little-endian
 
-  u_int m_index; // for bookkeeping, so host order
-  u_char *m_bufp;
+  uint32_t m_index; // for bookkeeping, so host order
+  uint8_t *m_bufp;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1837,7 +1837,7 @@ public:
       const UruString &name);
 
   // post-receive
-  MarkerGameRename_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGameRename_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   UruString* name() const {
@@ -1854,7 +1854,7 @@ public:
 protected:
   UruString *m_name;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1864,7 +1864,7 @@ public:
   MarkerGameDelete_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t gameid, uint32_t localid);
 
   // post-receive
-  MarkerGameDelete_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGameDelete_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // for use in backend (enables message reuse)
   void clear_id() {
@@ -1872,7 +1872,7 @@ public:
   }
 
 protected:
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1883,7 +1883,7 @@ public:
       int32_t number, const UruString &name);
 
   // post-receive
-  MarkerGameRenameMarker_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGameRenameMarker_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   int32_t number() const {
@@ -1904,7 +1904,7 @@ protected:
   int32_t m_number; // little-endian
   UruString *m_name;
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1915,7 +1915,7 @@ public:
       int32_t number);
 
   // post-receive
-  MarkerGameDeleteMarker_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGameDeleteMarker_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   int32_t number() const {
@@ -1930,7 +1930,7 @@ public:
 protected:
   int32_t m_number; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1941,7 +1941,7 @@ public:
       kinum_t player, int32_t number, int32_t newvalue);
 
   // post-receive
-  MarkerGameCaptureMarker_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGameCaptureMarker_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   kinum_t player() const {
@@ -1959,7 +1959,7 @@ protected:
   int32_t m_number; // little-endian
   int32_t m_value; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 
@@ -1969,7 +1969,7 @@ public:
   MarkerGameStop_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t gameid, uint32_t localid, kinum_t player);
 
   // post-receive
-  MarkerGameStop_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner = false);
+  MarkerGameStop_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner = false);
 
   // accessors
   kinum_t player() const {
@@ -1979,7 +1979,7 @@ public:
 protected:
   uint32_t m_player; // little-endian
 
-  virtual u_int fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct, u_char *buffer,
+  virtual uint32_t fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct, uint8_t *buffer,
       size_t buflen);
 };
 

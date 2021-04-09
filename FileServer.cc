@@ -70,7 +70,7 @@
 #include "moss_serv.h"
 #include "FileServer.h"
 
-FileServer::FileServer(int the_fd, const char *server_dir, bool is_a_thread) :
+FileServer::FileServer(int32_t the_fd, const char *server_dir, bool is_a_thread) :
     Server(server_dir, is_a_thread) {
   Connection *conn = new FileConnection(the_fd);
   m_conns.push_back(conn);
@@ -87,7 +87,7 @@ bool FileServer::shutdown(reason_t reason) {
 }
 
 NetworkMessage*
-FileServer::FileConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+FileServer::FileConnection::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   NetworkMessage *msg;
 
   *want_len = -1;
@@ -122,7 +122,7 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
     if (in->check_useable()) {
       if (m_log && m_log->would_log_at(Logger::LOG_INFO)) {
         NegotiationMessage *msg = (NegotiationMessage*) in;
-        int version = msg->client_version();
+        int32_t version = msg->client_version();
         char uuid[UUID_STR_LEN];
         format_uuid(msg->uuid(), uuid);
         log_info(m_log, "Client version: %u%s Release: %u UUID: %s\n", version, version == 0 ? " (launcher)" : "",
@@ -168,8 +168,8 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
         FileTransaction *trans = new FileTransaction(msg->request_id(), m_log, is_manifest, false);
 
         UruString namestr(msg->object_name(), msg->object_name_maxlen(), false, true, false);
-        u_int ret = namestr.strlen();
-        u_int len = ret + sizeof(".mbm");
+        uint32_t ret = namestr.strlen();
+        uint32_t len = ret + sizeof(".mbm");
         char fname[len];
         strncpy(fname, namestr.c_str(), ret);
         fname[ret] = '\0';
@@ -178,7 +178,7 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
           strncpy(fname + ret, ".mbm", len - ret);
         }
         // CRITICAL FOR SECURITY: make sure there are no .. elements
-        for (u_int i = 0; i < ret; i++) {
+        for (uint32_t i = 0; i < ret; i++) {
           if ((fname[i] == '.' && fname[i + 1] == '.') || fname[i] == '/' || fname[i] == '\\') {
             if (!is_manifest && (fname[i] == '\\' || fname[i] == '/')) {
               fname[i] = PATH_SEPARATOR[0];
@@ -229,12 +229,12 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
       } else if (msg->type() == BuildIdRequestTrans) {
 #ifdef OLD_PROTOCOL
 #ifdef OLD_PROTOCOL4
-    int build = 556; // Live4
+    int32_t build = 556; // Live4
 #else
-    int build = 401; // last open beta?
+    int32_t build = 401; // last open beta?
 #endif
 #else
-        int build = 847; // Live9
+        int32_t build = 847; // Live9
 #endif
         FileServerMessage *reply = new FileServerMessage(msg->request_id(), NO_ERROR, build);
         conn->enqueue(reply, MessageQueue::NORMAL);

@@ -42,7 +42,7 @@
 
 class FileServer: public Server {
 public:
-  FileServer(int the_fd, const char *server_dir, bool is_a_thread);
+  FileServer(int32_t the_fd, const char *server_dir, bool is_a_thread);
 
   virtual ~FileServer() {
     log_debug(m_log, "deleting\n");
@@ -53,7 +53,7 @@ public:
     }
   }
 
-  int type() const {
+  int32_t type() const {
     return TYPE_FILE;
   }
   const char* type_name() const {
@@ -66,13 +66,13 @@ public:
 
   class FileConnection: public Server::Connection {
   public:
-    FileConnection(int the_fd) :
+    FileConnection(int32_t the_fd) :
         Connection(the_fd), negotiation_done(false) {
       m_interval = KEEPALIVE_INTERVAL * 4;
       gettimeofday(&m_timeout, NULL);
       m_timeout.tv_sec += m_interval;
     }
-    NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+    NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
     bool negotiation_done;
   };
 
