@@ -46,18 +46,18 @@
 
 class GameServer: public Server {
 public:
-  GameServer(const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, const u_char *uuid,
+  GameServer(const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, const uint8_t *uuid,
       const char *filename, uint32_t connect_ipaddr, AgeDesc *age, std::list<SDLDesc*> &sdl);
   virtual ~GameServer();
 
-  int type() const {
+  int32_t type() const {
     return TYPE_GAME;
   }
   const char* type_name() const {
     return "game";
   }
 
-  int init();
+  int32_t init();
   bool shutdown(reason_t reason);
 
   reason_t message_read(Connection *conn, NetworkMessage *msg);
@@ -83,7 +83,7 @@ public:
 
   class GameConnection: public Server::Connection {
   public:
-    GameConnection(int the_fd, Logger *log) :
+    GameConnection(int32_t the_fd, Logger *log) :
         Connection(the_fd), m_state(START), m_kinum(0), m_log(log) {
       m_interval = KEEPALIVE_INTERVAL * 4;
       gettimeofday(&m_timeout, NULL);
@@ -98,7 +98,7 @@ public:
       return m_state;
     }
     void set_state(state_t s);
-    NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+    NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
     void set_logger(Logger *log) {
       m_log = log;
     }
@@ -106,7 +106,7 @@ public:
     /*
      * Additional accessors
      */
-    const u_char* client_uuid() const {
+    const uint8_t* client_uuid() const {
       return m_client_uuid;
     }
     kinum_t kinum() const {
@@ -122,7 +122,7 @@ public:
     void set_kinum(kinum_t ki) {
       m_kinum = ki;
     }
-    void set_uuid(const u_char *uuid) {
+    void set_uuid(const uint8_t *uuid) {
       memcpy(m_client_uuid, uuid, UUID_RAW_LEN);
     }
     void set_key(const PlKey &key);
@@ -130,7 +130,7 @@ public:
   protected:
     state_t m_state;
 
-    u_char m_client_uuid[UUID_RAW_LEN];
+    uint8_t m_client_uuid[UUID_RAW_LEN];
     kinum_t m_kinum;
     UruString m_player_name;
     PlKey m_key;
@@ -158,16 +158,16 @@ public:
   // here
   class DispatcherConnection : public Server::Connection {
   public:
-    DispatcherConnection(int the_fd, Logger *log, int other_fd=-1)
+    DispatcherConnection(int32_t the_fd, Logger *log, int32_t other_fd=-1)
       : Connection(the_fd), m_log(log), m_other_fd(other_fd) { }
-    NetworkMessage * make_if_enough(const u_char *buf, size_t len,
-            int *want_len, bool become_owner=false);
+    NetworkMessage * make_if_enough(const uint8_t *buf, size_t len,
+            int32_t *want_len, bool become_owner=false);
     virtual ~DispatcherConnection() { if (m_other_fd >= 0) close(m_other_fd); }
     // this function will arrange to forward all necessary connection state to
     // the game server, before deleting game_conn
     void forward_conn(GameConnection *game_conn);
   protected:
-    int m_other_fd;
+    int32_t m_other_fd;
   };
 #endif /* !FORK_GAME_TOO */
 
@@ -240,7 +240,7 @@ protected:
   // never happen
   class JoinTimer: public GameTimer {
   public:
-    JoinTimer(struct timeval &when, u_int &server_joiners, kinum_t kinum, const u_char *uuid, UruString *str) :
+    JoinTimer(struct timeval &when, uint32_t &server_joiners, kinum_t kinum, const uint8_t *uuid, UruString *str) :
         GameTimer(when, CLIENT_JOIN), m_kinum(kinum), m_name(*str), m_joiners(server_joiners) {
       m_joiners++;
       memcpy(m_acct_uuid, uuid, UUID_RAW_LEN);
@@ -254,13 +254,13 @@ protected:
     }
 
     kinum_t m_kinum;
-    u_char m_acct_uuid[UUID_RAW_LEN];
+    uint8_t m_acct_uuid[UUID_RAW_LEN];
     UruString m_name;
   protected:
-    u_int &m_joiners;
+    uint32_t &m_joiners;
   };
 #endif /* !STANDALONE */
-  u_int m_joiners;
+  uint32_t m_joiners;
 
 #ifndef FORK_GAME_TOO
   // this little dance is to allow new connections to be added asynchronously
@@ -270,10 +270,10 @@ protected:
   // connection list
   pthread_mutex_t m_client_queue_mutex;
   std::deque<std::pair<GameConnection*, NetworkMessage*> > *m_client_queue;
-  int m_fake_signal;
+  int32_t m_fake_signal;
   class GameSignalProcessor: public SignalProcessor {
   public:
-    reason_t signalled(int *todo, Server *s);
+    reason_t signalled(int32_t *todo, Server *s);
   };
   GameSignalProcessor m_signal_processor;
 #endif /* !FORK_GAME_TOO */
@@ -281,7 +281,7 @@ protected:
   /*
    * per-age data
    */
-  u_char m_age_uuid[16];
+  uint8_t m_age_uuid[16];
   char *m_filename;
   AgeDesc *m_age;
   std::list<SDLDesc*> m_agesdl;

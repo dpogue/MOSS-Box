@@ -35,10 +35,10 @@ public:
   // read a plKey into the object from the contents of the buffer,
   // returning how many bytes were read
   // throws truncated_message
-  u_int read_in(const u_char *buf, size_t buflen);
+  uint32_t read_in(const uint8_t *buf, size_t buflen);
 
-  u_int send_len() const;
-  u_int write_out(u_char *buf, size_t buflen, bool bitflip = true) const;
+  uint32_t send_len() const;
+  uint32_t write_out(uint8_t *buf, size_t buflen, bool bitflip = true) const;
 
   // since I wanted to put this class in a union, I can't have a
   // destructor so I must depend on calling code to clean up
@@ -59,10 +59,10 @@ public:
 
   // "null" keys show up in a few places
   void make_null();
-  static u_int null_send_len() {
+  static uint32_t null_send_len() {
     return 15;
   }
-  static u_int write_null_key(u_char *buf, size_t buflen);
+  static uint32_t write_null_key(uint8_t *buf, size_t buflen);
 
   uint8_t m_flags;
   uint8_t m_extra;

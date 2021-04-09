@@ -35,8 +35,8 @@ typedef struct _rc4 {
   unsigned char j;
 } rc4_state_t;
 
-void rc4_init_key(rc4_state_t *state, const unsigned char *key, unsigned int keylen);
-void rc4_encrypt(rc4_state_t *state, unsigned char *buf, unsigned int buflen);
+void rc4_init_key(rc4_state_t *state, const unsigned char *key, unsigned int32_t keylen);
+void rc4_encrypt(rc4_state_t *state, unsigned char *buf, unsigned int32_t buflen);
 
 #ifdef __cplusplus
 }

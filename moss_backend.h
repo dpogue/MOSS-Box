@@ -47,37 +47,37 @@ class BackendObj;
 
 class BackendServer: public Server {
 public:
-  BackendServer(int listen_fd, uint32_t ipaddr, const char *db_address, const int db_port, const char *db_user,
-      const char *db_password, const char *db_name, const char *db_params, const u_int &egg_mask) :
+  BackendServer(int32_t listen_fd, uint32_t ipaddr, const char *db_address, const int32_t db_port, const char *db_user,
+      const char *db_password, const char *db_name, const char *db_params, const uint32_t &egg_mask) :
       Server(listen_fd, ipaddr), my(NULL), m_egg_mask(egg_mask), m_db_addr(db_address), m_db_port(db_port), m_db_params(
           db_params), m_db_user(db_user), m_db_passwd(db_password), m_db_name(db_name), m_next_dispatcher(0), m_next_file(
           0), m_next_auth(0), m_timers(NULL), m_next_gameid(100) {
   }
   virtual ~BackendServer();
 
-  int type() const {
+  int32_t type() const {
     return CLASS_AUTH | CLASS_VAULT | CLASS_TRACK | CLASS_ADMIN;
   }
   const char* type_name() const {
     return "Backend";
   }
 
-  int init();
+  int32_t init();
   bool shutdown(reason_t reason);
 
   reason_t message_read(Connection *conn, NetworkMessage *msg);
 
-  void add_client_conn(int fd, u_char first);
+  void add_client_conn(int32_t fd, uint8_t first);
   reason_t conn_timeout(Connection *conn, reason_t why);
   reason_t conn_shutdown(Connection *conn, reason_t why);
 
 protected:
   BackendObj *my;
-  const u_int &m_egg_mask;
+  const uint32_t &m_egg_mask;
 
   // "arguments"
   const char *m_db_addr;
-  const int m_db_port;
+  const int32_t m_db_port;
   const char *m_db_params;
   const char *m_db_user;
   const char *m_db_passwd;
@@ -133,10 +133,10 @@ protected:
       return m_type;
     }
     // for auth, game connections
-    void set_uuid(const u_char *uuid) {
+    void set_uuid(const uint8_t *uuid) {
       memcpy(m_uuid, uuid, UUID_RAW_LEN);
     }
-    const u_char* uuid() const {
+    const uint8_t* uuid() const {
       return m_uuid;
     }
 
@@ -182,7 +182,7 @@ protected:
     void set_in_shutdown() {
       m_shutdown = true;
     }
-    u_int player_count() const {
+    uint32_t player_count() const {
       return m_players;
     }
     void bump_count() {
@@ -196,13 +196,13 @@ protected:
   protected:
     Connection *m_conn;
     uint32_t m_type;
-    u_char m_uuid[UUID_RAW_LEN];
+    uint8_t m_uuid[UUID_RAW_LEN];
     kinum_t m_kinum;
     UruString m_name;
     uint32_t m_id;
     uint32_t m_ipaddr; // host order
     bool m_shutdown;
-    u_int m_players;
+    uint32_t m_players;
   private:
     ConnectionEntity() {
     }
@@ -243,14 +243,14 @@ protected:
     UruString m_fa_hostname;
   };
   std::vector<DispatcherInfo*> m_dispatchers;
-  u_int m_next_dispatcher, m_next_file, m_next_auth;
+  uint32_t m_next_dispatcher, m_next_file, m_next_auth;
   KillClient_BackendMessage::kill_reason_t
-  handle_age_request(const u_char *age_uuid, UruString *filename, bool force_new, uint32_t user_id1, uint32_t user_id2,
+  handle_age_request(const uint8_t *age_uuid, UruString *filename, bool force_new, uint32_t user_id1, uint32_t user_id2,
       uint32_t reqid);
   class Waiter: public TimerQueue::Timer {
   public:
     Waiter(struct timeval &timeout, BackendServer *me, uint32_t id1, uint32_t id2, uint32_t reqid, kinum_t ki,
-        UruString &name, const u_char *acctuuid, const u_char *age_uuid, uint32_t nodeid) :
+        UruString &name, const uint8_t *acctuuid, const uint8_t *age_uuid, uint32_t nodeid) :
         Timer(timeout), m_server(me), m_id1(id1), m_id2(id2), m_reqid(reqid), m_kinum(ki), m_node(nodeid) {
       // make sure the Waiter has a copy in case the ConnectionEntity
       // goes away
@@ -265,9 +265,9 @@ protected:
     uint32_t m_reqid;
     kinum_t m_kinum;
     UruString m_name;
-    u_char m_acctuuid[UUID_RAW_LEN];
+    uint8_t m_acctuuid[UUID_RAW_LEN];
     uint32_t m_node;
-    u_char m_ageuuid[UUID_RAW_LEN];
+    uint8_t m_ageuuid[UUID_RAW_LEN];
   };
   TimerQueue *m_timers;
 
@@ -281,7 +281,7 @@ protected:
   } prop_type_t;
   void propagate_change_to_interested(uint32_t nodeid,
   // if transuuid is NULL one is generated
-      const u_char *transuuid, bool check_age) {
+      const uint8_t *transuuid, bool check_age) {
     propagate_to_interested(CHANGED, nodeid, 0, 0, transuuid, check_age);
   }
   void propagate_add_to_interested(uint32_t parent, uint32_t child, uint32_t ownerid, bool check_age) {
@@ -290,7 +290,7 @@ protected:
   void propagate_remove_to_interested(uint32_t parent, uint32_t child, bool check_age) {
     propagate_to_interested(REMOVED, parent, child, 0, NULL, check_age);
   }
-  void propagate_to_interested(prop_type_t t, uint32_t nodeid, uint32_t child, uint32_t ownerid, const u_char *transuuid,
+  void propagate_to_interested(prop_type_t t, uint32_t nodeid, uint32_t child, uint32_t ownerid, const uint8_t *transuuid,
       bool check_age);
   // we have a special function for player delete, because the relative
   // complexity of what updates need to be sent has been put into the DB
@@ -298,10 +298,10 @@ protected:
 
   // operations on our inefficient data structure
   ConnectionEntity* find_by_kinum(kinum_t ki, uint32_t type);
-  ConnectionEntity* find_by_uuid(const u_char *uuid, uint32_t type);
+  ConnectionEntity* find_by_uuid(const uint8_t *uuid, uint32_t type);
 
   // for GameMgrs
-  u_int m_next_gameid;
+  uint32_t m_next_gameid;
 
   /*
    * helper functions
@@ -323,7 +323,7 @@ protected:
   class DBConnection: public Connection {
   public:
     // XXX
-    virtual NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+    virtual NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
   };
 };
 

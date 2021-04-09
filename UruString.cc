@@ -44,7 +44,7 @@
 
 #include "UruString.h"
 
-UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_wide, bool copy) :
+UruString::UruString(const uint8_t *inbuf, int32_t buflen, bool has_length, bool is_wide, bool copy) :
     m_cstr(NULL), m_altstr(NULL), m_alt_type(NO_NULL), m_owns_cstr(false), m_owns_altstr(false), m_arrival_len(0), m_cstr_size(
         0), m_altstr_size(0) {
   size_t num_chars = 0;
@@ -71,22 +71,22 @@ UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_w
     } else {
       m_arrival_len = 2 + num_chars;
     }
-    if (buflen >= 0 && m_arrival_len > (u_int) buflen) {
+    if (buflen >= 0 && m_arrival_len > (uint32_t) buflen) {
       // the message has been truncated...
 #ifdef TEST_CODE
       printf("arrival_len > buflen: %u > %d\n", m_arrival_len, buflen);
 #endif
-      m_arrival_len = (u_int) buflen;
+      m_arrival_len = (uint32_t) buflen;
       if (is_wide) {
-        num_chars = ((u_int) buflen - 2) / 2;
+        num_chars = ((uint32_t) buflen - 2) / 2;
       } else {
-        num_chars = (u_int) buflen - 2;
+        num_chars = (uint32_t) buflen - 2;
       }
     }
     if (num_chars > 0) {
       // see if it's already null-terminated
-      u_int last_char = num_chars - 1;
-      u_char end = ((m_alt_type & BITFLIP) ? '\xff' : '\0');
+      uint32_t last_char = num_chars - 1;
+      uint8_t end = ((m_alt_type & BITFLIP) ? '\xff' : '\0');
       if ((is_wide && inbuf[2 + (2 * last_char)] == end && inbuf[2 + (2 * last_char) + 1] == end)
           || (!is_wide && inbuf[2 + last_char] == end)) {
         m_alt_type &= ~NO_NULL;
@@ -95,7 +95,7 @@ UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_w
     }
   } else {
     // look for null terminator
-    while (buflen < 0 || m_arrival_len < (u_int) buflen) {
+    while (buflen < 0 || m_arrival_len < (uint32_t) buflen) {
       if (inbuf[m_arrival_len] == '\0' && (!is_wide || inbuf[m_arrival_len + 1] == '\0')) {
         break;
       }
@@ -105,7 +105,7 @@ UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_w
         m_arrival_len++;
       }
     }
-    if (buflen >= 0 && m_arrival_len >= (u_int) buflen) {
+    if (buflen >= 0 && m_arrival_len >= (uint32_t) buflen) {
       // the message has been truncated...
 #ifdef TEST_CODE
       printf("located arrival_len > buflen: %u > %d\n", m_arrival_len, buflen);
@@ -118,10 +118,10 @@ UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_w
       }
     } else if (is_wide) {
       num_chars = m_arrival_len / 2;
-      if (buflen >= 0 && m_arrival_len + 2 > (u_int) buflen) {
+      if (buflen >= 0 && m_arrival_len + 2 > (uint32_t) buflen) {
         // this means m_arrival_len + 1 == buflen; the string is truncated in
         // the middle of the last character
-        m_arrival_len = (u_int) buflen;
+        m_arrival_len = (uint32_t) buflen;
       } else {
         m_arrival_len += 2;
       }
@@ -152,17 +152,17 @@ UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_w
     m_cstr_size = num_chars;
   } else {
     if (copy) {
-      u_int byte_ct = m_arrival_len;
+      uint32_t byte_ct = m_arrival_len;
       if (!has_length) {
         byte_ct += 2;
       }
-      m_altstr = new u_char[byte_ct];
+      m_altstr = new uint8_t[byte_ct];
       m_owns_altstr = true;
       m_alt_type |= (HAS_LEN | NO_NULL);
       if (dont_count_null) {
         num_chars -= 1;
       }
-      u_int chars = num_chars;
+      uint32_t chars = num_chars;
       if (m_alt_type & BITFLIP) {
         chars |= 0xF000;
       }
@@ -173,7 +173,7 @@ UruString::UruString(const u_char *inbuf, int buflen, bool has_length, bool is_w
         memcpy(m_altstr + 2, inbuf, m_arrival_len);
       }
     } else {
-      m_altstr = const_cast<u_char*>(inbuf);
+      m_altstr = const_cast<uint8_t*>(inbuf);
     }
     m_altstr_size = num_chars;
   }
@@ -209,7 +209,7 @@ UruString::UruString(const UruString &other, bool copy) :
       if (m_alt_type & HAS_LEN) {
         altlen += 2;
       }
-      m_altstr = new u_char[altlen];
+      m_altstr = new uint8_t[altlen];
       m_owns_altstr = true;
       memcpy(m_altstr, other.m_altstr, altlen);
     }
@@ -232,7 +232,7 @@ UruString::UruString(const char *c_str, bool copy) :
     memcpy(m_cstr + 2, c_str, m_cstr_size + 1);
   } else {
     m_alt_type = C | NO_NULL;
-    m_altstr = const_cast<u_char*>((const u_char*) c_str);
+    m_altstr = const_cast<uint8_t*>((const uint8_t*) c_str);
     m_altstr_size = m_cstr_size;
   }
 }
@@ -247,7 +247,7 @@ UruString::UruString(const std::string &str, bool copy) :
     memcpy(m_cstr + 2, str.c_str(), m_cstr_size + 1);
   } else {
     m_alt_type = C | NO_NULL;
-    m_altstr = const_cast<u_char*>((const u_char*) str.c_str());
+    m_altstr = const_cast<uint8_t*>((const uint8_t*) str.c_str());
     m_altstr_size = m_cstr_size;
   }
 }
@@ -288,7 +288,7 @@ UruString& UruString::operator=(const UruString &other) {
     if (m_alt_type & HAS_LEN) {
       altlen += 2;
     }
-    m_altstr = new u_char[altlen];
+    m_altstr = new uint8_t[altlen];
     m_owns_altstr = true;
     memcpy(m_altstr, other.m_altstr, altlen);
   } else {
@@ -322,7 +322,7 @@ UruString& UruString::operator=(const char *c_str) {
   return *this;
 }
 
-UruString& UruString::operator=(const u_char *c_str) {
+UruString& UruString::operator=(const uint8_t *c_str) {
   return operator=((const char*) c_str);
 }
 
@@ -374,7 +374,7 @@ bool UruString::operator==(const UruString &other) {
   }
   // ok, if we get here we have to convert to a common format and we can't
   // call other.c_str() because other is const, yuck
-  const u_char *altstr = get_str(other.m_alt_type & HAS_LEN, other.m_alt_type & WIDE, !(other.m_alt_type & NO_NULL),
+  const uint8_t *altstr = get_str(other.m_alt_type & HAS_LEN, other.m_alt_type & WIDE, !(other.m_alt_type & NO_NULL),
       other.m_alt_type & BITFLIP);
   size_t altlen = send_len(m_alt_type & HAS_LEN, m_alt_type & WIDE, !(m_alt_type & NO_NULL));
   return (!memcmp(altstr, other.m_altstr, altlen));
@@ -418,7 +418,7 @@ const char* const UruString::c_str() {
 // compiler warning.
 typedef union {
   char *c;
-  u_char *u;
+  uint8_t *u;
 } bothchar;
 
 // UTF-8 -> UTF-16: 1-3 UTF-8 bytes takes 2 UTF-16, 4 UTF-8 bytes takes 4
@@ -436,11 +436,11 @@ void UruString::make_cstr() {
     if (m_alt_type & HAS_LEN) {
       read_at.u += 2;
     }
-    u_char *tempbuf = NULL;
+    uint8_t *tempbuf = NULL;
     if (m_alt_type & BITFLIP) {
       // don't think this beast exists
-      tempbuf = new u_char[2 * m_altstr_size];
-      for (u_int i = 0; i < 2 * m_altstr_size; i++) {
+      tempbuf = new uint8_t[2 * m_altstr_size];
+      for (uint32_t i = 0; i < 2 * m_altstr_size; i++) {
         tempbuf[i] = ~read_at.u[i];
       }
       read_at.u = tempbuf;
@@ -479,7 +479,7 @@ void UruString::make_cstr() {
       read_at.u = (tempbuf ? tempbuf : ((m_alt_type & HAS_LEN) ? m_altstr + 2 : m_altstr));
       write_at = m_cstr + 2;
       // we don't want to create malformed UTF-8... so mangle the data
-      for (u_int i = 0; i < m_altstr_size; i++) {
+      for (uint32_t i = 0; i < m_altstr_size; i++) {
         char readchar = read_at.c[2 * i];
         // asciify
         readchar &= 0x7f;
@@ -514,7 +514,7 @@ void UruString::make_cstr() {
     write16(m_cstr, 0, m_cstr_size);
     char *write_at = m_cstr + 2;
     if (m_altstr) {
-      u_char *read_at = m_altstr;
+      uint8_t *read_at = m_altstr;
       if (m_alt_type & HAS_LEN) {
         read_at += 2;
       }
@@ -522,7 +522,7 @@ void UruString::make_cstr() {
         // altstr has no null or no length
         memcpy(write_at, read_at, m_cstr_size);
       } else {
-        for (u_int i = 0; i < m_cstr_size; i++) {
+        for (uint32_t i = 0; i < m_cstr_size; i++) {
           write_at[i] = (char) ~read_at[i];
         }
       }
@@ -531,8 +531,8 @@ void UruString::make_cstr() {
   }
 }
 
-const u_char* const UruString::get_str(bool include_length, bool as_wide, bool include_null, bool bitflip) {
-  int desired_type = C;
+const uint8_t* const UruString::get_str(bool include_length, bool as_wide, bool include_null, bool bitflip) {
+  int32_t desired_type = C;
   if (include_length) {
     desired_type |= HAS_LEN;
   }
@@ -570,22 +570,22 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
       make_cstr();
     }
     if (desired_type == (C | NO_NULL | HAS_LEN)) {
-      return (u_char*) m_cstr;
+      return (uint8_t*) m_cstr;
     } else {
-      return (u_char*) m_cstr + 2;
+      return (uint8_t*) m_cstr + 2;
     }
   }
 
   // any types handled from here on must be in m_altstr
   if (m_altstr && ((m_alt_type ^ desired_type) == BITFLIP)) {
     // just do the bitflip in place
-    u_int chars = read16(m_altstr, 0);
+    uint32_t chars = read16(m_altstr, 0);
     chars &= ~0xF000;
-    for (u_int i = 0; i < chars; i++) {
+    for (uint32_t i = 0; i < chars; i++) {
       m_altstr[i + 2] = ~m_altstr[i + 2];
     }
     if (m_alt_type & WIDE) {
-      for (u_int i = 0; i < chars; i++) {
+      for (uint32_t i = 0; i < chars; i++) {
         m_altstr[chars + i + 2] = ~m_altstr[chars + i + 2];
       }
     }
@@ -597,7 +597,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
   } else {
     // avoid calling iconv if possible
     bothchar source_str;
-    int source_type;
+    int32_t source_type;
     size_t source_size;
     bool delete_source = false;
     if (!m_altstr && !m_cstr) {
@@ -640,7 +640,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
       // conversion either way could require more space, up to either 3/2 or 2
       dstlen *= 2;
     }
-    m_altstr = new u_char[2 + dstlen];
+    m_altstr = new uint8_t[2 + dstlen];
     m_owns_altstr = true;
     bothchar read_at = source_str;
     if (source_type & HAS_LEN) {
@@ -650,17 +650,17 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
     write_at.u = m_altstr + 2;
 
     if (as_wide && !(source_type & WIDE)) {
-      u_char *tempbufr = NULL, *tempbufw = NULL;
+      uint8_t *tempbufr = NULL, *tempbufw = NULL;
       if (source_type & BITFLIP) {
-        tempbufr = new u_char[srclen];
-        for (u_int i = 0; i < srclen; i++) {
+        tempbufr = new uint8_t[srclen];
+        for (uint32_t i = 0; i < srclen; i++) {
           tempbufr[i] = ~read_at.u[i];
         }
         read_at.u = tempbufr;
       }
       if (bitflip) {
         // don't think this beast exists
-        tempbufw = new u_char[dstlen];
+        tempbufw = new uint8_t[dstlen];
         write_at.u = tempbufw;
       }
 
@@ -696,7 +696,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
           m_altstr_size--;
         }
         // we don't want to create malformed UTF-8... so mangle the data
-        for (u_int i = 0; i < m_altstr_size; i++) {
+        for (uint32_t i = 0; i < m_altstr_size; i++) {
           char readchar = read_at.c[i];
           // asciify
           readchar &= 0x7f;
@@ -717,7 +717,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
         iconv_close(iconv_state);
       }
 
-      u_int chars = m_altstr_size;
+      uint32_t chars = m_altstr_size;
       if (bitflip) {
         chars |= 0xF000;
       }
@@ -725,7 +725,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
       if (bitflip) {
         chars = m_altstr_size * 2;
         write_at.u = m_altstr + 2;
-        for (u_int i = 0; i < chars; i++) {
+        for (uint32_t i = 0; i < chars; i++) {
           write_at.u[i] = ~tempbufw[i];
         }
       }
@@ -736,17 +736,17 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
         delete[] tempbufw;
       }
     } else if (!as_wide && (source_type & WIDE)) {
-      u_char *tempbufr = NULL, *tempbufw = NULL;
+      uint8_t *tempbufr = NULL, *tempbufw = NULL;
       if (source_type & BITFLIP) {
         // don't think this beast exists
-        tempbufr = new u_char[srclen];
-        for (u_int i = 0; i < srclen; i++) {
+        tempbufr = new uint8_t[srclen];
+        for (uint32_t i = 0; i < srclen; i++) {
           tempbufr[i] = ~read_at.u[i];
         }
         read_at.u = tempbufr;
       }
       if (bitflip) {
-        tempbufw = new u_char[dstlen];
+        tempbufw = new uint8_t[dstlen];
         write_at.u = tempbufw;
       }
 
@@ -778,7 +778,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
           m_altstr_size--;
         }
         // again, mangle away
-        for (u_int i = 0; i < m_altstr_size; i++) {
+        for (uint32_t i = 0; i < m_altstr_size; i++) {
           char readchar = read_at.c[2 * i];
           // asciify
           readchar &= 0x7f;
@@ -797,14 +797,14 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
         iconv_close(iconv_state);
       }
 
-      u_int chars = m_altstr_size;
+      uint32_t chars = m_altstr_size;
       if (bitflip) {
         chars |= 0xF000;
       }
       write16(m_altstr, 0, chars);
       if (bitflip) {
         write_at.u = m_altstr + 2;
-        for (u_int i = 0; i < m_altstr_size; i++) {
+        for (uint32_t i = 0; i < m_altstr_size; i++) {
           write_at.u[i] = ~tempbufw[i];
         }
       }
@@ -821,7 +821,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
         m_altstr_size--;
       }
       if ((source_type & BITFLIP) != (desired_type & BITFLIP)) {
-        for (u_int i = 0; i < srclen; i++) {
+        for (uint32_t i = 0; i < srclen; i++) {
           write_at.u[i] = ~read_at.u[i];
         }
       } else {
@@ -834,7 +834,7 @@ const u_char* const UruString::get_str(bool include_length, bool as_wide, bool i
           write_at.u[srclen + 1] = (bitflip ? '\xff' : '\0');
         }
       }
-      u_int chars = m_altstr_size;
+      uint32_t chars = m_altstr_size;
       if (bitflip) {
         chars |= 0xF000;
       }

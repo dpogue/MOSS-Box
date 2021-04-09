@@ -39,7 +39,7 @@ class AuthClientMessage: public NetworkMessage {
 public:
   // want_len should be filled in to the total length of the message, if
   // known, otherwise it should be set to -1
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
 
   virtual bool check_useable() const;
 
@@ -59,7 +59,7 @@ public:
   }
 
 protected:
-  AuthClientMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  AuthClientMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       NetworkMessage(msg_buf, msg_len, msg_type) {
   }
 };
@@ -69,7 +69,7 @@ public:
   /*
    * This class copies the buffer passed in.
    */
-  AuthServerMessage(const u_char *contents, size_t content_len, int type);
+  AuthServerMessage(const uint8_t *contents, size_t content_len, int32_t type);
 
   virtual ~AuthServerMessage() {
     if (m_buf)
@@ -80,12 +80,12 @@ public:
     return m_buflen + 2;
   }
 
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 protected:
-  AuthServerMessage(int type) :
+  AuthServerMessage(int32_t type) :
       NetworkMessage(type) {
   }
 
@@ -101,8 +101,8 @@ public:
   AuthServerLoginMessage(uint32_t reqid, status_code_t status);
 
   // for a successful login
-  AuthServerLoginMessage(uint32_t reqid, status_code_t status, const u_char *uuid, customer_type_t customer_type,
-      const u_char *key);
+  AuthServerLoginMessage(uint32_t reqid, status_code_t status, const uint8_t *uuid, customer_type_t customer_type,
+      const uint8_t *key);
 };
 
 class AuthServerChangePassMessage: public AuthServerMessage {
@@ -112,19 +112,19 @@ public:
 
 class AuthServerFileMessage: public AuthServerMessage {
 public:
-  AuthServerFileMessage(FileTransaction *trans, int msg_type);
+  AuthServerFileMessage(FileTransaction *trans, int32_t msg_type);
   virtual ~AuthServerFileMessage();
 
   virtual size_t message_len() const;
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 protected:
   FileTransaction *m_transaction;
 #ifdef DOWNLOAD_NO_ACKS
-  u_int m_header_bytes;
+  uint32_t m_header_bytes;
 
   void next_offset();
 #endif
@@ -148,9 +148,9 @@ public:
     return m_passthru->message_len() - 16;
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 protected:
   VaultPassthrough_BackendMessage *m_passthru;
@@ -167,17 +167,17 @@ public:
 
 class AuthServerAgeReplyMessage: public AuthServerMessage {
 public:
-  AuthServerAgeReplyMessage(uint32_t reqid, status_code_t result, const u_char *contents, size_t content_len);
+  AuthServerAgeReplyMessage(uint32_t reqid, status_code_t result, const uint8_t *contents, size_t content_len);
 
   virtual size_t message_len() const {
     return 38;
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 protected:
-  u_char m_topbuf[10];
+  uint8_t m_topbuf[10];
 };
 
 class AuthServerKickMessage: public AuthServerMessage {
@@ -190,10 +190,10 @@ public:
   /*
    * This class copies the buffer passed in.
    */
-  AuthPingMessage(const u_char *msg_buf, size_t len) :
+  AuthPingMessage(const uint8_t *msg_buf, size_t len) :
       AuthClientMessage(NULL, len, kAuth2Cli_PingReply) {
 
-    m_buf = new u_char[len];
+    m_buf = new uint8_t[len];
     memcpy(m_buf, msg_buf, len);
   }
   virtual ~AuthPingMessage() {
@@ -205,9 +205,9 @@ public:
     return Ping;
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 #ifdef DEBUG_ENABLE
   virtual bool persistable() const { return true; } // copies buffer
@@ -216,7 +216,7 @@ public:
 
 class AuthClientLoginMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   msg_class_t msg_class() const {
     return LoginReq;
@@ -234,7 +234,7 @@ public:
   UruString& login() {
     return m_login;
   }
-  const u_char* hash() const {
+  const uint8_t* hash() const {
     return m_buf + m_hash_at;
   }
   UruString& token() {
@@ -245,21 +245,21 @@ public:
   }
 
 protected:
-  AuthClientLoginMessage(const u_char *msg_buf, size_t msg_len, int msg_type, u_int hash_location, u_int os_location) :
+  AuthClientLoginMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type, uint32_t hash_location, uint32_t os_location) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_login(msg_buf + 10, -1, true, true, false), m_hash_at(
           hash_location), m_token(msg_buf + hash_location + 20, -1, true, true, false), m_os(msg_buf + os_location,
           -1, true, true, false) {
   }
 
   UruString m_login;
-  u_int m_hash_at;
+  uint32_t m_hash_at;
   UruString m_token;
   UruString m_os;
 };
 
 class AuthClientChangePassMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   msg_class_t msg_class() const {
     return PasswordChange;
@@ -274,22 +274,22 @@ public:
   UruString& login() {
     return m_login;
   }
-  const u_char* hash() const {
+  const uint8_t* hash() const {
     return m_buf + m_hash_at;
   }
 
 protected:
-  AuthClientChangePassMessage(const u_char *msg_buf, size_t msg_len, int msg_type, u_int hash_location) :
+  AuthClientChangePassMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type, uint32_t hash_location) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_login(msg_buf + 6, -1, true, true, false), m_hash_at(hash_location) {
   }
 
   UruString m_login;
-  u_int m_hash_at;
+  uint32_t m_hash_at;
 };
 
 class AuthClientFileMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   virtual ~AuthClientFileMessage() {
     if (m_class)
@@ -316,7 +316,7 @@ public:
   }
 
 protected:
-  AuthClientFileMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  AuthClientFileMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_name(msg_buf + 6, msg_len - 6, true, true, false), m_class(NULL) {
 
     if (msg_type == kCli2Auth_FileListRequest) {
@@ -330,7 +330,7 @@ protected:
 
 class AuthClientPlayerCreateMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   msg_class_t msg_class() const {
     return PlayerCreate;
@@ -353,7 +353,7 @@ public:
   }
 
 protected:
-  AuthClientPlayerCreateMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  AuthClientPlayerCreateMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_name(msg_buf + 6, -1, true, true, false), m_gender(
           msg_buf + 6 + m_name.arrival_len(), -1, true, true, false), m_code(
           msg_buf + 6 + m_name.arrival_len() + m_gender.arrival_len(), -1, true, true, false) {
@@ -367,7 +367,7 @@ protected:
 // all just passed through to vault server
 class AuthClientVaultMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner);
 
   virtual bool check_useable() const;
 
@@ -395,7 +395,7 @@ public:
   }
 
 protected:
-  AuthClientVaultMessage(const u_char *msg_buf, size_t msg_len, int msg_type, bool become_owner) :
+  AuthClientVaultMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type, bool become_owner) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_owns_buf(become_owner) {
   }
 
@@ -410,7 +410,7 @@ protected:
 
 class AuthClientAgeRequestMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   msg_class_t msg_class() const {
     return AgeReq;
@@ -425,12 +425,12 @@ public:
   UruString& name() {
     return m_name;
   }
-  const u_char* uuid() const {
+  const uint8_t* uuid() const {
     return m_buf + m_buflen - 16;
   }
 
 protected:
-  AuthClientAgeRequestMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  AuthClientAgeRequestMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_name(msg_buf + 6, msg_len - 22, true, true, false) {
   }
 
@@ -439,14 +439,14 @@ protected:
 
 class AuthClientLogMessage: public AuthClientMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len);
 
   msg_class_t msg_class() const {
     return Log;
   }
 
 protected:
-  AuthClientLogMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  AuthClientLogMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       AuthClientMessage(msg_buf, msg_len, msg_type) {
   }
 };

@@ -41,20 +41,20 @@
 
 class AuthServer: public Server {
 public:
-  AuthServer(int the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address);
+  AuthServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address);
   void setkey(void *keydata) {
     m_keydata = keydata;
   }
   virtual ~AuthServer();
 
-  int type() const {
+  int32_t type() const {
     return TYPE_AUTH;
   }
   const char* type_name() const {
     return "auth";
   }
 
-  int init();
+  int32_t init();
   bool shutdown(reason_t reason);
 
   reason_t message_read(Connection *conn, NetworkMessage *msg);
@@ -81,13 +81,13 @@ public:
 
   class AuthConnection: public Server::Connection {
   public:
-    AuthConnection(int the_fd, state_t &state, Logger *log) :
+    AuthConnection(int32_t the_fd, state_t &state, Logger *log) :
         Connection(the_fd), m_state(state), m_log(log) {
       m_interval = KEEPALIVE_INTERVAL * 4;
       gettimeofday(&m_timeout, NULL);
       m_timeout.tv_sec += m_interval;
     }
-    NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+    NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
   private:
     state_t &m_state;
     Logger *m_log;
@@ -132,18 +132,18 @@ protected:
 
   // connection state tracking
   state_t m_state;
-  u_int m_reqid;
+  uint32_t m_reqid;
   char *m_download_dir;
   FileTransaction *m_download;
 
   // other data
   uint32_t m_nonce; // little-endian server nonce
-  u_char m_client_uuid[16];
+  uint8_t m_client_uuid[16];
   bool m_is_visitor;
   kinum_t m_kinum;
 #ifdef PELLET_SCORE_CACHE
-  u_int m_pelletreq;
-  u_char *m_pelletbuf;
+  uint32_t m_pelletreq;
+  uint8_t *m_pelletbuf;
 #endif
 };
 

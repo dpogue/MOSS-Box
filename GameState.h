@@ -95,7 +95,7 @@ public:
    * GameMgr stuff -- Heek, Quabs, Markers, Blue Spiral, etc.
    */
   // this returns NULL if the game type is not supported
-  GameMgr* setup_manager_for(kinum_t player, const u_char *uuid, bool &needs_new_id,
+  GameMgr* setup_manager_for(kinum_t player, const uint8_t *uuid, bool &needs_new_id,
   /* next two for marker games */
   uint32_t id1, uint32_t id2);
   // this returns NULL if there isn't a manager with that ID
@@ -119,7 +119,7 @@ protected:
   public:
     PlKey key;
     kinum_t who;
-    u_int lockseq;
+    uint32_t lockseq;
     ObjectLock(PlKey &plkey);
     ~ObjectLock() {
       key.delete_name();
@@ -134,7 +134,7 @@ protected:
     void callback();
   protected:
     ObjectLock *m_lock;
-    u_int m_lockseq;
+    uint32_t m_lockseq;
   };
   // GameServer's timer queue
   Server::TimerQueue *m_timers; // do not delete!

@@ -27,14 +27,14 @@
 // SDLState also uses it
 class parse_error: public std::runtime_error {
 public:
-  parse_error(unsigned int lineno, const std::string &error = "") :
+  parse_error(unsigned int32_t lineno, const std::string &error = "") :
       std::runtime_error(error), m_line(lineno) {
   }
-  unsigned int lineno() const {
+  unsigned int32_t lineno() const {
     return m_line;
   }
 protected:
-  unsigned int m_line;
+  unsigned int32_t m_line;
 private:
   parse_error();
 };
@@ -42,14 +42,14 @@ private:
 // overlong_message is used by *Message
 class overlong_message: public std::runtime_error {
 public:
-  overlong_message(unsigned int claimed_len, const std::string &error = "") :
+  overlong_message(unsigned int32_t claimed_len, const std::string &error = "") :
       std::runtime_error(error), m_claimed(claimed_len) {
   }
-  unsigned int claimed_len() const {
+  unsigned int32_t claimed_len() const {
     return m_claimed;
   }
 protected:
-  unsigned int m_claimed;
+  unsigned int32_t m_claimed;
 private:
   overlong_message();
 };

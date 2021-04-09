@@ -96,8 +96,8 @@ static const char *usage = "moss_auth|moss_file <file no> <config file>\n";
 
 #define SHUTDOWN 0
 #define SIGNAL_RESPONSES 1
-static int todo[SIGNAL_RESPONSES] = { 0 };
-static void sig_handler(int sig) {
+static int32_t todo[SIGNAL_RESPONSES] = { 0 };
+static void sig_handler(int32_t sig) {
   if (sig == SIGTERM || sig == SIGINT) {
     todo[SHUTDOWN] = 1;
   }
@@ -105,13 +105,13 @@ static void sig_handler(int sig) {
 
 class ShutdownProcessor: public Server::SignalProcessor {
 public:
-  Server::reason_t signalled(int *todo, Server *s) {
+  Server::reason_t signalled(int32_t *todo, Server *s) {
     return Server::SERVER_SHUTDOWN;
   }
 };
 
-int main(int argc, char *argv[]) {
-  int fd;
+int32_t main(int32_t argc, char *argv[]) {
+  int32_t fd;
   long ret;
   struct sockaddr_in vault_addr;
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
   /* configuration controls */
 
   char *vault_addr_name, *log_dir, *log_level, *auth_dir, *file_dir, *game_dir, *auth_key_file, *game_key_file;
-  int vault_port;
+  int32_t vault_port;
   vault_addr_name = log_dir = log_level = auth_dir = file_dir = game_dir = auth_key_file = NULL;
   ConfigParser *disp_config = new ConfigParser();
 

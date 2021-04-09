@@ -69,7 +69,7 @@ public:
   // the first bitfield ("mask" in Alcugs and therefore the Wireshark plugin))
   // but len is the actual buffer length (which should be equal to the 
   // length value + 4)
-  static bool check_len_by_bitfields(const u_char *buf, size_t len);
+  static bool check_len_by_bitfields(const uint8_t *buf, size_t len);
 
   // This constructor is for building a node up from data (e.g. from the DB).
   VaultNode();
@@ -82,7 +82,7 @@ public:
   // delete[] that buffer, and after the VaultNode is done. Also it is
   // expected that calling code will NOT use uuid_ptr() or data_ptr() to
   // write data to the node.
-  VaultNode(const u_char *inbuf, bool copy_data = true);
+  VaultNode(const uint8_t *inbuf, bool copy_data = true);
   virtual ~VaultNode();
 
   // if we ever find a use of bitfield2, we'll have to add an argument to
@@ -102,18 +102,18 @@ public:
   // value is in little-endian (transmission) order
   uint32_t& num_ref(vault_bitfield_t bit);
   // the returned buffer will have UUID_RAW_LEN bytes
-  u_char* uuid_ptr(vault_bitfield_t bit);
+  uint8_t* uuid_ptr(vault_bitfield_t bit);
   // the returned buffer will have len bytes; the len should not include the
   // four-byte length value, which will be placed in the first four bytes of
   // what is allocated and the buffer after it is returned -- note for
   // widestrings this length is (char count)*2 and the string should be
   // null-terminated, so len is (strlen(string)+1)*2
-  u_char* data_ptr(vault_bitfield_t bit, u_int len);
+  uint8_t* data_ptr(vault_bitfield_t bit, uint32_t len);
 
   const uint32_t num_val(vault_bitfield_t bit) const; // host order
-  const u_char* const_uuid_ptr(vault_bitfield_t bit) const;
+  const uint8_t* const_uuid_ptr(vault_bitfield_t bit) const;
   // the returned buffer includes the length as the first four bytes
-  const u_char* const_data_ptr(vault_bitfield_t bit) const;
+  const uint8_t* const_data_ptr(vault_bitfield_t bit) const;
 
   // accessors
   vault_nodetype_t type() const;
@@ -124,29 +124,29 @@ public:
     return m_bits2;
   }
   // this includes the four bytes for the length value itself
-  u_int message_len() const {
+  uint32_t message_len() const {
     return m_length + 4;
   }
 
   static const char* tablename_for_type(vault_nodetype_t type);
 
   // these have the standard meaning
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) const;
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) const;
 
 protected:
   typedef union {
     uint32_t intval;
-    u_char *bufval;
+    uint8_t *bufval;
   } field_t;
 
-  u_int m_length;
+  uint32_t m_length;
   uint32_t m_bits1;
   uint32_t m_bits2;
   field_t m_fields1[32]; // or, an STL list might be better, but it's unclear
   bool m_owns_bufs;
-  u_char m_header[12];
+  uint8_t m_header[12];
 };
 
 #endif /* _VAULT_NODE_H_ */

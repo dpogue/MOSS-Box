@@ -66,7 +66,7 @@ public:
   // Initialize state. Returns 0 for success and < 0 for other errors during
   // initialization.
   // throws std::bad_alloc
-  virtual int init() {
+  virtual int32_t init() {
     return 0;
   }
 
@@ -111,7 +111,7 @@ public:
   // Notify the Server that a connection has been accept()ed and pass in first
   // byte; from this moment on the Server is responsible for closing the fd
   // (even if it does so immediately).
-  virtual void add_client_conn(int fd, u_char first) {
+  virtual void add_client_conn(int32_t fd, uint8_t first) {
     close(fd);
   }
 
@@ -155,14 +155,14 @@ public:
   // non-zero. Note the SignalProcessor is *not* deleted by ~Server().
   class SignalProcessor {
   public:
-    virtual reason_t signalled(int *todo, Server *s) {
+    virtual reason_t signalled(int32_t *todo, Server *s) {
       return NO_SHUTDOWN;
     }
     virtual ~SignalProcessor() {
     }
     ;
   };
-  void set_signal_data(int *flags, size_t flagct, SignalProcessor *processor) {
+  void set_signal_data(int32_t *flags, size_t flagct, SignalProcessor *processor) {
     m_signal_flags = flags;
     m_signal_ct = flagct;
     m_signal_processor = processor;
@@ -179,7 +179,7 @@ public:
     m_main_thread = pthread_self();
   }
   // constructor for non-child servers
-  Server(int listen_fd, uint32_t ipaddr) :
+  Server(int32_t listen_fd, uint32_t ipaddr) :
       m_serv_dir(NULL), m_is_thread(false), m_signal_flags(NULL), m_signal_ct(0), m_signal_processor(NULL), m_log(NULL), m_is_child(
           false), m_fd(listen_fd), m_ipaddr(ipaddr), m_id(0), m_shutdown_done(false), m_in_shutdown(false) {
   }
@@ -194,7 +194,7 @@ public:
     }
   }
 
-  virtual int type() const = 0;
+  virtual int32_t type() const = 0;
   virtual const char* type_name() const = 0;
 
   /*
@@ -207,10 +207,10 @@ public:
   // or a new one. This should be used for "child" servers only, with a
   // valid conn_fd representing the client connection.
   // Side effect: this->m_ipaddr is set to the connection's local IP address.
-  void setup_logger(int conn_fd, const char *log_level, Logger *to_share) {
+  void setup_logger(int32_t conn_fd, const char *log_level, Logger *to_share) {
     internal_setup_logger(conn_fd, log_level, to_share, NULL);
   }
-  void setup_logger(int conn_fd, const char *log_level, const char *log_dir) {
+  void setup_logger(int32_t conn_fd, const char *log_level, const char *log_dir) {
     internal_setup_logger(conn_fd, log_level, NULL, log_dir);
   }
   // Set the server's Logger. This should be used for non-"child" servers.
@@ -229,7 +229,7 @@ public:
   }
 
   // Get the listen socket
-  int listen_fd() const {
+  int32_t listen_fd() const {
     return m_fd;
   }
   // Get a reference to the list of connections (it is called only once)
@@ -237,7 +237,7 @@ public:
     return m_conns;
   }
   // Get the pointer to the signal handler's array (called once)
-  int* get_signal_flags() const {
+  int32_t* get_signal_flags() const {
     return m_signal_flags;
   }
   size_t get_signal_flagct() const {
@@ -284,12 +284,12 @@ public:
   // is only necessary if FORK_ENABLE is defined, I am choosing to
   // do it this way instead.
 private:
-  int **m_accepted_fds;
-  int *m_fds_size;
+  int32_t **m_accepted_fds;
+  int32_t *m_fds_size;
 protected:
-  void cleanup_accepted_fds(int fd_to_keep);
+  void cleanup_accepted_fds(int32_t fd_to_keep);
 public:
-  void set_accepted_fds(int **accepted_fds, int *fds_size);
+  void set_accepted_fds(int32_t **accepted_fds, int32_t *fds_size);
 #endif
 
 protected:
@@ -302,12 +302,12 @@ protected:
   /*
    * local state
    */
-  int *m_signal_flags;
+  int32_t *m_signal_flags;
   size_t m_signal_ct;
   SignalProcessor *m_signal_processor;
   Logger *m_log;
   bool m_is_child;
-  int m_fd;
+  int32_t m_fd;
   // note, this *has* to be a list so that iterators work across removals
   std::list<Connection*> m_conns;
 
@@ -327,7 +327,7 @@ protected:
   // shutdown has been asynchronously *requested*
   bool m_in_shutdown;
 
-  virtual void internal_setup_logger(int conn_fd, const char *log_level, Logger *to_share, const char *log_dir);
+  virtual void internal_setup_logger(int32_t conn_fd, const char *log_level, Logger *to_share, const char *log_dir);
   // utility function
   BackendConnection* connect_to_backend(const struct sockaddr_in *vault_addr);
 #ifdef FORK_ENABLE
@@ -350,10 +350,10 @@ public:
    */
   class Connection {
   public:
-    int fd() const {
+    int32_t fd() const {
       return m_fd;
     }
-    void set_fd(int fd) {
+    void set_fd(int32_t fd) {
       m_fd = fd;
     }
     bool in_connect() const {
@@ -379,17 +379,17 @@ public:
     }
 
     struct timeval m_timeout; // timeout if this time is hit
-    u_int m_interval; // in seconds; 0 for no timeout
+    uint32_t m_interval; // in seconds; 0 for no timeout
     struct timeval m_lastread;
 
     Buffer *m_readbuf;
-    u_int m_read_fill;
-    u_int m_read_off;
+    uint32_t m_read_fill;
+    uint32_t m_read_off;
     Buffer *m_bigbuf;
-    u_char *m_writebuf;
-    u_int m_write_fill;
+    uint8_t *m_writebuf;
+    uint32_t m_write_fill;
 
-    Connection(int fd = -1, MessageQueue *writeq = NULL) :
+    Connection(int32_t fd = -1, MessageQueue *writeq = NULL) :
         m_interval(0), m_read_fill(0), m_read_off(0), m_bigbuf(NULL), m_writebuf(NULL), m_write_fill(0), m_fd(fd), m_in_connect(
             false), m_in_shutdown(false), m_is_encrypted(false), m_c2s_rc4(NULL), m_s2c_rc4(NULL) {
 
@@ -429,7 +429,7 @@ public:
 
     // this function should call the appropriate connection type's
     // message class's make_if_enough
-    virtual NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false) = 0;
+    virtual NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false) = 0;
 
     /*
      * Encrypted connection management
@@ -442,8 +442,8 @@ public:
     }
     // set up the keys
     // can throw std::bad_alloc
-    void set_rc4_key(const u_char *session_key);
-    reason_t setup_rc4_key(const u_char *nego_buf, size_t nego_buf_len, const void *keydata, int fd, Logger *log);
+    void set_rc4_key(const uint8_t *session_key);
+    reason_t setup_rc4_key(const uint8_t *nego_buf, size_t nego_buf_len, const void *keydata, int32_t fd, Logger *log);
     // when converting a connection to encrypted, call this
     // XXX can throw std::bad_alloc
     void set_encrypted() {
@@ -451,18 +451,18 @@ public:
       if (!m_writebuf) {
         // do not change this from BUFSIZE; XXX the select loop assumes this
         // length!
-        m_writebuf = new u_char[BUFSIZE];
+        m_writebuf = new uint8_t[BUFSIZE];
       }
     }
     // do not call these without having called set_encrypted and set_rc4_key!
-    void encrypt(u_char *buf, size_t len) {
+    void encrypt(uint8_t *buf, size_t len) {
 #ifdef HAVE_OPENSSL_RC4
       RC4(m_s2c_rc4, len, buf, buf);
 #else
       rc4_encrypt(m_s2c_rc4, buf, len);
 #endif
     }
-    void decrypt(u_char *buf, size_t len) {
+    void decrypt(uint8_t *buf, size_t len) {
 #ifdef HAVE_OPENSSL_RC4
       RC4(m_c2s_rc4, len, buf, buf);
 #else
@@ -471,7 +471,7 @@ public:
     }
 
   protected:
-    int m_fd;
+    int32_t m_fd;
     bool m_in_connect;
     bool m_in_shutdown;
     MessageQueue *m_msg_queue;
@@ -494,11 +494,11 @@ public:
         Connection(-1, writeq) {
     }
     // for things listening for backend connections
-    BackendConnection(int fd) :
+    BackendConnection(int32_t fd) :
         Connection(fd) {
     }
 
-    virtual NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
+    virtual NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner = false);
   };
 
   /*
@@ -513,7 +513,7 @@ public:
   class TimerQueue: public Connection {
   public:
     TimerQueue();
-    NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+    NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
       throw std::logic_error("A TimerQueue 'Connection' can't receive data");
     }
     ~TimerQueue();
@@ -561,7 +561,7 @@ public:
   protected:
     std::deque<Timer*> m_queue;
     void set_timeout();
-    static int timer_compare(const Timer *a, const Timer *b) {
+    static int32_t timer_compare(const Timer *a, const Timer *b) {
       return timeval_lessthan(b->m_when, a->m_when);
     }
   };
@@ -572,7 +572,7 @@ public:
  * startup operations and is the select loop, managing reading and writing
  * buffers.
  */
-//int serv_main(Server *server); // but, it must be the following type
+//int32_t serv_main(Server *server); // but, it must be the following type
 void* serv_main(void *serv);
 
 #endif /* _MOSS_SERV_H_ */

@@ -52,7 +52,7 @@
 #include "FileTransaction.h"
 #include "AuthMessage.h"
 
-NetworkMessage* AuthClientMessage::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+NetworkMessage* AuthClientMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   NetworkMessage *in = NULL;
   bool became_owner = false;
 
@@ -142,7 +142,7 @@ NetworkMessage* AuthClientMessage::make_if_enough(const u_char *buf, size_t len,
         *want_len = -1;
         return NULL;
       }
-      u_int total = 24;
+      uint32_t total = 24;
       total += (2 * read16(buf, 22)); // urustring?
       if (total > 24 + (256 * 2)/*256-char SMTP limit on email addresses*/) {
         throw overlong_message(total);
@@ -212,16 +212,16 @@ bool AuthClientMessage::check_useable() const {
   return false;
 }
 
-AuthServerMessage::AuthServerMessage(const u_char *contents, size_t content_len, int type) :
+AuthServerMessage::AuthServerMessage(const uint8_t *contents, size_t content_len, int32_t type) :
     NetworkMessage(type) {
 
-  m_buf = new u_char[content_len];
+  m_buf = new uint8_t[content_len];
   m_buflen = content_len;
   memcpy(m_buf, contents, m_buflen);
 }
 
-u_int AuthServerMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
-  u_int iov_off = 0;
+uint32_t AuthServerMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
+  uint32_t iov_off = 0;
   if (iov_off < iov_ct && start_at == 0) {
 #ifdef WORDS_BIGENDIAN
     iov[iov_off].iov_base = ((char*)&m_type)+3;
@@ -233,7 +233,7 @@ u_int AuthServerMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int star
     start_at += 1;
   }
   if (iov_off < iov_ct && start_at < 2) {
-    iov[iov_off].iov_base = (u_char*) &zero;
+    iov[iov_off].iov_base = (uint8_t*) &zero;
     iov[iov_off].iov_len = 1;
     iov_off++;
     start_at += 1;
@@ -246,7 +246,7 @@ u_int AuthServerMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int star
   return iov_off;
 }
 
-u_int AuthServerMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t AuthServerMessage::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   if (byte_ct + start_at < message_len()) {
     *msg_done = false;
     return 0;
@@ -255,11 +255,11 @@ u_int AuthServerMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, boo
   return (byte_ct + start_at) - message_len();
 }
 
-u_int AuthServerMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
-  u_int i = 0;
+uint32_t AuthServerMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
+  uint32_t i = 0;
   *msg_done = false;
   if (start_at == 0 && len > i) {
-    buffer[i] = (u_char) m_type;
+    buffer[i] = (uint8_t) m_type;
     i++;
     start_at++;
   }
@@ -269,7 +269,7 @@ u_int AuthServerMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at,
     start_at++;
   }
   if (len > i) {
-    u_int to_copy = m_buflen - (start_at - 2);
+    uint32_t to_copy = m_buflen - (start_at - 2);
     if ((len - i) < to_copy) {
       to_copy = len - i;
     } else {
@@ -285,18 +285,18 @@ AuthServerLoginMessage::AuthServerLoginMessage(uint32_t reqid, status_code_t sta
     AuthServerMessage(kAuth2Cli_AcctLoginReply) {
 
   m_buflen = 48;
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   memset(m_buf, 0, m_buflen);
   write32(m_buf, 0, reqid);
   write32(m_buf, 4, status);
 }
 
-AuthServerLoginMessage::AuthServerLoginMessage(uint32_t reqid, status_code_t status, const u_char *uuid,
-    customer_type_t customer_type, const u_char *key) :
+AuthServerLoginMessage::AuthServerLoginMessage(uint32_t reqid, status_code_t status, const uint8_t *uuid,
+    customer_type_t customer_type, const uint8_t *key) :
     AuthServerMessage(kAuth2Cli_AcctLoginReply) {
 
   m_buflen = 48;
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   write32(m_buf, 0, reqid);
   write32(m_buf, 4, status);
   memcpy(m_buf + 8, uuid, 16);
@@ -309,12 +309,12 @@ AuthServerChangePassMessage::AuthServerChangePassMessage(uint32_t reqid, status_
     AuthServerMessage(kAuth2Cli_AcctChangePasswordReply) {
 
   m_buflen = 8;
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   write32(m_buf, 0, reqid);
   write32(m_buf, 4, status);
 }
 
-AuthServerFileMessage::AuthServerFileMessage(FileTransaction *trans, int msg_type) :
+AuthServerFileMessage::AuthServerFileMessage(FileTransaction *trans, int32_t msg_type) :
     AuthServerMessage(msg_type), m_transaction(trans)
 #ifdef DOWNLOAD_NO_ACKS
     , m_header_bytes(0)
@@ -325,7 +325,7 @@ AuthServerFileMessage::AuthServerFileMessage(FileTransaction *trans, int msg_typ
   } else {
     m_buflen = 22;
   }
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   write16(m_buf, 0, m_type);
   write32(m_buf, 2, m_transaction->request_id());
   write32(m_buf, 6, 0);
@@ -370,7 +370,7 @@ void AuthServerFileMessage::next_offset() {
 #endif
 
 size_t AuthServerFileMessage::message_len() const {
-  u_int len = m_transaction->chunk_length();
+  uint32_t len = m_transaction->chunk_length();
   if (m_type == kAuth2Cli_FileListReply) {
     len = (len * 2) + 2;
   }
@@ -379,14 +379,14 @@ size_t AuthServerFileMessage::message_len() const {
 
 // these three methods are unfortunately nearly identical to
 // FileServerMessage's :-(
-u_int AuthServerFileMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
-  u_int i = 0;
+uint32_t AuthServerFileMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
+  uint32_t i = 0;
   bool done = true;
 
 #ifdef DOWNLOAD_NO_ACKS
   // start_at will encompass the entire message length, including the headers
   if (m_type == kAuth2Cli_FileDownloadChunk) {
-    u_int so_far = m_header_bytes+m_transaction->chunk_offset();
+    uint32_t so_far = m_header_bytes+m_transaction->chunk_offset();
     if (start_at < so_far) {
 #ifdef DEBUG_ENABLE
       throw std::logic_error("Auth download fill_iovecs start_at too small");
@@ -414,7 +414,7 @@ u_int AuthServerFileMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int 
   }
   if (done && m_type == kAuth2Cli_FileListReply) {
     if (i < iov_ct && start_at < 2) {
-      iov[i].iov_base = (u_char*) &zero;
+      iov[i].iov_base = (uint8_t*) &zero;
       iov[i].iov_len = 2 - start_at;
       i++;
     } else {
@@ -435,11 +435,11 @@ u_int AuthServerFileMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int 
   return i;
 }
 
-u_int AuthServerFileMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t AuthServerFileMessage::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
 #ifdef DOWNLOAD_NO_ACKS
   // start_at will encompass the entire message length, including the headers
   if (m_type == kAuth2Cli_FileDownloadChunk) {
-    u_int so_far = m_header_bytes+m_transaction->chunk_offset();
+    uint32_t so_far = m_header_bytes+m_transaction->chunk_offset();
     if (start_at < so_far) {
 #ifdef DEBUG_ENABLE
       throw std::logic_error("Auth download iovecs_written_bytes start_at "
@@ -490,14 +490,14 @@ u_int AuthServerFileMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at,
   return byte_ct;
 }
 
-u_int AuthServerFileMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
-  u_int offset = 0;
+uint32_t AuthServerFileMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
+  uint32_t offset = 0;
   *msg_done = false;
 
 #ifdef DOWNLOAD_NO_ACKS
   // start_at will encompass the entire message length, including the headers
   if (m_type == kAuth2Cli_FileDownloadChunk) {
-    u_int so_far = m_header_bytes+m_transaction->chunk_offset();
+    uint32_t so_far = m_header_bytes+m_transaction->chunk_offset();
     if (start_at < so_far) {
 #ifdef DEBUG_ENABLE
       throw std::logic_error("Auth download fill_buffer start_at too small");
@@ -552,7 +552,7 @@ u_int AuthServerFileMessage::fill_buffer(u_char *buffer, size_t len, u_int start
 #endif
     // this is a repeat of the above code, but it can be simpler because it
     // assumes start_at is 0
-    u_int wlen = m_buflen;
+    uint32_t wlen = m_buflen;
     if (wlen > len-offset) {
       wlen = len-offset;
     }
@@ -580,13 +580,13 @@ AuthServerPlayerCreateMessage::AuthServerPlayerCreateMessage(uint32_t reqid, sta
   } else {
     m_buflen = 16 + name->send_len(true, true, false) + gender->send_len(true, true, false);
   }
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   write32(m_buf, 0, reqid);
   write32(m_buf, 4, status);
   if (status == NO_ERROR) {
     write32(m_buf, 8, kinum);
     write32(m_buf, 12, acct_type);
-    u_int write_at = 16;
+    uint32_t write_at = 16;
     memcpy(m_buf + write_at, name->get_str(true, true, false), name->send_len(true, true, false));
     write_at += name->send_len(true, true, false);
     memcpy(m_buf + write_at, gender->get_str(true, true, false), gender->send_len(true, true, false));
@@ -618,19 +618,19 @@ AuthServerVaultMessage::~AuthServerVaultMessage() {
   }
 }
 
-u_int AuthServerVaultMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
+uint32_t AuthServerVaultMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
   return m_passthru->fill_iovecs(iov, iov_ct, start_at + 16);
 }
 
-u_int AuthServerVaultMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t AuthServerVaultMessage::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   return m_passthru->iovecs_written_bytes(byte_ct, start_at + 16, msg_done);
 }
 
-u_int AuthServerVaultMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
+uint32_t AuthServerVaultMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
   return m_passthru->fill_buffer(buffer, len, start_at + 16, msg_done);
 }
 
-AuthServerAgeReplyMessage::AuthServerAgeReplyMessage(uint32_t reqid, status_code_t result, const u_char *contents,
+AuthServerAgeReplyMessage::AuthServerAgeReplyMessage(uint32_t reqid, status_code_t result, const uint8_t *contents,
     size_t content_len) :
     AuthServerMessage(contents, content_len, kAuth2Cli_AgeReply) {
 
@@ -639,8 +639,8 @@ AuthServerAgeReplyMessage::AuthServerAgeReplyMessage(uint32_t reqid, status_code
   write32(m_topbuf, 6, result);
 }
 
-u_int AuthServerAgeReplyMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
-  u_int iov_off = 0;
+uint32_t AuthServerAgeReplyMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
+  uint32_t iov_off = 0;
   if (iov_off < iov_ct) {
     if (start_at < 10) {
       iov[iov_off].iov_base = m_topbuf + start_at;
@@ -659,8 +659,8 @@ u_int AuthServerAgeReplyMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_
   return iov_off;
 }
 
-u_int AuthServerAgeReplyMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
-  u_int i = 0;
+uint32_t AuthServerAgeReplyMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
+  uint32_t i = 0;
   *msg_done = false;
   if (start_at < 10) {
     i = 10 - start_at;
@@ -671,7 +671,7 @@ u_int AuthServerAgeReplyMessage::fill_buffer(u_char *buffer, size_t len, u_int s
     start_at += i;
   }
   if (len > i) {
-    u_int to_copy = m_buflen - (start_at - 10);
+    uint32_t to_copy = m_buflen - (start_at - 10);
     if ((len - i) < to_copy) {
       to_copy = len - i;
     } else {
@@ -687,11 +687,11 @@ AuthServerKickMessage::AuthServerKickMessage(status_code_t reason) :
     AuthServerMessage(kAuth2Cli_KickedOff) {
 
   m_buflen = 4;
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   write32(m_buf, 0, reason);
 }
 
-u_int AuthPingMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
+uint32_t AuthPingMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
   if (iov_ct > 0) {
     iov[0].iov_base = m_buf + start_at;
     iov[0].iov_len = m_buflen - start_at;
@@ -701,7 +701,7 @@ u_int AuthPingMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_
   }
 }
 
-u_int AuthPingMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t AuthPingMessage::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   if (byte_ct + start_at >= m_buflen) {
     *msg_done = true;
     return (byte_ct + start_at) - m_buflen;
@@ -711,7 +711,7 @@ u_int AuthPingMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool 
   }
 }
 
-u_int AuthPingMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
+uint32_t AuthPingMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
   if (m_buflen - start_at <= len) {
     memcpy(buffer, m_buf + start_at, m_buflen - start_at);
     *msg_done = true;
@@ -723,17 +723,17 @@ u_int AuthPingMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, b
   }
 }
 
-NetworkMessage* AuthClientLoginMessage::make_if_enough(const u_char *buf, size_t len, int *want_len) {
+NetworkMessage* AuthClientLoginMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len) {
   if (len < 12) {
     *want_len = -1;
     return NULL;
   }
-  u_int total = 12;
+  uint32_t total = 12;
   total += (2 * read16(buf, 10)); // urustring ?
   if (total > 12 + 2 + (64 * 2)/*64 is max username length*/) {
     throw overlong_message(total);
   }
-  u_int hash_loc = total;
+  uint32_t hash_loc = total;
   total += 20;
   if (len < total + 2) {
     *want_len = -1;
@@ -744,7 +744,7 @@ NetworkMessage* AuthClientLoginMessage::make_if_enough(const u_char *buf, size_t
     *want_len = -1;
     return NULL;
   }
-  u_int os_loc = total;
+  uint32_t os_loc = total;
   total += 2 + (2 * read16(buf, total)); // urustring ?
   if (total > 12 + 2 + (64 * 2) + 150/*guess*/+ 150/*148-byte os name?*/) {
     throw overlong_message(total);
@@ -756,17 +756,17 @@ NetworkMessage* AuthClientLoginMessage::make_if_enough(const u_char *buf, size_t
   return new AuthClientLoginMessage(buf, total, kCli2Auth_AcctLoginRequest, hash_loc, os_loc);
 }
 
-NetworkMessage* AuthClientChangePassMessage::make_if_enough(const u_char *buf, size_t len, int *want_len) {
+NetworkMessage* AuthClientChangePassMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len) {
   if (len < 28) {
     *want_len = -1;
     return NULL;
   }
-  u_int total = 8;
+  uint32_t total = 8;
   total += (2 * read16(buf, 6)); // urustring ?
   if (total > 26 + 2 + (64 * 2)/*64 is max username length*/) {
     throw overlong_message(total);
   }
-  u_int hash_loc = total;
+  uint32_t hash_loc = total;
   total += 20;
   if (len < total) {
     *want_len = total;
@@ -776,9 +776,9 @@ NetworkMessage* AuthClientChangePassMessage::make_if_enough(const u_char *buf, s
   kCli2Auth_AcctChangePasswordRequest, hash_loc);
 }
 
-NetworkMessage* AuthClientFileMessage::make_if_enough(const u_char *buf, size_t len, int *want_len) {
+NetworkMessage* AuthClientFileMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len) {
   uint16_t type = read16(buf, 0);
-  int total = -1;
+  int32_t total = -1;
   switch (type) {
   case kCli2Auth_FileDownloadChunkAck:
     total = 6;
@@ -789,7 +789,7 @@ NetworkMessage* AuthClientFileMessage::make_if_enough(const u_char *buf, size_t 
     }
     total = 8;
     total += 2 * read16(buf, 6);
-    if (len < (u_int) total + 2) {
+    if (len < (uint32_t) total + 2) {
       total = -1;
       break;
     }
@@ -811,7 +811,7 @@ NetworkMessage* AuthClientFileMessage::make_if_enough(const u_char *buf, size_t 
     throw std::logic_error("AuthClientFileMessage::make_if_enough called "
         "for an unhandled type");
   }
-  if (total == -1 || (int) len < total) {
+  if (total == -1 || (int32_t) len < total) {
     *want_len = total;
     return NULL;
   }
@@ -819,12 +819,12 @@ NetworkMessage* AuthClientFileMessage::make_if_enough(const u_char *buf, size_t 
 }
 
 NetworkMessage*
-AuthClientPlayerCreateMessage::make_if_enough(const u_char *buf, size_t len, int *want_len) {
+AuthClientPlayerCreateMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len) {
   if (len < 8) {
     *want_len = -1;
     return NULL;
   }
-  u_int total = 8 + 2 * (read16(buf, 6)); // urustring?
+  uint32_t total = 8 + 2 * (read16(buf, 6)); // urustring?
   if (total > 8 + (62 * 2)/*62 is max avatar name length*/) {
     throw overlong_message(total);
   }
@@ -846,9 +846,9 @@ AuthClientPlayerCreateMessage::make_if_enough(const u_char *buf, size_t len, int
   kCli2Auth_PlayerCreateRequest);
 }
 
-NetworkMessage* AuthClientVaultMessage::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+NetworkMessage* AuthClientVaultMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   uint16_t type = read16(buf, 0);
-  int total = -1;
+  int32_t total = -1;
   switch (type) {
   case kCli2Auth_VaultNodeCreate:
   case kCli2Auth_VaultNodeFind:
@@ -894,8 +894,8 @@ NetworkMessage* AuthClientVaultMessage::make_if_enough(const u_char *buf, size_t
     break;
   case kCli2Auth_VaultInitAgeRequest:
     total = 38;
-    for (int i = 0; i < 4; i++) {
-      if ((int) len < total + 2) {
+    for (int32_t i = 0; i < 4; i++) {
+      if ((int32_t) len < total + 2) {
         total = -9; // so that when 8 is added below it's still -1
         break;
       }
@@ -939,7 +939,7 @@ NetworkMessage* AuthClientVaultMessage::make_if_enough(const u_char *buf, size_t
   if (total > 600 * 1024/*let images be nearly 600k, which is way too much*/) {
     throw overlong_message(total);
   }
-  if (total == -1 || (int) len < total) {
+  if (total == -1 || (int32_t) len < total) {
     *want_len = total;
     return NULL;
   }
@@ -947,7 +947,7 @@ NetworkMessage* AuthClientVaultMessage::make_if_enough(const u_char *buf, size_t
 }
 
 bool AuthClientVaultMessage::check_useable() const {
-  u_int start = 0;
+  uint32_t start = 0;
 
   switch (m_type) {
   case kCli2Auth_VaultNodeFetch:
@@ -1002,7 +1002,7 @@ bool AuthClientVaultMessage::check_useable() const {
   return false;
 }
 
-NetworkMessage* AuthClientAgeRequestMessage::make_if_enough(const u_char *buf, size_t len, int *want_len) {
+NetworkMessage* AuthClientAgeRequestMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len) {
   if (len < 8) {
     *want_len = -1;
     return NULL;
@@ -1011,13 +1011,13 @@ NetworkMessage* AuthClientAgeRequestMessage::make_if_enough(const u_char *buf, s
   if (*want_len > 8 + (128/*string length in PublicAgeList*/* 2) + 16) {
     throw overlong_message(*want_len);
   }
-  if ((int) len < *want_len) {
+  if ((int32_t) len < *want_len) {
     return NULL;
   }
   return new AuthClientAgeRequestMessage(buf, *want_len, buf[0]);
 }
 
-NetworkMessage* AuthClientLogMessage::make_if_enough(const u_char *buf, size_t len, int *want_len) {
+NetworkMessage* AuthClientLogMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len) {
   if (len < 4) {
     *want_len = -1;
     return NULL;
@@ -1026,7 +1026,7 @@ NetworkMessage* AuthClientLogMessage::make_if_enough(const u_char *buf, size_t l
   if (*want_len > 6 + (32 * 1024/*32k is a lot of log*/)) {
     throw overlong_message(*want_len);
   }
-  if ((int) len < *want_len) {
+  if ((int32_t) len < *want_len) {
     return NULL;
   }
   return new AuthClientLogMessage(buf, *want_len, buf[0]);

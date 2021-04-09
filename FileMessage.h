@@ -39,7 +39,7 @@
 
 class FileClientMessage: public NetworkMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len);
 
   bool check_useable() const;
 
@@ -53,15 +53,15 @@ public:
     return read32(m_buf, 8);
   }
   // object_name() only for ManifestRequestTrans and DownloadRequestTrans
-  const u_char* object_name() const {
+  const uint8_t* object_name() const {
     return m_buf + 12;
   }
-  u_int object_name_maxlen() const {
+  uint32_t object_name_maxlen() const {
     return m_buflen - 12;
   }
 
 protected:
-  FileClientMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  FileClientMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       NetworkMessage(msg_buf, msg_len, msg_type) {
   }
 };
@@ -69,8 +69,8 @@ protected:
 class FileServerMessage: public NetworkMessage {
 public:
   FileServerMessage(FileClientMessage *ping);
-  FileServerMessage(FileTransaction *trans, int reply_type);
-  FileServerMessage(uint32_t reqid, status_code_t status, int build_no);
+  FileServerMessage(FileTransaction *trans, int32_t reply_type);
+  FileServerMessage(uint32_t reqid, status_code_t status, int32_t build_no);
 
   virtual ~FileServerMessage() {
     if (m_buf) {
@@ -78,13 +78,13 @@ public:
     }
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 protected:
   FileTransaction *m_transaction;
-  static const int zero;
+  static const int32_t zero;
 
 #ifdef DEBUG_ENABLE
 public:

@@ -83,7 +83,7 @@
 #include "moss_serv.h"
 #include "GatekeeperServer.h"
 
-GatekeeperServer::GatekeeperServer(int the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address) :
+GatekeeperServer::GatekeeperServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address) :
     Server(server_dir, is_a_thread), m_state(START), m_vault_addr(vault_address), m_vault(NULL) {
   Connection *conn = new GatekeeperConnection(the_fd, m_state, m_log);
   m_conns.push_back(conn);
@@ -106,7 +106,7 @@ GatekeeperServer::~GatekeeperServer() {
   // do not delete m_vault (it is in m_conns and deleted in ~Server)
 }
 
-int GatekeeperServer::init() {
+int32_t GatekeeperServer::init() {
   // set up vault/tracking server connection
   m_vault = connect_to_backend(&m_vault_addr);
   if (m_vault) {
@@ -135,7 +135,7 @@ bool GatekeeperServer::shutdown(reason_t reason) {
 }
 
 NetworkMessage*
-GatekeeperServer::GatekeeperConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+GatekeeperServer::GatekeeperConnection::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   NetworkMessage *msg = NULL;
 
   *want_len = -1;
@@ -163,7 +163,7 @@ GatekeeperServer::GatekeeperConnection::make_if_enough(const u_char *buf, size_t
       // (just this once)
 #ifndef NO_ENCRYPTION
       set_encrypted();
-      decrypt((u_char*) buf, len);
+      decrypt((uint8_t*) buf, len);
 #endif
     }
     msg = GatekeeperClientMessage::make_if_enough(buf, len);

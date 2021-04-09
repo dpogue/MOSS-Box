@@ -54,11 +54,11 @@
 #ifdef USE_POSTGRES
 
 #ifdef USE_PQXX
-std::string ESC_BIN(pqxx::transaction_base &T, const u_char *s, u_int len) {
+std::string ESC_BIN(pqxx::transaction_base &T, const uint8_t *s, uint32_t len) {
   std::stringstream res;
   res << std::oct << std::setfill('0');
-  for (u_int i = 0; i < len; i++) {
-    res << std::setw(2) << "\\\\" << std::setw(3) << (int) s[i];
+  for (uint32_t i = 0; i < len; i++) {
+    res << std::setw(2) << "\\\\" << std::setw(3) << (int32_t) s[i];
   }
   // copying is fun!
   return res.str();
@@ -68,7 +68,7 @@ std::string ESC_BIN(pqxx::transaction_base &T, const u_char *s, u_int len) {
 #ifndef USE_PQXX
 void AuthAcctLogin_AcctQuery(BackendObj *conn, char *name,
            AuthAcctLogin_AcctQuery_Result &result) {
-  static int tries = 0;
+  static int32_t tries = 0;
   // if using PQexec instead, use PQescapeStringConn on name
   PGresult *res = PQexecParams(conn->C,
              "SELECT hash,class,id,visitor,banned "
@@ -116,13 +116,13 @@ void AuthAcctLogin_AcctQuery(BackendObj *conn, char *name,
 //    // ???
 //  }
   else {
-    int ntuples = PQntuples(res);
+    int32_t ntuples = PQntuples(res);
     if (ntuples == 0) {
       result.result_code = ERROR_ACCT_NOT_FOUND;
     }
     else if (ntuples == 1 && PQnfields(res) == 5) {
       result.result_code = NO_ERROR;
-      int colnum = PQfnumber(res, "banned");
+      int32_t colnum = PQfnumber(res, "banned");
       char *value;
       if (!PQgetisnull(res, 0, colnum)) {
   value = PQgetvalue(res, 0, colnum);
@@ -137,8 +137,8 @@ void AuthAcctLogin_AcctQuery(BackendObj *conn, char *name,
     result.result_code = ERROR_INVALID_PARAM;
   }
   else {
-    int i;
-    unsigned int data;
+    int32_t i;
+    unsigned int32_t data;
     for (i = 19; i >= 0; i--) {
       /* if we sscanf four bytes at a time, we have to byte-swap
          to big-endian */
@@ -146,7 +146,7 @@ void AuthAcctLogin_AcctQuery(BackendObj *conn, char *name,
         result.result_code = ERROR_INVALID_PARAM;
         break;
       }
-      result.hash[i] = (u_char)(data & 0xFF);
+      result.hash[i] = (uint8_t)(data & 0xFF);
       hash[2*i] = '\0';
     }
   }

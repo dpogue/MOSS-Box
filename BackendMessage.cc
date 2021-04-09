@@ -50,7 +50,7 @@
 
 // isn't this nice and grotty?
 #define START_FILL_TYPE \
-  u_int done = 0, to_do, to_write; \
+  uint32_t done = 0, to_do, to_write; \
   do { \
     if (iovs) { \
       to_do = iov_ct; \
@@ -156,8 +156,8 @@
 #define WRITE_URU_STRING_PTR(var, include_len, is_wide, include_null, flip, lastvar) \
   do { \
     if (var) { \
-      u_int str_len = var->send_len(include_len, is_wide, include_null); \
-      const u_char *str_str \
+      uint32_t str_len = var->send_len(include_len, is_wide, include_null); \
+      const uint8_t *str_str \
   = var->get_str(include_len, is_wide, include_null, flip); \
       if (start_at < str_len) { \
   to_write = str_len-start_at; \
@@ -231,13 +231,13 @@
   *msg_done = true; \
   return done;
 
-NetworkMessage* BackendMessage::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+NetworkMessage* BackendMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   if (len < 4) {
     *want_len = -1;
     return NULL;
   }
   *want_len = read32(buf, 0);
-  if (*want_len > (int) len) {
+  if (*want_len > (int32_t) len) {
     return NULL;
   }
   uint32_t msg_type = read32(buf, 4);
@@ -355,13 +355,13 @@ NetworkMessage* BackendMessage::make_if_enough(const u_char *buf, size_t len, in
 }
 
 NetworkMessage*
-VaultPassthrough_BackendMessage::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+VaultPassthrough_BackendMessage::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   if (len < 18) {
     // this should not happen
     *want_len = 0;
     return NULL;
   }
-  int msgtype = read16(buf, 16);
+  int32_t msgtype = read16(buf, 16);
   switch (msgtype) {
   case kCli2Auth_VaultFetchNodeRefs:
     return new VaultFetchRefs_ToBackendMessage(buf, *want_len, become_owner);
@@ -401,8 +401,8 @@ VaultPassthrough_BackendMessage::make_if_enough(const u_char *buf, size_t len, i
   return NULL;
 }
 
-u_int BackendMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
-  u_int done = 0;
+uint32_t BackendMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
+  uint32_t done = 0;
 
   if (start_at < 16) {
     iov[done].iov_base = m_header + start_at;
@@ -421,7 +421,7 @@ u_int BackendMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_a
   return done;
 }
 
-u_int BackendMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t BackendMessage::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   if (byte_ct + start_at >= message_len()) {
     *msg_done = true;
     return byte_ct - (message_len() - start_at);
@@ -431,8 +431,8 @@ u_int BackendMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *
   }
 }
 
-u_int BackendMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
-  u_int done = 0;
+uint32_t BackendMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
+  uint32_t done = 0;
 
   if (start_at < 16) {
     done = MIN(len, 16 - start_at);
@@ -458,7 +458,7 @@ Hello_BackendMessage::Hello_BackendMessage(uint32_t id1, uint32_t id2, uint32_t 
   setup_header(id1, id2, 4);
 }
 
-Hello_BackendMessage::Hello_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+Hello_BackendMessage::Hello_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(read32(inbuf, 4), inbuf, in_len), m_peer_info(read32le(inbuf, 16)) {
   if (become_owner) {
     delete[] inbuf;
@@ -468,8 +468,8 @@ Hello_BackendMessage::Hello_BackendMessage(const u_char *inbuf, size_t in_len, b
 #endif
 }
 
-u_int Hello_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t Hello_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_peer_info, true);
@@ -486,7 +486,7 @@ KillClient_BackendMessage::KillClient_BackendMessage(uint32_t id1, uint32_t id2,
   }
 }
 
-KillClient_BackendMessage::KillClient_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+KillClient_BackendMessage::KillClient_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(ADMIN_KILL_CLIENT | FROM_SERVER, inbuf, in_len), m_reason(htole32(KillClient_BackendMessage::UNKNOWN)), m_ki(
         0) {
   m_reason = read32le(inbuf, 16);
@@ -501,8 +501,8 @@ KillClient_BackendMessage::KillClient_BackendMessage(const u_char *inbuf, size_t
 #endif
 }
 
-u_int KillClient_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t KillClient_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   bool togame = (why() == AUTH_DISCONNECT ? true : false);
   START_FILL_TYPE
   ;
@@ -515,11 +515,11 @@ u_int KillClient_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_
 }
 
 AuthAcctLogin_ToBackendMessage::AuthAcctLogin_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid,
-    const UruString &name, const u_char *hash, authtype_t authtype, uint32_t server_nonce, uint32_t client_nonce) :
+    const UruString &name, const uint8_t *hash, authtype_t authtype, uint32_t server_nonce, uint32_t client_nonce) :
     BackendMessage(AUTH_ACCT_LOGIN), m_reqid(htole32(reqid)), m_name(NULL), m_authtype(htole32(authtype)) {
   m_name = new UruString(name, true);
   memcpy(m_pwhash, hash, 20);
-  u_int len = 28 + m_name->send_len(true, true, true);
+  uint32_t len = 28 + m_name->send_len(true, true, true);
   if (this->authtype() != PLAIN_HASH) {
     // these are provided little-endian, no swapping necessary
     m_server = server_nonce;
@@ -529,9 +529,9 @@ AuthAcctLogin_ToBackendMessage::AuthAcctLogin_ToBackendMessage(uint32_t id1, uin
   setup_header(id1, id2, len);
 }
 
-AuthAcctLogin_ToBackendMessage::AuthAcctLogin_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+AuthAcctLogin_ToBackendMessage::AuthAcctLogin_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(AUTH_ACCT_LOGIN, inbuf, in_len), m_reqid(0), m_name(NULL), m_authtype(htole32(PLAIN_HASH)) {
-  u_int read_at = 16;
+  uint32_t read_at = 16;
   m_reqid = read32le(inbuf, read_at);
   read_at += 4;
   m_authtype = read32le(inbuf, read_at);
@@ -544,7 +544,7 @@ AuthAcctLogin_ToBackendMessage::AuthAcctLogin_ToBackendMessage(const u_char *inb
   memcpy(m_pwhash, inbuf + read_at, 20);
   if (become_owner) {
     // pointed at by m_name!
-    m_buf = const_cast<u_char*>(inbuf);
+    m_buf = const_cast<uint8_t*>(inbuf);
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
@@ -561,8 +561,8 @@ AuthAcctLogin_ToBackendMessage::AuthAcctLogin_ToBackendMessage(const u_char *inb
   }
 }
 
-u_int AuthAcctLogin_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t AuthAcctLogin_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   bool nonces = (authtype() == PLAIN_HASH ? false : true);
   START_FILL_TYPE
   ;
@@ -579,8 +579,8 @@ u_int AuthAcctLogin_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool 
 }
 
 AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid,
-    status_code_t result, const u_char *acct_uuid, customer_type_t acct_type, UruString *dirname, u_char *p_info,
-    u_int p_info_len, bool become_owner) :
+    status_code_t result, const uint8_t *acct_uuid, customer_type_t acct_type, UruString *dirname, uint8_t *p_info,
+    uint32_t p_info_len, bool become_owner) :
     BackendMessage(AUTH_ACCT_LOGIN | FROM_SERVER), m_reqid(htole32(reqid)), m_result(htole32(result)), m_acct_type(
         htole32(acct_type)), m_dirname(dirname) {
   if (result == NO_ERROR) {
@@ -590,7 +590,7 @@ AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(uint32_t id1,
       if (become_owner) {
         m_buf = p_info;
       } else {
-        m_buf = new u_char[p_info_len];
+        m_buf = new uint8_t[p_info_len];
         memcpy(m_buf, p_info, p_info_len);
       }
     } else if (become_owner && p_info) {
@@ -606,13 +606,13 @@ AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(uint32_t id1,
   }
 }
 
-AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(AUTH_ACCT_LOGIN | FROM_SERVER, inbuf, in_len), m_reqid(0), m_result(htole32(ERROR_INTERNAL)), m_acct_type(
         htole32(GUEST_CUSTOMER)), m_dirname(NULL) {
   m_reqid = read32le(inbuf, 16);
   m_result = read32le(inbuf, 20);
   if (result() == NO_ERROR) {
-    u_int read_at = 24;
+    uint32_t read_at = 24;
     memcpy(m_uuid, inbuf + read_at, UUID_RAW_LEN);
     read_at += UUID_RAW_LEN;
     m_acct_type = read32le(inbuf, read_at);
@@ -622,7 +622,7 @@ AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(const u_char 
     if (m_buflen < 0) {
       // XXX serious problem
     } else if (m_buflen > 0) {
-      m_buf = new u_char[m_buflen];
+      m_buf = new uint8_t[m_buflen];
       memcpy(m_buf, inbuf + read_at + m_dirname->arrival_len(), m_buflen);
     }
   } else {
@@ -637,8 +637,8 @@ AuthAcctLogin_FromBackendMessage::AuthAcctLogin_FromBackendMessage(const u_char 
 #endif
 }
 
-u_int AuthAcctLogin_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t AuthAcctLogin_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   bool bad = (result() != NO_ERROR);
   START_FILL_TYPE
   ;
@@ -654,14 +654,14 @@ u_int AuthAcctLogin_FromBackendMessage::fill_type(bool iovs, u_int start_at, boo
   ;
 }
 
-AuthKIValidate_ToBackendMessage::AuthKIValidate_ToBackendMessage(uint32_t id1, uint32_t id2, const u_char *acct_uuid,
+AuthKIValidate_ToBackendMessage::AuthKIValidate_ToBackendMessage(uint32_t id1, uint32_t id2, const uint8_t *acct_uuid,
     kinum_t kinum) :
     BackendMessage(AUTH_KI_VALIDATE), m_kinum(htole32(kinum)) {
   memcpy(m_uuid, acct_uuid, UUID_RAW_LEN);
   setup_header(id1, id2, UUID_RAW_LEN + 4);
 }
 
-AuthKIValidate_ToBackendMessage::AuthKIValidate_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+AuthKIValidate_ToBackendMessage::AuthKIValidate_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(AUTH_KI_VALIDATE, inbuf, in_len), m_kinum(0) {
   if (in_len < 40) {
     // XXX serious problem
@@ -676,8 +676,8 @@ AuthKIValidate_ToBackendMessage::AuthKIValidate_ToBackendMessage(const u_char *i
 #endif
 }
 
-u_int AuthKIValidate_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t AuthKIValidate_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_BUFFER(m_uuid, UUID_RAW_LEN, false);
@@ -692,7 +692,7 @@ AuthKIValidate_FromBackendMessage::AuthKIValidate_FromBackendMessage(uint32_t id
   setup_header(id1, id2, 8);
 }
 
-AuthKIValidate_FromBackendMessage::AuthKIValidate_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+AuthKIValidate_FromBackendMessage::AuthKIValidate_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(AUTH_KI_VALIDATE | FROM_SERVER, inbuf, in_len), m_kinum(0), m_result(htole32(ERROR_INTERNAL)) {
   m_kinum = read32le(inbuf, 16);
   m_result = read32le(inbuf, 20);
@@ -704,8 +704,8 @@ AuthKIValidate_FromBackendMessage::AuthKIValidate_FromBackendMessage(const u_cha
 #endif
 }
 
-u_int AuthKIValidate_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t AuthKIValidate_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_kinum, false);
@@ -719,7 +719,7 @@ AuthPlayerLogout_BackendMessage::AuthPlayerLogout_BackendMessage(uint32_t id1, u
   setup_header(id1, id2, 4);
 }
 
-AuthPlayerLogout_BackendMessage::AuthPlayerLogout_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+AuthPlayerLogout_BackendMessage::AuthPlayerLogout_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(AUTH_PLAYER_LOGOUT, inbuf, in_len), m_kinum(0) {
   if (in_len < 20) {
     // XXX serious problem
@@ -733,8 +733,8 @@ AuthPlayerLogout_BackendMessage::AuthPlayerLogout_BackendMessage(const u_char *i
 #endif
 }
 
-u_int AuthPlayerLogout_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t AuthPlayerLogout_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_kinum, true);
@@ -742,8 +742,8 @@ u_int AuthPlayerLogout_BackendMessage::fill_type(bool iovs, u_int start_at, bool
   ;
 }
 
-AuthChangePassword_ToBackendMessage::AuthChangePassword_ToBackendMessage(uint32_t id1, uint32_t id2, const u_char *uuid,
-    uint32_t reqid, const UruString &name, const u_char *hash) :
+AuthChangePassword_ToBackendMessage::AuthChangePassword_ToBackendMessage(uint32_t id1, uint32_t id2, const uint8_t *uuid,
+    uint32_t reqid, const UruString &name, const uint8_t *hash) :
     BackendMessage(AUTH_CHANGE_PASSWORD), m_reqid(htole32(reqid)), m_name(NULL) {
   m_name = new UruString(name, true);
   memcpy(m_uuid, uuid, UUID_RAW_LEN);
@@ -751,9 +751,9 @@ AuthChangePassword_ToBackendMessage::AuthChangePassword_ToBackendMessage(uint32_
   setup_header(id1, id2, 24 + UUID_RAW_LEN + m_name->send_len(true, false, true));
 }
 
-AuthChangePassword_ToBackendMessage::AuthChangePassword_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+AuthChangePassword_ToBackendMessage::AuthChangePassword_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(AUTH_CHANGE_PASSWORD, inbuf, in_len), m_reqid(0), m_name(NULL) {
-  u_int read_at = 16;
+  uint32_t read_at = 16;
   memcpy(m_uuid, inbuf + read_at, UUID_RAW_LEN);
   read_at += UUID_RAW_LEN;
   m_reqid = read32le(inbuf, read_at);
@@ -766,15 +766,15 @@ AuthChangePassword_ToBackendMessage::AuthChangePassword_ToBackendMessage(const u
   memcpy(m_pwhash, inbuf + read_at, 20);
   if (become_owner) {
     // pointed at by m_name!
-    m_buf = const_cast<u_char*>(inbuf);
+    m_buf = const_cast<uint8_t*>(inbuf);
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
   }
 }
 
-u_int AuthChangePassword_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t AuthChangePassword_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_BUFFER(m_uuid, UUID_RAW_LEN, false);
@@ -791,7 +791,7 @@ AuthChangePassword_FromBackendMessage::AuthChangePassword_FromBackendMessage(uin
   setup_header(id1, id2, 8);
 }
 
-AuthChangePassword_FromBackendMessage::AuthChangePassword_FromBackendMessage(const u_char *inbuf, size_t in_len,
+AuthChangePassword_FromBackendMessage::AuthChangePassword_FromBackendMessage(const uint8_t *inbuf, size_t in_len,
     bool become_owner) :
     BackendMessage(AUTH_CHANGE_PASSWORD | FROM_SERVER, inbuf, in_len), m_reqid(0), m_result(ERROR_INTERNAL) {
   m_reqid = read32le(inbuf, 16);
@@ -804,8 +804,8 @@ AuthChangePassword_FromBackendMessage::AuthChangePassword_FromBackendMessage(con
 #endif
 }
 
-u_int AuthChangePassword_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov,
-    u_int iov_ct, u_char *buffer, size_t buflen) {
+uint32_t AuthChangePassword_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov,
+    uint32_t iov_ct, uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -815,7 +815,7 @@ u_int AuthChangePassword_FromBackendMessage::fill_type(bool iovs, u_int start_at
 }
 
 VaultPlayerCreate_ToBackendMessage::VaultPlayerCreate_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid,
-    u_char *acct_uuid, const UruString &name, const UruString &gender) :
+    uint8_t *acct_uuid, const UruString &name, const UruString &gender) :
     BackendMessage(VAULT_PLAYER_CREATE), m_reqid(htole32(reqid)), m_name(NULL), m_gender(NULL) {
   m_name = new UruString(name, true);
   m_gender = new UruString(gender, true);
@@ -823,9 +823,9 @@ VaultPlayerCreate_ToBackendMessage::VaultPlayerCreate_ToBackendMessage(uint32_t 
   setup_header(id1, id2, 20 + m_name->send_len(true, false, true) + m_gender->send_len(true, false, true));
 }
 
-VaultPlayerCreate_ToBackendMessage::VaultPlayerCreate_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultPlayerCreate_ToBackendMessage::VaultPlayerCreate_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(VAULT_PLAYER_CREATE, inbuf, in_len), m_reqid(0), m_name(NULL), m_gender(NULL) {
-  u_int read_at = 16;
+  uint32_t read_at = 16;
   m_reqid = read32le(inbuf, read_at);
   read_at += 4;
   memcpy(m_uuid, inbuf + read_at, UUID_RAW_LEN);
@@ -840,15 +840,15 @@ VaultPlayerCreate_ToBackendMessage::VaultPlayerCreate_ToBackendMessage(const u_c
   }
   if (become_owner) {
     // pointed at by UruStrings!
-    m_buf = const_cast<u_char*>(inbuf);
+    m_buf = const_cast<uint8_t*>(inbuf);
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
   }
 }
 
-u_int VaultPlayerCreate_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultPlayerCreate_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -870,7 +870,7 @@ VaultPlayerCreate_FromBackendMessage::VaultPlayerCreate_FromBackendMessage(uint3
   }
 }
 
-VaultPlayerCreate_FromBackendMessage::VaultPlayerCreate_FromBackendMessage(const u_char *inbuf, size_t in_len,
+VaultPlayerCreate_FromBackendMessage::VaultPlayerCreate_FromBackendMessage(const uint8_t *inbuf, size_t in_len,
     bool become_owner) :
     BackendMessage(VAULT_PLAYER_CREATE | FROM_SERVER, inbuf, in_len), m_reqid(0), m_result(htole32(ERROR_INTERNAL)), m_kinum(
         0), m_acct_type(htole32(GUEST_CUSTOMER)), m_name(NULL), m_gender(NULL) {
@@ -879,7 +879,7 @@ VaultPlayerCreate_FromBackendMessage::VaultPlayerCreate_FromBackendMessage(const
   if (result() == NO_ERROR) {
     m_kinum = read32le(inbuf, 24);
     m_acct_type = read32le(inbuf, 28);
-    u_int read_at = 32;
+    uint32_t read_at = 32;
     m_name = new UruString(inbuf + read_at, in_len - read_at, true, false, !become_owner);
     read_at += m_name->arrival_len();
     if (in_len - read_at < 2) {
@@ -891,15 +891,15 @@ VaultPlayerCreate_FromBackendMessage::VaultPlayerCreate_FromBackendMessage(const
   }
   if (become_owner) {
     // pointed at by UruStrings!
-    m_buf = const_cast<u_char*>(inbuf);
+    m_buf = const_cast<uint8_t*>(inbuf);
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
   }
 }
 
-u_int VaultPlayerCreate_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov,
-    u_int iov_ct, u_char *buffer, size_t buflen) {
+uint32_t VaultPlayerCreate_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov,
+    uint32_t iov_ct, uint8_t *buffer, size_t buflen) {
   bool has_error = (result() != NO_ERROR);
   START_FILL_TYPE
   ;
@@ -920,7 +920,7 @@ VaultPlayerDelete_ToBackendMessage::VaultPlayerDelete_ToBackendMessage(uint32_t 
   setup_header(id1, id2, 8);
 }
 
-VaultPlayerDelete_ToBackendMessage::VaultPlayerDelete_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultPlayerDelete_ToBackendMessage::VaultPlayerDelete_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(VAULT_PLAYER_DELETE, inbuf, in_len), m_reqid(0), m_kinum(0) {
   m_reqid = read32le(inbuf, 16);
   m_kinum = read32le(inbuf, 20);
@@ -932,8 +932,8 @@ VaultPlayerDelete_ToBackendMessage::VaultPlayerDelete_ToBackendMessage(const u_c
 #endif
 }
 
-u_int VaultPlayerDelete_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultPlayerDelete_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -948,7 +948,7 @@ VaultPlayerDelete_FromBackendMessage::VaultPlayerDelete_FromBackendMessage(uint3
   setup_header(id1, id2, 8);
 }
 
-VaultPlayerDelete_FromBackendMessage::VaultPlayerDelete_FromBackendMessage(const u_char *inbuf, size_t in_len,
+VaultPlayerDelete_FromBackendMessage::VaultPlayerDelete_FromBackendMessage(const uint8_t *inbuf, size_t in_len,
     bool become_owner) :
     BackendMessage(VAULT_PLAYER_DELETE | FROM_SERVER, inbuf, in_len), m_reqid(0), m_result(htole32(ERROR_INTERNAL)) {
   m_reqid = read32le(inbuf, 16);
@@ -961,8 +961,8 @@ VaultPlayerDelete_FromBackendMessage::VaultPlayerDelete_FromBackendMessage(const
 #endif
 }
 
-u_int VaultPlayerDelete_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov,
-    u_int iov_ct, u_char *buffer, size_t buflen) {
+uint32_t VaultPlayerDelete_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov,
+    uint32_t iov_ct, uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -971,16 +971,16 @@ u_int VaultPlayerDelete_FromBackendMessage::fill_type(bool iovs, u_int start_at,
   ;
 }
 
-VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(uint32_t id1, uint32_t id2, const u_char *inbuf, size_t in_len,
+VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(uint32_t id1, uint32_t id2, const uint8_t *inbuf, size_t in_len,
     bool to_server, bool become_owner) :
     BackendMessage(VAULT_PASSTHRU | (to_server ? 0 : FROM_SERVER)), m_vault_offset(0), m_msgtype(0) {
   setup_header(id1, id2, in_len);
   m_buflen = in_len;
   if (!become_owner) {
-    m_buf = new u_char[in_len];
+    m_buf = new uint8_t[in_len];
     memcpy(m_buf, inbuf, in_len);
   } else {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
   }
   if (in_len >= 2) {
     // should always be true
@@ -988,7 +988,7 @@ VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(uint32_t id1, u
   }
 }
 
-VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(const u_char *inbuf, size_t in_len, bool to_server,
+VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(const uint8_t *inbuf, size_t in_len, bool to_server,
     bool become_owner) :
     BackendMessage(VAULT_PASSTHRU | (to_server ? 0 : FROM_SERVER), inbuf, in_len), m_vault_offset(become_owner ? 16 : 0), m_msgtype(
         0)
@@ -996,10 +996,10 @@ VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(const u_char *i
 {
   m_buflen = in_len - 16;
   if (!become_owner) {
-    m_buf = new u_char[m_buflen];
+    m_buf = new uint8_t[m_buflen];
     memcpy(m_buf, inbuf + 16, m_buflen);
   } else {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
   }
   if (m_buflen >= 2) {
     // should always be true
@@ -1012,19 +1012,19 @@ VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(const u_char *i
 #endif
 }
 
-VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(int type, int msgtype) :
+VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(int32_t type, int32_t msgtype) :
     BackendMessage(type), m_vault_offset(0), m_msgtype(htole16(msgtype)) {
 }
 
-VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(int type, const u_char *inbuf, size_t in_len,
+VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(int32_t type, const uint8_t *inbuf, size_t in_len,
     bool become_owner) :
     BackendMessage(type, inbuf, in_len), m_vault_offset(become_owner ? 16 : 0), m_msgtype(0) {
   m_buflen = in_len - 16;
   if (!become_owner) {
-    m_buf = new u_char[m_buflen];
+    m_buf = new uint8_t[m_buflen];
     memcpy(m_buf, inbuf + 16, m_buflen);
   } else {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
   }
   if (m_buflen >= 2) {
     // should always be true
@@ -1036,17 +1036,17 @@ VaultPassthrough_BackendMessage::VaultPassthrough_BackendMessage(int type, const
 #endif
 }
 
-u_int VaultPassthrough_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultPassthrough_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
-  u_char *write_where = m_buf + m_vault_offset;
+  uint8_t *write_where = m_buf + m_vault_offset;
   WRITE_BUFFER(write_where, m_buflen, true);
   END_FILL_TYPE
   ;
 }
 
-VaultFetchRefs_ToBackendMessage::VaultFetchRefs_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultFetchRefs_ToBackendMessage::VaultFetchRefs_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_FETCHREFS, inbuf, in_len, true/*don't bother to copy*/), m_reqid(0), m_node(0) {
   m_reqid = read32le(m_buf, m_vault_offset + 2);
   m_node = read32le(m_buf, m_vault_offset + 6);
@@ -1056,8 +1056,8 @@ VaultFetchRefs_ToBackendMessage::VaultFetchRefs_ToBackendMessage(const u_char *i
   }
 }
 
-u_int VaultFetchRefs_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultFetchRefs_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1070,7 +1070,7 @@ u_int VaultFetchRefs_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool
   ;
 }
 
-VaultNode_ToBackendMessage::VaultNode_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultNode_ToBackendMessage::VaultNode_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_PASSTHRU, inbuf, in_len, become_owner), m_reqid(0), m_id(0), m_node(NULL) {
   // fix up type
   switch (uru_msgtype()) {
@@ -1088,7 +1088,7 @@ VaultNode_ToBackendMessage::VaultNode_ToBackendMessage(const u_char *inbuf, size
     ;
   }
 
-  u_int off = 2;
+  uint32_t off = 2;
   m_reqid = read32le(m_buf, m_vault_offset + off);
   off += 4;
   if (m_type == VAULT_SAVENODE) {
@@ -1121,8 +1121,8 @@ VaultNode_ToBackendMessage::~VaultNode_ToBackendMessage() {
   }
 }
 
-u_int VaultNode_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultNode_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("who is calling this???");
 #endif
@@ -1141,7 +1141,7 @@ u_int VaultNode_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg
   }
 }
 
-VaultNodeFetch_ToBackendMessage::VaultNodeFetch_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultNodeFetch_ToBackendMessage::VaultNodeFetch_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_FETCH, inbuf, in_len, true/*don't bother to copy*/), m_reqid(0), m_node(0) {
   m_reqid = read32le(m_buf, m_vault_offset + 2);
   m_node = read32le(m_buf, m_vault_offset + 6);
@@ -1151,8 +1151,8 @@ VaultNodeFetch_ToBackendMessage::VaultNodeFetch_ToBackendMessage(const u_char *i
   }
 }
 
-u_int VaultNodeFetch_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultNodeFetch_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1182,8 +1182,8 @@ VaultNodeFetch_FromBackendMessage::~VaultNodeFetch_FromBackendMessage() {
   }
 }
 
-u_int VaultNodeFetch_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultNodeFetch_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_2_BYTES(m_msgtype, false);
@@ -1202,13 +1202,13 @@ u_int VaultNodeFetch_FromBackendMessage::fill_type(bool iovs, u_int start_at, bo
   ;
 }
 
-VaultRefChange_ToBackendMessage::VaultRefChange_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultRefChange_ToBackendMessage::VaultRefChange_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_ADDREF, inbuf, in_len, true/*don't bother to copy*/), m_owner(0) {
   // fix up type
   if (!is_add()) {
     m_type = VAULT_REMOVEREF;
   }
-  u_int off = m_vault_offset + 2;
+  uint32_t off = m_vault_offset + 2;
 #if !defined(OLD_PROTOCOL) || defined(OLD_PROTOCOL4)
   m_reqid = read32le(m_buf, off);
   off += 4;
@@ -1230,8 +1230,8 @@ bool VaultRefChange_ToBackendMessage::is_add() const {
   return (uru_msgtype() == kCli2Auth_VaultNodeAdd);
 }
 
-u_int VaultRefChange_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultRefChange_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1249,10 +1249,10 @@ u_int VaultRefChange_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool
   ;
 }
 
-VaultInitAge_ToBackendMessage::VaultInitAge_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultInitAge_ToBackendMessage::VaultInitAge_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_INIT_AGE, inbuf, in_len, become_owner), m_reqid(0), m_filename(NULL), m_instance(
         NULL), m_username(NULL), m_dispname(NULL), m_unk(0), m_id(0) {
-  u_int off = m_vault_offset + 2;
+  uint32_t off = m_vault_offset + 2;
   m_reqid = read32le(m_buf, off);
   off += 4;
   memcpy(m_createuuid, m_buf + off, 16);
@@ -1276,8 +1276,8 @@ VaultInitAge_ToBackendMessage::VaultInitAge_ToBackendMessage(const u_char *inbuf
   }
 }
 
-u_int VaultInitAge_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultInitAge_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1297,9 +1297,9 @@ u_int VaultInitAge_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *
   ;
 }
 
-VaultAgeList_ToBackendMessage::VaultAgeList_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultAgeList_ToBackendMessage::VaultAgeList_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_AGE_LIST, inbuf, in_len, become_owner), m_reqid(0), m_filename(NULL) {
-  u_int off = m_vault_offset + 2;
+  uint32_t off = m_vault_offset + 2;
   m_reqid = read32le(m_buf, off);
   off += 4;
   m_filename = new UruString(m_buf + off, in_len - off, true, true, false/*backed by m_buf*/);
@@ -1309,8 +1309,8 @@ VaultAgeList_ToBackendMessage::VaultAgeList_ToBackendMessage(const u_char *inbuf
   }
 }
 
-u_int VaultAgeList_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultAgeList_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1323,7 +1323,7 @@ u_int VaultAgeList_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *
   ;
 }
 
-VaultNodeSend_BackendMessage::VaultNodeSend_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultNodeSend_BackendMessage::VaultNodeSend_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_SENDNODE, inbuf, in_len, true/*don't bother to copy*/), m_player(0), m_nodeid(0) {
   m_nodeid = read32le(m_buf, m_vault_offset + 2);
   m_player = read32le(m_buf, m_vault_offset + 6);
@@ -1333,8 +1333,8 @@ VaultNodeSend_BackendMessage::VaultNodeSend_BackendMessage(const u_char *inbuf, 
   }
 }
 
-u_int VaultNodeSend_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultNodeSend_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1347,7 +1347,7 @@ u_int VaultNodeSend_BackendMessage::fill_type(bool iovs, u_int start_at, bool *m
   ;
 }
 
-VaultSetAgePublic_BackendMessage::VaultSetAgePublic_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultSetAgePublic_BackendMessage::VaultSetAgePublic_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_SET_AGE_PUBLIC, inbuf, in_len, true/*don't bother to copy*/), m_nodeid(0), m_public(
         0) {
   m_nodeid = read32le(m_buf, m_vault_offset + 2);
@@ -1358,8 +1358,8 @@ VaultSetAgePublic_BackendMessage::VaultSetAgePublic_BackendMessage(const u_char 
   }
 }
 
-u_int VaultSetAgePublic_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultSetAgePublic_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1372,11 +1372,11 @@ u_int VaultSetAgePublic_BackendMessage::fill_type(bool iovs, u_int start_at, boo
   ;
 }
 
-VaultScoreGet_ToBackendMessage::VaultScoreGet_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultScoreGet_ToBackendMessage::VaultScoreGet_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_SCORE_GET, inbuf, in_len, become_owner), m_reqid(0), m_holder(0), m_name(NULL) {
   m_reqid = read32le(m_buf, m_vault_offset + 2);
   m_holder = read32le(m_buf, m_vault_offset + 6);
-  u_int off = m_vault_offset + 10;
+  uint32_t off = m_vault_offset + 10;
   m_name = new UruString(m_buf + off, in_len - off, true, true, false/*backed by m_buf*/);
   off += m_name->arrival_len();
   if (off != in_len) {
@@ -1384,8 +1384,8 @@ VaultScoreGet_ToBackendMessage::VaultScoreGet_ToBackendMessage(const u_char *inb
   }
 }
 
-u_int VaultScoreGet_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultScoreGet_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1411,9 +1411,9 @@ VaultScoreGet_FromBackendMessage::VaultScoreGet_FromBackendMessage(uint32_t id1,
     UruString *score_name) :
     VaultPassthrough_BackendMessage(VAULT_PASSTHRU | FROM_SERVER,
     kAuth2Cli_ScoreGetScoresReply), m_reqid(htole32(reqid)), m_result(htole32(result)), m_code(htole32(1)), m_msglen(0) {
-  u_int slen = score_name->send_len(false, true, true);
+  uint32_t slen = score_name->send_len(false, true, true);
   m_buflen = 24 + slen;
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   m_msglen = htole32(m_buflen);
   write32(m_buf, 0, score_id);
   write32(m_buf, 4, holder);
@@ -1426,8 +1426,8 @@ VaultScoreGet_FromBackendMessage::VaultScoreGet_FromBackendMessage(uint32_t id1,
   setup_header(id1, id2, 18 + m_buflen);
 }
 
-u_int VaultScoreGet_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultScoreGet_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_2_BYTES(m_msgtype, false);
@@ -1447,12 +1447,12 @@ u_int VaultScoreGet_FromBackendMessage::fill_type(bool iovs, u_int start_at, boo
   ;
 }
 
-VaultScoreCreate_BackendMessage::VaultScoreCreate_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultScoreCreate_BackendMessage::VaultScoreCreate_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_SCORE_CREATE, inbuf, in_len, become_owner), m_reqid(0), m_holder(0), m_name(NULL), m_type(
         0), m_value(0) {
   m_reqid = read32le(m_buf, m_vault_offset + 2);
   m_holder = read32le(m_buf, m_vault_offset + 6);
-  u_int off = m_vault_offset + 10;
+  uint32_t off = m_vault_offset + 10;
   m_name = new UruString(m_buf + off, in_len - off, true, true, false/*backed by m_buf*/);
   off += m_name->arrival_len();
   m_type = read32le(m_buf, m_vault_offset + off);
@@ -1464,8 +1464,8 @@ VaultScoreCreate_BackendMessage::VaultScoreCreate_BackendMessage(const u_char *i
   }
 }
 
-u_int VaultScoreCreate_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultScoreCreate_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1481,15 +1481,15 @@ u_int VaultScoreCreate_BackendMessage::fill_type(bool iovs, u_int start_at, bool
   ;
 }
 
-VaultScoreAddPoints_BackendMessage::VaultScoreAddPoints_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultScoreAddPoints_BackendMessage::VaultScoreAddPoints_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_SCORE_ADD, inbuf, in_len, become_owner), m_reqid(0), m_scoreid(0), m_delta(0) {
   m_reqid = read32le(m_buf, m_vault_offset + 2);
   m_scoreid = read32le(m_buf, m_vault_offset + 6);
   m_delta = read32le(m_buf, m_vault_offset + 10);
 }
 
-u_int VaultScoreAddPoints_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultScoreAddPoints_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1503,7 +1503,7 @@ u_int VaultScoreAddPoints_BackendMessage::fill_type(bool iovs, u_int start_at, b
   ;
 }
 
-VaultScoreXferPoints_BackendMessage::VaultScoreXferPoints_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+VaultScoreXferPoints_BackendMessage::VaultScoreXferPoints_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     VaultPassthrough_BackendMessage(VAULT_SCORE_XFER, inbuf, in_len, become_owner), m_reqid(0), m_scoreid(0), m_destid(0), m_delta(
         0) {
   m_reqid = read32le(m_buf, m_vault_offset + 2);
@@ -1512,8 +1512,8 @@ VaultScoreXferPoints_BackendMessage::VaultScoreXferPoints_BackendMessage(const u
   m_delta = read32le(m_buf, m_vault_offset + 14);
 }
 
-u_int VaultScoreXferPoints_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t VaultScoreXferPoints_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
 #ifdef DEBUG_ENABLE
   throw std::logic_error("this function should not be called");
 #endif
@@ -1533,7 +1533,7 @@ TrackPing_BackendMessage::TrackPing_BackendMessage(uint32_t id1, uint32_t id2) :
   setup_header(id1, id2, 0);
 }
 
-TrackPing_BackendMessage::TrackPing_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackPing_BackendMessage::TrackPing_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_PING, inbuf, in_len) {
   if (become_owner) {
     delete[] inbuf;
@@ -1543,7 +1543,7 @@ TrackPing_BackendMessage::TrackPing_BackendMessage(const u_char *inbuf, size_t i
 #endif
 }
 
-TrackDispatcherHello_BackendMessage::TrackDispatcherHello_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackDispatcherHello_BackendMessage::TrackDispatcherHello_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_DISPATCHER_HELLO, inbuf, in_len) {
   m_restrict_type = read32le(inbuf, 16);
   if (become_owner) {
@@ -1554,7 +1554,7 @@ TrackDispatcherHello_BackendMessage::TrackDispatcherHello_BackendMessage(const u
 #endif
 }
 
-TrackDispatcherBye_BackendMessage::TrackDispatcherBye_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackDispatcherBye_BackendMessage::TrackDispatcherBye_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_DISPATCHER_BYE, inbuf, in_len) {
   if (become_owner) {
     delete[] inbuf;
@@ -1580,13 +1580,13 @@ TrackServiceTypes_BackendMessage::TrackServiceTypes_BackendMessage(uint32_t id1,
   setup_header(id1, id2, 12 + m_hostname->send_len(true, false, true));
 }
 
-TrackServiceTypes_BackendMessage::TrackServiceTypes_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackServiceTypes_BackendMessage::TrackServiceTypes_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_SERVICE_TYPES, inbuf, in_len), m_address(0), m_hostname(NULL) {
   m_auth = inbuf[16];
   m_file = inbuf[17];
   m_game = inbuf[18];
   m_addrtype = inbuf[19];
-  u_int offset = 20;
+  uint32_t offset = 20;
   if (addrtype() == ST_HOSTNAME) {
     m_hostname = new UruString(inbuf + 20, in_len - 28, true, false, !become_owner);
     offset += m_hostname->arrival_len();
@@ -1598,15 +1598,15 @@ TrackServiceTypes_BackendMessage::TrackServiceTypes_BackendMessage(const u_char 
   offset += 4;
   m_restrict_type = read32le(inbuf, offset);
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
   }
 }
 
-u_int TrackServiceTypes_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackServiceTypes_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_1_BYTE(m_auth, false);
@@ -1630,7 +1630,7 @@ TrackFindService_ToBackendMessage::TrackFindService_ToBackendMessage(uint32_t id
   setup_header(id1, id2, 9);
 }
 
-TrackFindService_ToBackendMessage::TrackFindService_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackFindService_ToBackendMessage::TrackFindService_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_FIND_SERVICE, inbuf, in_len) {
   m_reqid = read32le(inbuf, 16);
   m_reqid2 = read32le(inbuf, 20);
@@ -1643,8 +1643,8 @@ TrackFindService_ToBackendMessage::TrackFindService_ToBackendMessage(const u_cha
 #endif
 }
 
-u_int TrackFindService_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackFindService_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -1676,7 +1676,7 @@ TrackFindService_FromBackendMessage::TrackFindService_FromBackendMessage(uint32_
   setup_header(id1, id2, 16);
 }
 
-TrackFindService_FromBackendMessage::TrackFindService_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackFindService_FromBackendMessage::TrackFindService_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_FIND_SERVICE | FROM_SERVER, inbuf, in_len), m_reqid(0), m_reqid2(0), m_address(0), m_hostname(NULL) {
   m_reqid = read32le(inbuf, 16);
   m_reqid2 = read32le(inbuf, 20);
@@ -1688,15 +1688,15 @@ TrackFindService_FromBackendMessage::TrackFindService_FromBackendMessage(const u
     m_address = read32le(inbuf, 28); // really big-endian
   }
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
   }
 }
 
-u_int TrackFindService_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackFindService_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -1713,14 +1713,14 @@ u_int TrackFindService_FromBackendMessage::fill_type(bool iovs, u_int start_at, 
   ;
 }
 
-TrackGameHello_BackendMessage::TrackGameHello_BackendMessage(uint32_t id1, uint32_t id2, const u_char *uuid, uint32_t server_id,
+TrackGameHello_BackendMessage::TrackGameHello_BackendMessage(uint32_t id1, uint32_t id2, const uint8_t *uuid, uint32_t server_id,
     uint32_t connect_ipaddr) :
     BackendMessage(TRACK_GAME_HELLO), m_id(htole32(server_id)), m_ipaddr(connect_ipaddr) {
   setup_header(id1, id2, UUID_RAW_LEN + 8);
   memcpy(m_uuid, uuid, UUID_RAW_LEN);
 }
 
-TrackGameHello_BackendMessage::TrackGameHello_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackGameHello_BackendMessage::TrackGameHello_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_GAME_HELLO, inbuf, in_len), m_id(0), m_ipaddr(0) {
   memcpy(m_uuid, inbuf + 16, UUID_RAW_LEN);
   m_id = read32le(inbuf, 16 + UUID_RAW_LEN);
@@ -1733,8 +1733,8 @@ TrackGameHello_BackendMessage::TrackGameHello_BackendMessage(const u_char *inbuf
 #endif
 }
 
-u_int TrackGameHello_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackGameHello_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_BUFFER(m_uuid, UUID_RAW_LEN, false);
@@ -1749,7 +1749,7 @@ TrackGameBye_ToBackendMessage::TrackGameBye_ToBackendMessage(uint32_t id1, uint3
   setup_header(id1, id2, 4);
 }
 
-TrackGameBye_ToBackendMessage::TrackGameBye_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackGameBye_ToBackendMessage::TrackGameBye_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_GAME_BYE, inbuf, in_len), m_final(0) {
   m_final = read32le(inbuf, 16);
   if (become_owner) {
@@ -1760,8 +1760,8 @@ TrackGameBye_ToBackendMessage::TrackGameBye_ToBackendMessage(const u_char *inbuf
 #endif
 }
 
-u_int TrackGameBye_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackGameBye_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_final, true);
@@ -1774,7 +1774,7 @@ TrackGameBye_FromBackendMessage::TrackGameBye_FromBackendMessage(uint32_t id1, u
   setup_header(id1, id2, 0);
 }
 
-TrackGameBye_FromBackendMessage::TrackGameBye_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackGameBye_FromBackendMessage::TrackGameBye_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_GAME_BYE | FROM_SERVER, inbuf, in_len) {
   if (become_owner) {
     delete[] inbuf;
@@ -1789,7 +1789,7 @@ TrackGamePlayerInfo_BackendMessage::TrackGamePlayerInfo_BackendMessage(uint32_t 
   setup_header(id1, id2, 5);
 }
 
-TrackGamePlayerInfo_BackendMessage::TrackGamePlayerInfo_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackGamePlayerInfo_BackendMessage::TrackGamePlayerInfo_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_GAME_PLAYERINFO, inbuf, in_len), m_kinum(0), m_present(false) {
   m_kinum = read32le(inbuf, 16);
   m_present = inbuf[20];
@@ -1801,8 +1801,8 @@ TrackGamePlayerInfo_BackendMessage::TrackGamePlayerInfo_BackendMessage(const u_c
 #endif
 }
 
-u_int TrackGamePlayerInfo_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackGamePlayerInfo_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_kinum, false);
@@ -1812,7 +1812,7 @@ u_int TrackGamePlayerInfo_BackendMessage::fill_type(bool iovs, u_int start_at, b
 }
 
 TrackMsgForward_BackendMessage::TrackMsgForward_BackendMessage(uint32_t id1, uint32_t id2, NetworkMessage *msg_to_fwd,
-    u_int recips_at) :
+    uint32_t recips_at) :
     BackendMessage(TRACK_INTERAGE_FWD), m_recip_offset(htole32(recips_at)), m_msg(msg_to_fwd) {
   m_msg->add_ref();
   if (m_msg->type() & CLASS_TRACK) {
@@ -1824,16 +1824,16 @@ TrackMsgForward_BackendMessage::TrackMsgForward_BackendMessage(uint32_t id1, uin
   setup_header(id1, id2, 4 + m_msg->message_len() - m_msg_offset);
 }
 
-TrackMsgForward_BackendMessage::TrackMsgForward_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+TrackMsgForward_BackendMessage::TrackMsgForward_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     BackendMessage(msg_type, inbuf, in_len), m_msg(NULL) {
   m_recip_offset = read32le(inbuf, 16);
   m_buflen = m_total_len - 20;
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
     m_msg_offset = 20;
   } else {
-    m_buf = new u_char[m_buflen];
+    m_buf = new uint8_t[m_buflen];
     memcpy(m_buf, inbuf + 20, m_buflen);
     m_msg_offset = 0;
   }
@@ -1852,7 +1852,7 @@ TrackMsgForward_BackendMessage::~TrackMsgForward_BackendMessage() {
   }
 }
 
-const u_char* TrackMsgForward_BackendMessage::fwd_msg() const {
+const uint8_t* TrackMsgForward_BackendMessage::fwd_msg() const {
   if (m_msg) {
     return m_msg->buffer() + m_msg_offset;
   } else {
@@ -1860,8 +1860,8 @@ const u_char* TrackMsgForward_BackendMessage::fwd_msg() const {
   }
 }
 
-u_int TrackMsgForward_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackMsgForward_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_recip_offset, false);
@@ -1880,15 +1880,15 @@ u_int TrackMsgForward_BackendMessage::fill_type(bool iovs, u_int start_at, bool 
 }
 
 TrackSDLUpdate_BackendMessage::TrackSDLUpdate_BackendMessage(uint32_t id1, uint32_t id2, kinum_t from_ki, uint32_t from_id1,
-    uint32_t from_id2, const u_char *sdl_buf, size_t sdl_len, sdl_type_t update_type) :
+    uint32_t from_id2, const uint8_t *sdl_buf, size_t sdl_len, sdl_type_t update_type) :
     BackendMessage(TRACK_SDL_UPDATE | FROM_SERVER), m_kinum(htole32(from_ki)), m_from_id1(htole32(from_id1)), m_from_id2(
         htole32(from_id2)), m_data_off(0), m_datalen(htole32(sdl_len)), m_sdl_type(htole32(update_type)) {
-  m_buf = new u_char[sdl_len];
+  m_buf = new uint8_t[sdl_len];
   memcpy(m_buf, sdl_buf, sdl_len);
   setup_header(id1, id2, 20 + sdl_len);
 }
 
-TrackSDLUpdate_BackendMessage::TrackSDLUpdate_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackSDLUpdate_BackendMessage::TrackSDLUpdate_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_SDL_UPDATE | FROM_SERVER, inbuf, in_len), m_kinum(0), m_from_id1(0), m_from_id2(0), m_data_off(0), m_datalen(
         0), m_sdl_type(htole32(INVALID)) {
   m_kinum = read32le(inbuf, 16);
@@ -1898,10 +1898,10 @@ TrackSDLUpdate_BackendMessage::TrackSDLUpdate_BackendMessage(const u_char *inbuf
   m_datalen = read32le(inbuf, 32);
   size_t sdl_len = le32toh(m_datalen);
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
     m_data_off = 36;
   } else {
-    m_buf = new u_char[sdl_len];
+    m_buf = new uint8_t[sdl_len];
     memcpy(m_buf, inbuf + 36, sdl_len);
   }
 #ifdef DEBUG_ENABLE
@@ -1909,8 +1909,8 @@ TrackSDLUpdate_BackendMessage::TrackSDLUpdate_BackendMessage(const u_char *inbuf
 #endif
 }
 
-u_int TrackSDLUpdate_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackSDLUpdate_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_kinum, false);
@@ -1923,14 +1923,14 @@ u_int TrackSDLUpdate_BackendMessage::fill_type(bool iovs, u_int start_at, bool *
   ;
 }
 
-TrackNextGameID_BackendMessage::TrackNextGameID_BackendMessage(uint32_t id1, uint32_t id2, bool server, u_int howmany,
-    u_int start) :
+TrackNextGameID_BackendMessage::TrackNextGameID_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t howmany,
+    uint32_t start) :
     BackendMessage((server ? TRACK_NEXT_GAMEID | FROM_SERVER : TRACK_NEXT_GAMEID)), m_number(htole32(howmany)), m_start(
         htole32(start)) {
   setup_header(id1, id2, server ? 8 : 4);
 }
 
-TrackNextGameID_BackendMessage::TrackNextGameID_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+TrackNextGameID_BackendMessage::TrackNextGameID_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     BackendMessage(msg_type, inbuf, in_len), m_start(0) {
   m_number = read32le(inbuf, 16);
@@ -1945,8 +1945,8 @@ TrackNextGameID_BackendMessage::TrackNextGameID_BackendMessage(const u_char *inb
 #endif
 }
 
-u_int TrackNextGameID_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackNextGameID_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   bool not_server = ((m_type & FROM_SERVER) ? false : true);
   START_FILL_TYPE
   ;
@@ -1959,14 +1959,14 @@ u_int TrackNextGameID_BackendMessage::fill_type(bool iovs, u_int start_at, bool 
 }
 
 TrackAgeRequest_ToBackendMessage::TrackAgeRequest_ToBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid,
-    const UruString &agename, const u_char *ageuuid) :
+    const UruString &agename, const uint8_t *ageuuid) :
     BackendMessage(TRACK_FIND_GAME), m_reqid(htole32(reqid)), m_filename(NULL) {
   m_filename = new UruString(agename, true);
   memcpy(m_uuid, ageuuid, UUID_RAW_LEN);
   setup_header(id1, id2, 4 + UUID_RAW_LEN + m_filename->send_len(true, false, true));
 }
 
-TrackAgeRequest_ToBackendMessage::TrackAgeRequest_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackAgeRequest_ToBackendMessage::TrackAgeRequest_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_FIND_GAME, inbuf, in_len), m_reqid(0), m_filename(NULL) {
   m_reqid = read32le(inbuf, 16);
   memcpy(m_uuid, inbuf + 20, UUID_RAW_LEN);
@@ -1980,8 +1980,8 @@ TrackAgeRequest_ToBackendMessage::TrackAgeRequest_ToBackendMessage(const u_char 
 #endif
 }
 
-u_int TrackAgeRequest_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackAgeRequest_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -1992,7 +1992,7 @@ u_int TrackAgeRequest_ToBackendMessage::fill_type(bool iovs, u_int start_at, boo
 }
 
 TrackAgeRequest_FromBackendMessage::TrackAgeRequest_FromBackendMessage(uint32_t id1, uint32_t id2, uint32_t reqid,
-    status_code_t result, const u_char *uuid, uint32_t server_id, uint32_t age_node, uint32_t ipaddr) :
+    status_code_t result, const uint8_t *uuid, uint32_t server_id, uint32_t age_node, uint32_t ipaddr) :
     BackendMessage(TRACK_FIND_GAME | FROM_SERVER), m_reqid(htole32(reqid)), m_result(htole32(result)) {
   setup_header(id1, id2, 20 + UUID_RAW_LEN);
   write32(m_body, 0, server_id);
@@ -2005,7 +2005,7 @@ TrackAgeRequest_FromBackendMessage::TrackAgeRequest_FromBackendMessage(uint32_t 
   write32(m_body, 8 + UUID_RAW_LEN, ipaddr);
 }
 
-TrackAgeRequest_FromBackendMessage::TrackAgeRequest_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackAgeRequest_FromBackendMessage::TrackAgeRequest_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_FIND_GAME | FROM_SERVER, inbuf, in_len) {
   m_reqid = read32le(inbuf, 16);
   m_result = read32le(inbuf, 20);
@@ -2019,8 +2019,8 @@ TrackAgeRequest_FromBackendMessage::TrackAgeRequest_FromBackendMessage(const u_c
 #endif
 }
 
-u_int TrackAgeRequest_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackAgeRequest_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_reqid, false);
@@ -2031,14 +2031,14 @@ u_int TrackAgeRequest_FromBackendMessage::fill_type(bool iovs, u_int start_at, b
 }
 
 TrackStartAge_FromBackendMessage::TrackStartAge_FromBackendMessage(uint32_t id1, uint32_t id2, UruString *agename,
-    const u_char *ageuuid) :
+    const uint8_t *ageuuid) :
     BackendMessage(TRACK_START_GAME | FROM_SERVER), m_filename(agename) {
   memcpy(m_ageuuid, ageuuid, UUID_RAW_LEN);
   setup_header(id1, id2,
   UUID_RAW_LEN + agename->send_len(true, false, true));
 }
 
-TrackStartAge_FromBackendMessage::TrackStartAge_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackStartAge_FromBackendMessage::TrackStartAge_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_START_GAME | FROM_SERVER, inbuf, in_len), m_filename(NULL) {
   memcpy(m_ageuuid, inbuf + 16, UUID_RAW_LEN);
   m_filename = new UruString(inbuf + 16 + UUID_RAW_LEN, in_len - (16 + UUID_RAW_LEN), true, false, true);
@@ -2051,8 +2051,8 @@ TrackStartAge_FromBackendMessage::TrackStartAge_FromBackendMessage(const u_char 
 #endif
 }
 
-u_int TrackStartAge_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackStartAge_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_BUFFER(m_ageuuid, UUID_RAW_LEN, false);
@@ -2061,14 +2061,14 @@ u_int TrackStartAge_FromBackendMessage::fill_type(bool iovs, u_int start_at, boo
   ;
 }
 
-TrackStartAge_ToBackendMessage::TrackStartAge_ToBackendMessage(uint32_t id1, uint32_t id2, const u_char *ageuuid,
+TrackStartAge_ToBackendMessage::TrackStartAge_ToBackendMessage(uint32_t id1, uint32_t id2, const uint8_t *ageuuid,
     TrackStartAge_ToBackendMessage::problem_t p) :
     BackendMessage(TRACK_START_GAME), m_problem(htole32(p)) {
   memcpy(m_ageuuid, ageuuid, UUID_RAW_LEN);
   setup_header(id1, id2, 4 + UUID_RAW_LEN);
 }
 
-TrackStartAge_ToBackendMessage::TrackStartAge_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackStartAge_ToBackendMessage::TrackStartAge_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_START_GAME, inbuf, in_len) {
   m_problem = read32le(inbuf, 16);
   memcpy(m_ageuuid, inbuf + 20, UUID_RAW_LEN);
@@ -2081,8 +2081,8 @@ TrackStartAge_ToBackendMessage::TrackStartAge_ToBackendMessage(const u_char *inb
 #endif
 }
 
-u_int TrackStartAge_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackStartAge_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_problem, false);
@@ -2092,14 +2092,14 @@ u_int TrackStartAge_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool 
 }
 
 TrackAddPlayer_FromBackendMessage::TrackAddPlayer_FromBackendMessage(uint32_t id1, uint32_t id2, kinum_t kinum,
-    const UruString &player_name, const u_char *uuid) :
+    const UruString &player_name, const uint8_t *uuid) :
     BackendMessage(TRACK_ADD_PLAYER | FROM_SERVER), m_kinum(htole32(kinum)), m_name(NULL) {
   memcpy(m_uuid, uuid, UUID_RAW_LEN);
   m_name = new UruString(player_name, true); // copy string
   setup_header(id1, id2, 4 + UUID_RAW_LEN + m_name->send_len(true, false, true));
 }
 
-TrackAddPlayer_FromBackendMessage::TrackAddPlayer_FromBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackAddPlayer_FromBackendMessage::TrackAddPlayer_FromBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_ADD_PLAYER | FROM_SERVER, inbuf, in_len) {
   m_kinum = read32le(inbuf, 16);
   memcpy(m_uuid, inbuf + 20, UUID_RAW_LEN);
@@ -2113,8 +2113,8 @@ TrackAddPlayer_FromBackendMessage::TrackAddPlayer_FromBackendMessage(const u_cha
 #endif
 }
 
-u_int TrackAddPlayer_FromBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackAddPlayer_FromBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_kinum, false);
@@ -2130,7 +2130,7 @@ TrackAddPlayer_ToBackendMessage::TrackAddPlayer_ToBackendMessage(uint32_t id1, u
   setup_header(id1, id2, 8);
 }
 
-TrackAddPlayer_ToBackendMessage::TrackAddPlayer_ToBackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+TrackAddPlayer_ToBackendMessage::TrackAddPlayer_ToBackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     BackendMessage(TRACK_ADD_PLAYER, inbuf, in_len) {
   m_kinum = read32le(inbuf, 16);
   m_result = read32le(inbuf, 20);
@@ -2142,8 +2142,8 @@ TrackAddPlayer_ToBackendMessage::TrackAddPlayer_ToBackendMessage(const u_char *i
 #endif
 }
 
-u_int TrackAddPlayer_ToBackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t TrackAddPlayer_ToBackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_kinum, false);
@@ -2158,7 +2158,7 @@ void Marker_BackendMessage::change_to_server() {
 }
 
 MarkerGetGame_BackendMessage::MarkerGetGame_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t gameid,
-    bool exists, uint32_t player_or_localid, char type, const u_char *uuid, UruString *name) :
+    bool exists, uint32_t player_or_localid, char type, const uint8_t *uuid, UruString *name) :
     Marker_BackendMessage((server ? MARKER_NEWGAME | FROM_SERVER : MARKER_NEWGAME), gameid, player_or_localid), m_game_exists(
         !!exists), m_game_type(type), m_name(NULL) {
   if (uuid) {
@@ -2174,13 +2174,13 @@ MarkerGetGame_BackendMessage::MarkerGetGame_BackendMessage(uint32_t id1, uint32_
   setup_header(id1, id2, 10 + UUID_RAW_LEN + m_name->send_len(true, false, true));
 }
 
-MarkerGetGame_BackendMessage::MarkerGetGame_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner) :
+MarkerGetGame_BackendMessage::MarkerGetGame_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len), m_name(NULL) {
   m_game_exists = inbuf[24];
   m_game_type = inbuf[25];
   memcpy(m_template, inbuf + 26, UUID_RAW_LEN);
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
@@ -2188,8 +2188,8 @@ MarkerGetGame_BackendMessage::MarkerGetGame_BackendMessage(const u_char *inbuf, 
   m_name = new UruString(inbuf + (26 + UUID_RAW_LEN), in_len - (26 + UUID_RAW_LEN), true, false, !become_owner);
 }
 
-u_int MarkerGetGame_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t MarkerGetGame_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2203,9 +2203,9 @@ u_int MarkerGetGame_BackendMessage::fill_type(bool iovs, u_int start_at, bool *m
 }
 
 MarkerAdd_BackendMessage::MarkerAdd_BackendMessage(uint32_t id1, uint32_t id2, bool server, uint32_t gameid, uint32_t localid,
-    double x, double y, double z, const UruString &name, const UruString &age, int number) :
+    double x, double y, double z, const UruString &name, const UruString &age, int32_t number) :
     Marker_BackendMessage((server ? MARKER_ADD | FROM_SERVER : MARKER_ADD), gameid, localid), m_name(NULL), m_agename(NULL) {
-  m_buf = new u_char[sizeof(marker_data_t)];
+  m_buf = new uint8_t[sizeof(marker_data_t)];
   m_data = (marker_data_t*) m_buf;
   m_data->x = x;
   m_data->y = y;
@@ -2216,17 +2216,17 @@ MarkerAdd_BackendMessage::MarkerAdd_BackendMessage(uint32_t id1, uint32_t id2, b
   setup_header(id1, id2, 8 + marker_data_len + m_name->send_len(true, false, true) + m_agename->send_len(true, false, true));
 }
 
-MarkerAdd_BackendMessage::MarkerAdd_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type, bool become_owner) :
+MarkerAdd_BackendMessage::MarkerAdd_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type, bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len), m_name(NULL), m_agename(NULL) {
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
     m_data = (marker_data_t*) (m_buf + 24);
   } else {
-    m_buf = new u_char[sizeof(marker_data_t)];
+    m_buf = new uint8_t[sizeof(marker_data_t)];
     m_data = (marker_data_t*) (m_buf);
     memcpy(m_buf, inbuf + 24, marker_data_len);
   }
-  u_int off = 24 + marker_data_len;
+  uint32_t off = 24 + marker_data_len;
   m_name = new UruString(inbuf + off, in_len - (off + 2), true, false, !become_owner);
   off += m_name->arrival_len();
   m_agename = new UruString(inbuf + off, in_len - off, true, false, !become_owner);
@@ -2235,18 +2235,18 @@ MarkerAdd_BackendMessage::MarkerAdd_BackendMessage(const u_char *inbuf, size_t i
 #endif
 }
 
-u_int MarkerAdd_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
-  u_char *fakebuf;
+uint32_t MarkerAdd_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
+  uint8_t *fakebuf;
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
   WRITE_4_BYTES(m_localid, false);
-  fakebuf = (u_char*) &m_data->x;
+  fakebuf = (uint8_t*) &m_data->x;
   WRITE_BUFFER(fakebuf, 8, false);
-  fakebuf = (u_char*) &m_data->y;
+  fakebuf = (uint8_t*) &m_data->y;
   WRITE_BUFFER(fakebuf, 8, false);
-  fakebuf = (u_char*) &m_data->z;
+  fakebuf = (uint8_t*) &m_data->z;
   WRITE_BUFFER(fakebuf, 8, false);
   WRITE_4_BYTES(m_data->number, false);
   WRITE_URU_STRING_PTR(m_name, true, false, true, false, false);
@@ -2264,17 +2264,17 @@ MarkersAll_BackendMessage::MarkersAll_BackendMessage(uint32_t id1, uint32_t id2,
   setup_header(id1, id2, 12);
 }
 
-MarkersAll_BackendMessage::MarkersAll_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+MarkersAll_BackendMessage::MarkersAll_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     Marker_BackendMessage(MARKER_DUMP | FROM_SERVER, inbuf, in_len), m_index(0), m_name(NULL), m_agename(NULL) {
   m_listlen = read32le(inbuf, 24);
   m_buflen = in_len - 28;
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
     m_bufp = inbuf + 28;
   } else {
     // we are copying this data so the storage can be used by the game
     // server to send its messages
-    m_buf = new u_char[m_buflen];
+    m_buf = new uint8_t[m_buflen];
     memcpy(m_buf, inbuf + 28, m_buflen);
     m_bufp = m_buf;
   }
@@ -2305,7 +2305,7 @@ void MarkersAll_BackendMessage::finalize() {
   if (m_index > 0) {
     m_listlen = htole32(m_index);
     size_t total = 12;
-    for (u_int i = 0; i < m_index; i++) {
+    for (uint32_t i = 0; i < m_index; i++) {
       total += m_list[i].info_size;
     }
     setup_header(get_id1(), get_id2(), total);
@@ -2340,8 +2340,8 @@ void MarkersAll_BackendMessage::advance_index() {
   }
 }
 
-u_int MarkersAll_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t MarkersAll_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   if (m_buf) {
     // programmer error
 #ifdef DEBUG_ENABLE
@@ -2355,9 +2355,9 @@ u_int MarkersAll_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_
   WRITE_4_BYTES(m_localid, false);
   if (m_index > 0) {
     WRITE_4_BYTES(m_listlen, false);
-    for (u_int i = 0; i < m_index; i++) {
+    for (uint32_t i = 0; i < m_index; i++) {
       struct marker_info &marker = m_list[i];
-      u_char *asbuf = (u_char*) &marker.data;
+      uint8_t *asbuf = (uint8_t*) &marker.data;
       WRITE_BUFFER(asbuf, marker_data_len, false);
       UruString *str = &marker.markername;
       WRITE_URU_STRING_PTR(str, true, false, false, false, false);
@@ -2376,29 +2376,29 @@ MarkersCaptured_BackendMessage::MarkersCaptured_BackendMessage(uint32_t id1, uin
     Marker_BackendMessage(MARKER_STATE | FROM_SERVER, gameid, localid), m_listlen(htole32(num_entries)), m_index(0) {
   if (num_entries > 0) {
     m_buflen = 8 * num_entries;
-    m_buf = new u_char[m_buflen];
+    m_buf = new uint8_t[m_buflen];
   }
   // this is for zero markers
   setup_header(id1, id2, 12);
 }
 
-MarkersCaptured_BackendMessage::MarkersCaptured_BackendMessage(const u_char *inbuf, size_t in_len, bool become_owner) :
+MarkersCaptured_BackendMessage::MarkersCaptured_BackendMessage(const uint8_t *inbuf, size_t in_len, bool become_owner) :
     Marker_BackendMessage(MARKER_STATE | FROM_SERVER, inbuf, in_len), m_index(0) {
   m_listlen = read32le(inbuf, 24);
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
 #ifdef DEBUG_ENABLE
     // message should not be queued m_unsafe = false;
 #endif
     m_bufp = m_buf + 28;
   } else {
-    m_bufp = const_cast<u_char*>(inbuf + 28); // less safe, don't use add_marker!
+    m_bufp = const_cast<uint8_t*>(inbuf + 28); // less safe, don't use add_marker!
   }
 }
 
 void MarkersCaptured_BackendMessage::add_marker(int32_t number, int32_t value) {
   if (m_index < size()) {
-    u_int offset = (m_index * 8/*2 4-byte integers per element*/);
+    uint32_t offset = (m_index * 8/*2 4-byte integers per element*/);
     write32(m_buf, offset, number);
     offset += 4;
     write32(m_buf, offset, value);
@@ -2417,8 +2417,8 @@ void MarkersCaptured_BackendMessage::finalize() {
   }
 }
 
-u_int MarkersCaptured_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t MarkersCaptured_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2441,20 +2441,20 @@ MarkerGameRename_BackendMessage::MarkerGameRename_BackendMessage(uint32_t id1, u
   setup_header(id1, id2, 8 + m_name->send_len(true, false, true));
 }
 
-MarkerGameRename_BackendMessage::MarkerGameRename_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+MarkerGameRename_BackendMessage::MarkerGameRename_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len), m_name(NULL) {
   m_name = new UruString(inbuf + 24, in_len - 24, true, false, !become_owner);
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
   }
 #ifdef DEBUG_ENABLE
   m_unsafe = false;
 #endif
 }
 
-u_int MarkerGameRename_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t MarkerGameRename_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2470,7 +2470,7 @@ MarkerGameDelete_BackendMessage::MarkerGameDelete_BackendMessage(uint32_t id1, u
   setup_header(id1, id2, 8);
 }
 
-MarkerGameDelete_BackendMessage::MarkerGameDelete_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+MarkerGameDelete_BackendMessage::MarkerGameDelete_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len) {
   if (become_owner) {
@@ -2481,8 +2481,8 @@ MarkerGameDelete_BackendMessage::MarkerGameDelete_BackendMessage(const u_char *i
 #endif
 }
 
-u_int MarkerGameDelete_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t MarkerGameDelete_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2499,21 +2499,21 @@ MarkerGameRenameMarker_BackendMessage::MarkerGameRenameMarker_BackendMessage(uin
   setup_header(id1, id2, 12 + m_name->send_len(true, false, true));
 }
 
-MarkerGameRenameMarker_BackendMessage::MarkerGameRenameMarker_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+MarkerGameRenameMarker_BackendMessage::MarkerGameRenameMarker_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len), m_name(NULL) {
   m_number = read32le(inbuf, 24);
   m_name = new UruString(inbuf + 28, in_len - 28, true, false, !become_owner);
   if (become_owner) {
-    m_buf = const_cast<u_char*>(inbuf); // safe; we're becoming owner
+    m_buf = const_cast<uint8_t*>(inbuf); // safe; we're becoming owner
   }
 #ifdef DEBUG_ENABLE
   m_unsafe = false;
 #endif
 }
 
-u_int MarkerGameRenameMarker_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov,
-    u_int iov_ct, u_char *buffer, size_t buflen) {
+uint32_t MarkerGameRenameMarker_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov,
+    uint32_t iov_ct, uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2531,7 +2531,7 @@ MarkerGameDeleteMarker_BackendMessage::MarkerGameDeleteMarker_BackendMessage(uin
   setup_header(id1, id2, 12);
 }
 
-MarkerGameDeleteMarker_BackendMessage::MarkerGameDeleteMarker_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+MarkerGameDeleteMarker_BackendMessage::MarkerGameDeleteMarker_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len) {
   m_number = read32le(inbuf, 24);
@@ -2543,8 +2543,8 @@ MarkerGameDeleteMarker_BackendMessage::MarkerGameDeleteMarker_BackendMessage(con
 #endif
 }
 
-u_int MarkerGameDeleteMarker_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov,
-    u_int iov_ct, u_char *buffer, size_t buflen) {
+uint32_t MarkerGameDeleteMarker_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov,
+    uint32_t iov_ct, uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2561,7 +2561,7 @@ MarkerGameCaptureMarker_BackendMessage::MarkerGameCaptureMarker_BackendMessage(u
   setup_header(id1, id2, 20);
 }
 
-MarkerGameCaptureMarker_BackendMessage::MarkerGameCaptureMarker_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+MarkerGameCaptureMarker_BackendMessage::MarkerGameCaptureMarker_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len) {
   m_player = read32le(inbuf, 24);
@@ -2575,8 +2575,8 @@ MarkerGameCaptureMarker_BackendMessage::MarkerGameCaptureMarker_BackendMessage(c
 #endif
 }
 
-u_int MarkerGameCaptureMarker_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov,
-    u_int iov_ct, u_char *buffer, size_t buflen) {
+uint32_t MarkerGameCaptureMarker_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov,
+    uint32_t iov_ct, uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);
@@ -2595,7 +2595,7 @@ MarkerGameStop_BackendMessage::MarkerGameStop_BackendMessage(uint32_t id1, uint3
   setup_header(id1, id2, 12);
 }
 
-MarkerGameStop_BackendMessage::MarkerGameStop_BackendMessage(const u_char *inbuf, size_t in_len, int msg_type,
+MarkerGameStop_BackendMessage::MarkerGameStop_BackendMessage(const uint8_t *inbuf, size_t in_len, int32_t msg_type,
     bool become_owner) :
     Marker_BackendMessage(msg_type, inbuf, in_len) {
   m_player = read32le(inbuf, 24);
@@ -2607,8 +2607,8 @@ MarkerGameStop_BackendMessage::MarkerGameStop_BackendMessage(const u_char *inbuf
 #endif
 }
 
-u_int MarkerGameStop_BackendMessage::fill_type(bool iovs, u_int start_at, bool *msg_done, struct iovec *iov, u_int iov_ct,
-    u_char *buffer, size_t buflen) {
+uint32_t MarkerGameStop_BackendMessage::fill_type(bool iovs, uint32_t start_at, bool *msg_done, struct iovec *iov, uint32_t iov_ct,
+    uint8_t *buffer, size_t buflen) {
   START_FILL_TYPE
   ;
   WRITE_4_BYTES(m_requester, false);

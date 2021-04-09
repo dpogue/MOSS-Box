@@ -45,7 +45,7 @@ ConfigParser::~ConfigParser() {
   }
 }
 
-int ConfigParser::register_config(const char *name, int *value, int the_default) {
+int32_t ConfigParser::register_config(const char *name, int32_t *value, int32_t the_default) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
     if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
@@ -60,7 +60,7 @@ int ConfigParser::register_config(const char *name, int *value, int the_default)
   return 0;
 }
 
-int ConfigParser::register_config(const char *name, char **value, const char *the_default) {
+int32_t ConfigParser::register_config(const char *name, char **value, const char *the_default) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
     if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
@@ -81,7 +81,7 @@ int ConfigParser::register_config(const char *name, char **value, const char *th
   return 0;
 }
 
-int ConfigParser::register_config(const char *name, bool *value, bool the_default) {
+int32_t ConfigParser::register_config(const char *name, bool *value, bool the_default) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
     if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
@@ -96,7 +96,7 @@ int ConfigParser::register_config(const char *name, bool *value, bool the_defaul
   return 0;
 }
 
-int ConfigParser::unregister_config(const char *name) {
+int32_t ConfigParser::unregister_config(const char *name) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
     if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
@@ -109,14 +109,14 @@ int ConfigParser::unregister_config(const char *name) {
   return 1;
 }
 
-int ConfigParser::read_config(const char *filename, bool complain) {
+int32_t ConfigParser::read_config(const char *filename, bool complain) {
   std::ifstream file(filename, std::ios_base::binary | std::ios_base::in);
   if (file.fail()) {
     return -1;
   }
 
-  u_int bufsize = 256, bufat = 0, lineno = 1;
-  int checked;
+  uint32_t bufsize = 256, bufat = 0, lineno = 1;
+  int32_t checked;
   char *linebuf = NULL;
 
   try {
@@ -166,7 +166,7 @@ static bool is_whitespace(char c) {
   return (c == ' ' || c == '\r' || c == '\n' || c == '\t');
 }
 
-int ConfigParser::check_line(char *linebuf, bool complain) {
+int32_t ConfigParser::check_line(char *linebuf, bool complain) {
   char *name = linebuf;
   while (is_whitespace(*name)) {
     name++;
@@ -203,7 +203,7 @@ int ConfigParser::check_line(char *linebuf, bool complain) {
         // no '=' found
         return ERROR_NOT_PAIR;
       } else if (e->m_type == TYPE_INT) {
-        int num = sscanf(value, "%i", (int*) e->m_addr);
+        int32_t num = sscanf(value, "%i", (int32_t*) e->m_addr);
         if (num != 1) {
           return ERROR_BAD_FORMAT;
         }
@@ -214,7 +214,7 @@ int ConfigParser::check_line(char *linebuf, bool complain) {
         } else if (value[0] == 'f' || value[0] == 'F') {
           *(bool*) e->m_addr = false;
         } else {
-          int val;
+          int32_t val;
           if (sscanf(value, "%i", &val) != 1) {
             return ERROR_BAD_FORMAT;
           }
@@ -260,7 +260,7 @@ int ConfigParser::check_line(char *linebuf, bool complain) {
   return ERROR_NONE;
 }
 
-void ConfigParser::file_error(u_int lineno, int error) {
+void ConfigParser::file_error(uint32_t lineno, int32_t error) {
   const char *text;
 
   switch (error) {
@@ -285,9 +285,9 @@ void ConfigParser::file_error(u_int lineno, int error) {
   throw parse_error(lineno, text);
 }
 
-char** ConfigParser::split_string(const char *str, u_int *count) {
+char** ConfigParser::split_string(const char *str, uint32_t *count) {
   const char *at = str;
-  u_int num = 1;
+  uint32_t num = 1;
   *count = 0;
   while (*at != '\0') {
     if (*at == '\\' && *(at + 1) == ',') {

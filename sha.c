@@ -21,7 +21,7 @@
 #include <netinet/in.h>
 #include "sha.h"
 
-uint32_t f(int t, uint32_t B, uint32_t C, uint32_t D) {
+uint32_t f(int32_t t, uint32_t B, uint32_t C, uint32_t D) {
   if (0 <= t && t <= 19) {
     return (B & C) | (~B & D);
   }
@@ -31,7 +31,7 @@ uint32_t f(int t, uint32_t B, uint32_t C, uint32_t D) {
   return B ^ C ^ D;
 }
 
-uint32_t K(int t) {
+uint32_t K(int32_t t) {
   if (0 <= t && t <= 19) {
     return 0x5A827999;
   }
@@ -59,8 +59,8 @@ uint32_t K(int t) {
   H[0] += A; H[1] += B; H[2] += C; H[3] += D; H[4] += E;
 
 /* returns true if the padding is not completed (and we need another block) */
-int pad(unsigned char *message, uint64_t len) {
-  int i = len % 64;
+int32_t pad(unsigned char *message, uint64_t len) {
+  int32_t i = len % 64;
   if (i == 0) {
     return 1;
   }
@@ -77,7 +77,7 @@ int pad(unsigned char *message, uint64_t len) {
 }
 
 void extrapad(unsigned char *message, size_t len) {
-  int i = 0;
+  int32_t i = 0;
   if (len % 64 == 0) {
     message[i++] = 0x80;
   }
@@ -91,23 +91,23 @@ void extrapad(unsigned char *message, size_t len) {
  * We are doing math with these values so they need to be in native byte
  * order.
  */
-void swap_words(uint32_t *buf, int howmany) {
+void swap_words(uint32_t *buf, int32_t howmany) {
 #ifndef WORDS_BIGENDIAN
-  int i;
+  int32_t i;
   for (i = 0; i < howmany; i++) {
     buf[i] = htonl(buf[i]);
   }
 #endif
 }
 
-static void sha_hash(const unsigned char *message, uint64_t len, unsigned char *hash, int is1) {
+static void sha_hash(const unsigned char *message, uint64_t len, unsigned char *hash, int32_t is1) {
   /* from the spec */
   uint32_t *H = (uint32_t*) hash;
   uint32_t A, B, C, D, E, TEMP;
   uint32_t W[80];
   /* some business logic */
   uint64_t consumed = 0, n;
-  int extra_block = 0, t;
+  int32_t extra_block = 0, t;
 
   H[0] = 0x67452301;
   H[1] = 0xEFCDAB89;

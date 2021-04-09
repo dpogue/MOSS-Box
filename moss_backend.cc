@@ -82,9 +82,9 @@
 #define RELOAD 0
 #define SHUTDOWN 1
 #define SIGNAL_RESPONSES 2
-static int todo[SIGNAL_RESPONSES] = { 0, 0 };
+static int32_t todo[SIGNAL_RESPONSES] = { 0, 0 };
 
-static void sig_handler(int sig) {
+static void sig_handler(int32_t sig) {
   if (sig == SIGHUP) {
     todo[RELOAD] = 1;
   } else if (sig == SIGTERM || sig == SIGINT) {
@@ -96,7 +96,7 @@ static void sig_handler(int sig) {
 
 class BackendProcessor: public Server::SignalProcessor {
 public:
-  Server::reason_t signalled(int *todo, Server *s) {
+  Server::reason_t signalled(int32_t *todo, Server *s) {
     if (todo[SHUTDOWN]) {
       return Server::SERVER_SHUTDOWN;
     }
@@ -174,15 +174,15 @@ public:
       return false;
     }
     if (m_egg_disable && strlen(m_egg_disable) > 0) {
-      u_int count = 0;
+      uint32_t count = 0;
       char **split = ConfigParser::split_string(m_egg_disable, &count);
       if (split) {
         egg_mask = 0;
-        for (u_int i = 0; i < count; i++) {
-          int val;
+        for (uint32_t i = 0; i < count; i++) {
+          int32_t val;
           if (sscanf(split[i], "%i", &val) != 1) {
             // non-integer value, disable all eggs
-            egg_mask = (u_int) -1;
+            egg_mask = (uint32_t) -1;
             break;
           } else if (val < 0) {
             val = -val;
@@ -241,8 +241,8 @@ public:
   }
 
   char *bind_addr_name, *log_dir, *log_level, *pid_file, *db_addr, *db_user, *db_passwd, *db_name, *db_params;
-  int bind_port, db_port;
-  u_int egg_mask;
+  int32_t bind_port, db_port;
+  uint32_t egg_mask;
 protected:
   Logger *m_log;
   const char *m_cfg_file;
@@ -250,8 +250,8 @@ protected:
   ConfigParser m_back_config;
 };
 
-int main(int argc, char *argv[]) {
-  int ret, fd = -1;
+int32_t main(int32_t argc, char *argv[]) {
+  int32_t ret, fd = -1;
   long return_value = 0;
   struct sockaddr_in bind_addr;
   Logger *log = NULL;

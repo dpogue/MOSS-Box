@@ -18,8 +18,8 @@
 
 #include "rc4.h"
 
-void rc4_init_key(rc4_state_t *state, const unsigned char *key, unsigned int keylen) {
-  unsigned int i, k;
+void rc4_init_key(rc4_state_t *state, const unsigned char *key, unsigned int32_t keylen) {
+  unsigned int32_t i, k;
   unsigned char j, tmp;
 
   state->i = state->j = 0;
@@ -39,9 +39,9 @@ void rc4_init_key(rc4_state_t *state, const unsigned char *key, unsigned int key
   }
 }
 
-void rc4_encrypt(rc4_state_t *state, unsigned char *buf, unsigned int buflen) {
+void rc4_encrypt(rc4_state_t *state, unsigned char *buf, unsigned int32_t buflen) {
   unsigned char tmp;
-  unsigned int n;
+  unsigned int32_t n;
 
   for (n = 0; n < buflen; n++) {
     state->i++;

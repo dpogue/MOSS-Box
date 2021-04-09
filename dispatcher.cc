@@ -113,9 +113,9 @@
 #define THREAD_JOIN 2
 #define CHILD_EXIT 3
 #define SIGNAL_RESPONSES 4
-static int todo[SIGNAL_RESPONSES] = { 0, 0, 0, 0 };
+static int32_t todo[SIGNAL_RESPONSES] = { 0, 0, 0, 0 };
 
-static void sig_handler(int sig) {
+static void sig_handler(int32_t sig) {
   if (sig == SIGHUP) {
     todo[RELOAD] = 1;
   } else if (sig == SIGTERM) {
@@ -135,7 +135,7 @@ static void sig_handler(int sig) {
   }
 }
 
-static void usr2_handler(int sig) {
+static void usr2_handler(int32_t sig) {
   // nothing need be done
 }
 
@@ -146,7 +146,7 @@ static void usr2_handler(int sig) {
 
 class DispatcherProcessor: public Server::SignalProcessor {
 public:
-  Server::reason_t signalled(int *todo, Server *s);
+  Server::reason_t signalled(int32_t *todo, Server *s);
 
   DispatcherProcessor(Logger *logger, const char *config_file) :
       bind_addr_name(NULL), track_addr_name(NULL), log_dir(NULL), log_level(NULL), pid_file(NULL), server_types(NULL), ext_addr_name(
@@ -311,7 +311,7 @@ public:
 #ifdef FORK_ENABLE
   bool check_child_name() {
     struct stat s;
-    int ret = stat(child_name, &s);
+    int32_t ret = stat(child_name, &s);
     if (ret < 0) {
       log_err(m_log, "Child server executable file %s does not exist\n",
         child_name);
@@ -331,7 +331,7 @@ public:
       return false;
     }
     struct stat s;
-    int ret = stat(dir, &s);
+    int32_t ret = stat(dir, &s);
     if (ret < 0) {
       if (create) {
         ret = recursive_mkdir(dir, S_IRWXU | S_IRWXG);
@@ -363,10 +363,10 @@ public:
       *auth_dir, *file_dir, *game_dir, *auth_log_level, *file_log_level, *game_log_level, *gate_log_level,
       *game_addr_name, *auth_key_file, *game_key_file, *gate_key_file, *status_str;
   bool always_resolve;
-  int bind_port, track_port, status_len;
+  int32_t bind_port, track_port, status_len;
 
   ThreadManager *m_thread_manager;
-  u_char m_do_auth, m_do_file, m_do_game, m_do_gate, m_do_status;
+  uint8_t m_do_auth, m_do_file, m_do_game, m_do_gate, m_do_status;
   uint32_t m_ext_addr; // network order
 
   const char *m_cfg_file;
@@ -379,14 +379,14 @@ protected:
 
 class Dispatcher: public Server {
 public:
-  Dispatcher(int listen_fd, uint32_t ipaddr, struct sockaddr_in &track_address) :
+  Dispatcher(int32_t listen_fd, uint32_t ipaddr, struct sockaddr_in &track_address) :
       Server(listen_fd, ipaddr), m_track_addr(track_address),
 #ifndef FORK_ENABLE
           m_auth_log(NULL), m_file_log(NULL),
 #endif
           m_gate_log(NULL), m_auth_keydata(NULL), m_game_keydata(NULL), m_gate_keydata(NULL), m_track(NULL), m_retry(
               false) {
-    int err = pthread_attr_init(&m_thread_attr);
+    int32_t err = pthread_attr_init(&m_thread_attr);
     if (err) {
       log_err(m_log, "pthread_attr_init() failed: %s\n", strerror(err));
       throw std::bad_alloc();
@@ -395,14 +395,14 @@ public:
   }
   virtual ~Dispatcher();
 
-  int type() const {
+  int32_t type() const {
     return 0;
   }
   const char* type_name() const {
     return "main";
   }
 
-  int init();
+  int32_t init();
   bool shutdown(reason_t reason) {
     log_info(m_log, "MOSS shutdown in progress...\n");
     if (m_track && m_track->fd() >= 0) {
@@ -421,7 +421,7 @@ public:
 
   reason_t message_read(Connection *conn, NetworkMessage *msg);
 
-  void add_client_conn(int fd, u_char first);
+  void add_client_conn(int32_t fd, uint8_t first);
   void conn_completed(Connection *conn);
   reason_t conn_timeout(Connection *conn, reason_t why);
   reason_t conn_shutdown(Connection *conn, reason_t why);
@@ -438,7 +438,7 @@ public:
   void send_tracking_update(TrackServiceTypes_BackendMessage *msg) {
     m_track->enqueue(msg);
   }
-  void* update_keydata(const char *fname, int auth_game_gate);
+  void* update_keydata(const char *fname, int32_t auth_game_gate);
 
 protected:
   struct sockaddr_in m_track_addr;
@@ -454,7 +454,7 @@ protected:
   // state for talking to tracking server
   BackendConnection *m_track;
   bool m_retry;
-  int do_connect();
+  int32_t do_connect();
 
   // state for managing connections to game servers
   std::map<uint32_t, GameServer*> m_games;
@@ -464,13 +464,13 @@ static const char *http_reply = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\
 static const char *http_404 = "HTTP/1.0 404 Not Found\r\nContent-Type: text/html\r\n\r\n"
     "The requested URL does not exist.";
 
-int main(int argc, char *argv[]) {
-  int ret;
+int32_t main(int32_t argc, char *argv[]) {
+  int32_t ret;
   long return_value = 0;
 
   /* config stuff */
   struct sockaddr_in bind_addr, track_addr;
-  int fd = -1;
+  int32_t fd = -1;
 
   /* server stuff */
   Logger *log = NULL;
@@ -716,7 +716,7 @@ int main(int argc, char *argv[]) {
     uint32_t use_addr = (uint32_t) bind_addr.sin_addr.s_addr;
     if (use_addr == INADDR_ANY) {
       // turn address into 0.x.x.x
-      u_char *addrp = (u_char*) &use_addr;
+      uint8_t *addrp = (uint8_t*) &use_addr;
       get_random_data(addrp + 1, 3);
     }
     server = new Dispatcher(fd, use_addr, track_addr);
@@ -827,7 +827,7 @@ int main(int argc, char *argv[]) {
   return return_value;
 }
 
-Server::reason_t DispatcherProcessor::signalled(int *todo, Server *s) {
+Server::reason_t DispatcherProcessor::signalled(int32_t *todo, Server *s) {
   Dispatcher *server = (Dispatcher*) s;
 
   if (todo[SHUTDOWN]) {
@@ -899,7 +899,7 @@ Server::reason_t DispatcherProcessor::signalled(int *todo, Server *s) {
       // Well, they had an address but then reconfigured it to unset. The
       // best thing we can do is keep using the previous address.
     }
-    u_char did_game = m_do_game, did_file = m_do_file, did_auth = m_do_auth;
+    uint8_t did_game = m_do_game, did_file = m_do_file, did_auth = m_do_auth;
     parse_server_types();
 #if defined(USING_RSA) || defined(USING_DH)
       if (m_do_auth) {
@@ -1037,8 +1037,8 @@ DispatcherProcessor::construct_tracking_update(uint32_t id1, uint32_t id2) {
   }
 }
 
-void Dispatcher::add_client_conn(int fd, u_char type) {
-  int ret;
+void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
+  int32_t ret;
   DispatcherProcessor *dp = (DispatcherProcessor*) m_signal_processor;
 
   // dispatch!
@@ -1107,7 +1107,7 @@ void Dispatcher::add_client_conn(int fd, u_char type) {
       uint32_t new_id;
 
       do {
-        get_random_data((u_char*) &new_id, 4);
+        get_random_data((uint8_t*) &new_id, 4);
       } while (!dp->m_thread_manager->is_id_available(new_id));
       server->set_id(new_id);
       server->setup_logger(fd, dp->auth_log_level, m_auth_log);
@@ -1196,7 +1196,7 @@ void Dispatcher::add_client_conn(int fd, u_char type) {
       uint32_t new_id;
 
       do {
-        get_random_data((u_char*) &new_id, 4);
+        get_random_data((uint8_t*) &new_id, 4);
       } while (!dp->m_thread_manager->is_id_available(new_id));
       server->set_id(new_id);
       server->setup_logger(fd, dp->file_log_level, m_file_log);
@@ -1259,7 +1259,7 @@ void Dispatcher::add_client_conn(int fd, u_char type) {
       uint32_t new_id;
 
       do {
-        get_random_data((u_char*) &new_id, 4);
+        get_random_data((uint8_t*) &new_id, 4);
       } while (!dp->m_thread_manager->is_id_available(new_id));
       server->set_id(new_id);
       server->setup_logger(fd, dp->gate_log_level, m_gate_log);
@@ -1291,7 +1291,7 @@ void Dispatcher::add_client_conn(int fd, u_char type) {
   else if (type == dp->m_do_status) {
     // treat as an HTTP GET request, spit out status message
     log_msgs(m_log, "Connection %d: status\n", fd);
-    u_int rsz = sizeof("ET /serverstatus/") - 1;
+    uint32_t rsz = sizeof("ET /serverstatus/") - 1;
     char request[200];
     ret = read(fd, request, 200);
     if (!strncmp(request, "ET /serverstatus/", rsz)
@@ -1321,13 +1321,13 @@ void Dispatcher::add_client_conn(int fd, u_char type) {
       log_warn(m_log, "Connection on %d requested gatekeeper\n", fd);
     } else {
       log_warn(m_log, "Connection on %d requested unknown "
-          "type %u\n", fd, (unsigned int )type);
+          "type %u\n", fd, (unsigned int32_t )type);
     }
     close(fd);
   }
 }
 
-int Dispatcher::init() {
+int32_t Dispatcher::init() {
   // set up vault/tracking server connection
   m_track = new BackendConnection();
   m_track->m_interval = 0;
@@ -1340,14 +1340,14 @@ int Dispatcher::init() {
   return 0;
 }
 
-int Dispatcher::do_connect() {
+int32_t Dispatcher::do_connect() {
   m_track->set_in_connect(false);
   m_track->set_fd(socket(PF_INET, SOCK_STREAM, IPPROTO_TCP));
   if (m_track->fd() < 0) {
     log_err(m_log, "Error in socket(): %s\n", strerror(errno));
     return -1;
   }
-  int flags = fcntl(m_track->fd(), F_GETFL, NULL);
+  int32_t flags = fcntl(m_track->fd(), F_GETFL, NULL);
   if (fcntl(m_track->fd(), F_SETFL, flags | O_NONBLOCK)) {
     log_err(m_log, "Error setting socket nonblocking: %s\n", strerror(errno));
     return -1;
@@ -1367,7 +1367,7 @@ int Dispatcher::do_connect() {
   return 0;
 }
 
-void* Dispatcher::update_keydata(const char *fname, int auth_game_gate) {
+void* Dispatcher::update_keydata(const char *fname, int32_t auth_game_gate) {
   const char *use_file;
   void **keydata;
   if (auth_game_gate < 0) {
@@ -1424,7 +1424,7 @@ void Dispatcher::conn_completed(Connection *conn) {
 }
 
 Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg) {
-  int msg_type = msg->type();
+  int32_t msg_type = msg->type();
   Server::reason_t result = NO_SHUTDOWN;
 
   if (conn == m_track) {
@@ -1544,11 +1544,11 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
 
           uint32_t new_id;
           do {
-            get_random_data((u_char*) &new_id, 4);
+            get_random_data((uint8_t*) &new_id, 4);
           } while (!dp->m_thread_manager->is_id_available(new_id));
 #ifdef FORK_GAME_TOO
     // set up sockets for new game server
-    int sockets[2];
+    int32_t sockets[2];
     if (socketpair(PF_LOCAL, SOCK_DGRAM, PF_UNSPEC, sockets) < 0) {
       log_err(m_log, "Cannot create socket pair for game server\n");
       TrackStartAge_ToBackendMessage *reject =
@@ -1559,7 +1559,7 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
       break;
     }
     // set up connection to new game server
-    int sflags = fcntl(sockets[0], F_GETFL, NULL);
+    int32_t sflags = fcntl(sockets[0], F_GETFL, NULL);
     if (fcntl(sockets[0], F_SETFL, sflags|O_NONBLOCK)) {
       log_err(m_log, "Error setting socket nonblocking: %s\n",
         strerror(errno));
@@ -1645,7 +1645,7 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
           // now actually make and start the thread
           pthread_t tid;
 
-          int ret = pthread_create(&tid, &m_thread_attr, serv_main, server);
+          int32_t ret = pthread_create(&tid, &m_thread_attr, serv_main, server);
           if (ret) {
             log_err(m_log, "Game pthread_create failed: %s\n", strerror(ret));
             delete server;
@@ -1881,7 +1881,7 @@ DispatcherProcessor::~DispatcherProcessor() {
 }
 
 bool DispatcherProcessor::parse_server_types() {
-  u_int count;
+  uint32_t count;
   bool return_value = true;
 
   if (!server_types) {
@@ -1894,8 +1894,8 @@ bool DispatcherProcessor::parse_server_types() {
     return false;
   }
 
-  u_char auth = 0, file = 0, game = 0, gate = 0, status = 0;
-  for (u_int i = 0; i < count; i++) {
+  uint8_t auth = 0, file = 0, game = 0, gate = 0, status = 0;
+  for (uint32_t i = 0; i < count; i++) {
     if (!strcasecmp(s_types[i], "auth")) {
       auth = TYPE_AUTH;
     } else if (!strcasecmp(s_types[i], "file")) {

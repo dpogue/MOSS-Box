@@ -75,22 +75,22 @@
  * GameMgr game types
  */
 // Heek: 9d83c2e2-7835-4477-9aaa-22254c59a753
-static const u_char Heek_UUID[] = { 0xe2, 0xc2, 0x83, 0x9d, 0x35, 0x78, 0x77, 0x44, 0x9a, 0xaa, 0x22, 0x25, 0x4c, 0x59, 0xa7,
+static const uint8_t Heek_UUID[] = { 0xe2, 0xc2, 0x83, 0x9d, 0x35, 0x78, 0x77, 0x44, 0x9a, 0xaa, 0x22, 0x25, 0x4c, 0x59, 0xa7,
     0x53 };
 // BlueSpiral: 5ff98165-913e-4fd1-a2c2-9c7f31be2cc8
-static const u_char BlueSpiral_UUID[] = { 0x65, 0x81, 0xf9, 0x5f, 0x3e, 0x91, 0xd1, 0x4f, 0xa2, 0xc2, 0x9c, 0x7f, 0x31, 0xbe,
+static const uint8_t BlueSpiral_UUID[] = { 0x65, 0x81, 0xf9, 0x5f, 0x3e, 0x91, 0xd1, 0x4f, 0xa2, 0xc2, 0x9c, 0x7f, 0x31, 0xbe,
     0x2c, 0xc8 };
 // VarSync (quab): 475c2e9b-a245-4106-a047-9b25d41ff333
-static const u_char VarSync_UUID[] = { 0x9b, 0x2e, 0x5c, 0x47, 0x45, 0xa2, 0x06, 0x41, 0xa0, 0x47, 0x9b, 0x25, 0xd4, 0x1f, 0xf3,
+static const uint8_t VarSync_UUID[] = { 0x9b, 0x2e, 0x5c, 0x47, 0x45, 0xa2, 0x06, 0x41, 0xa0, 0x47, 0x9b, 0x25, 0xd4, 0x1f, 0xf3,
     0x33 };
 // Marker: 000b2c39-0319-4be1-b06c-7a105b160fcf
-static const u_char Marker_UUID[] = { 0x39, 0x2c, 0x0b, 0x00, 0x19, 0x03, 0xe1, 0x4b, 0xb0, 0x6c, 0x7a, 0x10, 0x5b, 0x16, 0x0f,
+static const uint8_t Marker_UUID[] = { 0x39, 0x2c, 0x0b, 0x00, 0x19, 0x03, 0xe1, 0x4b, 0xb0, 0x6c, 0x7a, 0x10, 0x5b, 0x16, 0x0f,
     0xcf };
 // ClimbingWall: 6224cdf4-3556-4740-b7cd-d637562d07be
-static const u_char ClimbingWall_UUID[] = { 0xf4, 0xcd, 0x24, 0x62, 0x56, 0x35, 0x40, 0x47, 0xb7, 0xcd, 0xd6, 0x37, 0x56, 0x2d,
+static const uint8_t ClimbingWall_UUID[] = { 0xf4, 0xcd, 0x24, 0x62, 0x56, 0x35, 0x40, 0x47, 0xb7, 0xcd, 0xd6, 0x37, 0x56, 0x2d,
     0x07, 0xbe };
 // TicTacToe: a7236529-11d8-4758-9368-59cb43445a83
-static const u_char TicTacToe_UUID[] = { 0x29, 0x65, 0x23, 0xa7, 0xd8, 0x11, 0x58, 0x47, 0x93, 0x68, 0x59, 0xcb, 0x43, 0x44,
+static const uint8_t TicTacToe_UUID[] = { 0x29, 0x65, 0x23, 0xa7, 0xd8, 0x11, 0x58, 0x47, 0x93, 0x68, 0x59, 0xcb, 0x43, 0x44,
     0x5a, 0x83 };
 
 GameState::~GameState() {
@@ -271,7 +271,7 @@ static bool check_useable_none(PropagateBufferMessage *msg) {
   return true;
 }
 static bool header_only_check_useable(PropagateBufferMessage *msg) {
-  u_int msg_len = msg->message_len();
+  uint32_t msg_len = msg->message_len();
   if (msg_len < 16) {
     // header info
     return false;
@@ -327,7 +327,7 @@ static bool members_list_handler(PropagateBufferMessage *msg, GameState *state, 
 static propagate_handler ph_members_list = { msg_is_handled, header_only_check_useable/*no body*/, members_list_handler };
 
 static bool state_request_check_useable(PropagateBufferMessage *msg) {
-  u_int msg_len = msg->message_len();
+  uint32_t msg_len = msg->message_len();
   if (msg_len < 16) {
     // header info
     return false;
@@ -343,10 +343,10 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
   log_msgs(log, "plNetMsgGameStateRequest (kinum=%u)\n", conn->kinum());
   conn->set_state(GameServer::STATE_REQUESTED);
   // this message needs to queue all relevant game state on conn
-  u_int state_count = 0;
+  uint32_t state_count = 0;
 
-  const u_char *buf = msg->buffer();
-  u_int offset = msg->body_offset();
+  const uint8_t *buf = msg->buffer();
+  uint32_t offset = msg->body_offset();
   uint32_t pages = read32(buf, offset);
   if (pages == 0) {
     // send all
@@ -366,13 +366,13 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
       // filter needs to be more discriminating in multiplayer
       if (sdl->name_equals("CloneMessage")) {
         // clones are handled differently
-        const u_char *sdl_buf = sdl->vars()[0]->m_value[0].v_creatable;
+        const uint8_t *sdl_buf = sdl->vars()[0]->m_value[0].v_creatable;
         if (!sdl_buf) {
           log_err(log, "CloneMessage SDL is missing its data!\n");
           // well, throw that one away, it's useless
         } else {
-          u_int clone_len = read32(sdl_buf, 0);
-          u_char is_player = sdl_buf[4];
+          uint32_t clone_len = read32(sdl_buf, 0);
+          uint8_t is_player = sdl_buf[4];
           if (is_player && key.m_clientid == conn->kinum()) {
             // the client loads the clone before asking for the age state,
             // so don't send the player's own clone back
@@ -415,14 +415,14 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
       pages = 200;
     }
     uint32_t pageids[pages];
-    u_int top = 0;
+    uint32_t top = 0;
     // when traversing the list, make sure we don't read off the end of
     // the buffer
-    u_int bufend = msg->message_len();
+    uint32_t bufend = msg->message_len();
     while (top < pages) {
       if (bufend < offset + 8) {
         log_net(log, "Bad GameStateRequest message (kinum=%u): %u pages "
-            "listed but message too short\n", conn->kinum(), (int )pages);
+            "listed but message too short\n", conn->kinum(), (int32_t )pages);
         break;
       }
       pageids[top++] = read32(buf, offset);
@@ -435,7 +435,7 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
     std::list<SDLState*>::const_iterator iter;
     for (iter = state->sdl_begin(); iter != state->sdl_end(); iter++) {
       SDLState *sdl = *iter;
-      for (u_int i = 0; i < top; i++) {
+      for (uint32_t i = 0; i < top; i++) {
         if (sdl->key().m_pageid == pageids[i]) {
           conn->enqueue(new PlNetMsgSDLState(sdl, true));
           state_count++;
@@ -452,9 +452,9 @@ static propagate_handler ph_state_request = { msg_is_handled, state_request_chec
 
 static bool test_and_set_handler(PropagateBufferMessage *msg, GameState *state, GameServer::GameConnection *conn, Logger *log) {
   kinum_t ki = conn->kinum();
-  const u_char *buf = msg->buffer();
-  u_int offset = msg->body_offset();
-  u_int buflen = msg->message_len();
+  const uint8_t *buf = msg->buffer();
+  uint32_t offset = msg->body_offset();
+  uint32_t buflen = msg->message_len();
   PlKey key;
   try {
     offset += key.read_in(buf + offset, buflen - offset);
@@ -468,8 +468,8 @@ static bool test_and_set_handler(PropagateBufferMessage *msg, GameState *state, 
   const char *action = NULL;
 
   // now there is a bunch more, make sure not to read off end of message
-  u_int claimed_msglen = 0, submsg_offset = 0; // shut up compiler
-  u_char from_state = 0, to_state = 0; // shut up compiler
+  uint32_t claimed_msglen = 0, submsg_offset = 0; // shut up compiler
+  uint8_t from_state = 0, to_state = 0; // shut up compiler
   if (buflen < offset + 9) {
     goto test_and_set_truncated;
   }
@@ -582,12 +582,12 @@ static propagate_handler ph_test_and_set = { msg_is_handled, header_only_check_u
 static bool sdl_handler(PropagateBufferMessage *msg, GameState *state, GameServer::GameConnection *conn, Logger *log) {
   kinum_t ki = conn->kinum();
   conn->set_state(GameServer::IN_GAME);
-  const u_char *buf = msg->buffer();
-  u_int offset = msg->body_offset();
-  u_int buflen = msg->message_len();
+  const uint8_t *buf = msg->buffer();
+  uint32_t offset = msg->body_offset();
+  uint32_t buflen = msg->message_len();
 
   SDLState *sdl = new SDLState();
-  int readlen = 0;
+  int32_t readlen = 0;
   bool retval = true, known = true;
   bool bcast = (msg->subtype() == plNetMsgSDLStateBCast);
   try {
@@ -679,21 +679,21 @@ static propagate_handler ph_sdl = { msg_is_handled, header_only_check_useable, s
 
 #ifndef STANDALONE
 static bool directed_check_useable(PropagateBufferMessage *msg) {
-  u_int msg_len = msg->message_len();
+  uint32_t msg_len = msg->message_len();
   if (msg_len < 16) {
     // header info
     return false;
   }
-  u_int offset = msg->body_offset();
+  uint32_t offset = msg->body_offset();
   if (msg_len < offset + 9) {
     return false;
   }
-  const u_char *buf = msg->buffer();
+  const uint8_t *buf = msg->buffer();
   offset += 10 + read32(buf, offset + 5); // 10 includes "end thing"
   if (msg_len < offset + 1) {
     return false;
   }
-  u_char recip_ct = buf[offset++];
+  uint8_t recip_ct = buf[offset++];
   if (msg_len < offset + (4 * recip_ct)) {
     return false;
   }
@@ -708,21 +708,21 @@ static bool directed_handler(PropagateBufferMessage *msg, GameState *state, Game
 static propagate_handler ph_directed = { msg_is_handled, directed_check_useable, directed_handler };
 
 static bool voice_check_useable(PropagateBufferMessage *msg) {
-  u_int msg_len = msg->message_len();
+  uint32_t msg_len = msg->message_len();
   if (msg_len < 16) {
     // header info
     return false;
   }
-  u_int offset = msg->body_offset();
+  uint32_t offset = msg->body_offset();
   if (msg_len < offset + 5) {
     return false;
   }
-  const u_char *buf = msg->buffer();
+  const uint8_t *buf = msg->buffer();
   offset += 4 + read16(buf, offset + 2);
   if (msg_len < offset + 1) {
     return false;
   }
-  u_char recip_ct = buf[offset++];
+  uint8_t recip_ct = buf[offset++];
   if (msg_len < offset + (4 * recip_ct)) {
     return false;
   }
@@ -737,16 +737,16 @@ static bool voice_handler(PropagateBufferMessage *msg, GameState *state, GameSer
 static propagate_handler ph_voice = { msg_is_handled, voice_check_useable, voice_handler };
 
 static bool load_clone_check_useable(PropagateBufferMessage *msg) {
-  u_int msg_len = msg->message_len();
+  uint32_t msg_len = msg->message_len();
   if (msg_len < 16) {
     // header info
     return false;
   }
-  u_int offset = msg->body_offset();
+  uint32_t offset = msg->body_offset();
   if (msg_len < offset + 9) {
     return false;
   }
-  const u_char *buf = msg->buffer();
+  const uint8_t *buf = msg->buffer();
   // submessage length
   offset += 10 + read32(buf, offset + 5); // 10 includes submessage "end thing"
   PlKey obj;
@@ -765,11 +765,11 @@ static bool load_clone_check_useable(PropagateBufferMessage *msg) {
   return true;
 }
 static bool load_clone_handler(PropagateBufferMessage *msg, GameState *state, GameServer::GameConnection *conn, Logger *log) {
-  const u_char *buf = msg->buffer();
-  u_int offset = msg->body_offset();
-  u_int msg_start = offset;
+  const uint8_t *buf = msg->buffer();
+  uint32_t offset = msg->body_offset();
+  uint32_t msg_start = offset;
   offset += 10 + read32(buf, offset + 5); // 10 includes submessage "end thing"
-  u_int msg_end = offset;
+  uint32_t msg_end = offset;
 
   // okay, it looks like we can keep this submessage wholesale, we don't
   // even need to parse it
@@ -792,7 +792,7 @@ static bool load_clone_handler(PropagateBufferMessage *msg, GameState *state, Ga
     delete sdl;
     return true;
   }
-  u_char is_player = buf[offset++];
+  uint8_t is_player = buf[offset++];
   // we don't get unloads from clients any more in MOUL, but just in case
   if (buf[offset] == 0) {
     log_net(log, "Got a LoadClone *un*load message (kinum=%u)\n", msg->kinum());
@@ -810,8 +810,8 @@ static bool load_clone_handler(PropagateBufferMessage *msg, GameState *state, Ga
   log_msgs(log, "plNetMsgLoadClone (kinum=%u)\n", msg->kinum());
   sdl->expand();
   sdl->vars()[0]->m_value = new SDLDesc::Variable::data_t[1];
-  u_int submsg_len = msg_end - msg_start;
-  u_char *saved = new u_char[submsg_len + 5];
+  uint32_t submsg_len = msg_end - msg_start;
+  uint8_t *saved = new uint8_t[submsg_len + 5];
   sdl->vars()[0]->m_value[0].v_creatable = saved;
   write32(saved, 0, submsg_len);
   saved[4] = is_player;
@@ -895,7 +895,7 @@ protected:
     UruString name;
     double val; // always little-endian
     // not strictly required, I don't think
-    // u_int index;
+    // uint32_t index;
     Var() {
     }
     Var(const Var &other) :
@@ -948,19 +948,19 @@ protected:
 
   uint32_t m_sid1, m_sid2;
   // time limit not used in quest games apparently; 677 ms isn't very long
-  u_int m_time_limit;
-  u_char m_game_type;
+  uint32_t m_time_limit;
+  uint8_t m_game_type;
   UruString *m_game_name;
   UruString *m_template;
   // for tracking game state
-  u_int m_private_id;
+  uint32_t m_private_id;
   game_state_t m_state;
   struct timeval m_start_time;
   // XXX elapsed time has to go into the DB if games that actually
   // care about the time ever exist
   // XXX also, this is not *actually* elapsed time so all code working with
   // it could be wrong
-  u_int m_elapsed_time;
+  uint32_t m_elapsed_time;
 };
 
 class BlueSpiralGameMgr: public GameMgr {
@@ -998,20 +998,20 @@ protected:
   };
   void handle_timeout(DoorTimer::action_t why, GameServer *server);
 
-  u_char m_order[7];
-  u_int m_next;
+  uint8_t m_order[7];
+  uint32_t m_next;
   bool m_started;
   bool m_rotating;
   DoorTimer *m_timer; // do not delete; the TimerQueue does that
 
 private:
-  static const int turn_delta = 15;
-  static const int game_delta = 60;
+  static const int32_t turn_delta = 15;
+  static const int32_t game_delta = 60;
   // close is client-side and occurs 1 second after GameOver arrives or the
   // door finishes opening (whichever is later)
   // close_delta is used only for STANDALONE, so make it something modest
   // so the one player has a good chance of making it
-  static const int close_delta = 14;
+  static const int32_t close_delta = 14;
 };
 
 class HeekGameMgr: public GameMgr {
@@ -1060,8 +1060,8 @@ protected:
 
   // lots of helper functions
   void tell_all_sitters(GameMgrMessage *send, GameServer *server);
-  int get_player_index(kinum_t player) {
-    for (u_int i = 0; i < 5; i++) {
+  int32_t get_player_index(kinum_t player) {
+    for (uint32_t i = 0; i < 5; i++) {
       if (m_sitting[i] && m_sitting[i]->m_ki == player) {
         return i;
       }
@@ -1074,7 +1074,7 @@ protected:
   }
   void reset_choices() {
     m_choice_ct = 0;
-    for (u_int i = 0; i < 5; i++) {
+    for (uint32_t i = 0; i < 5; i++) {
       if (m_sitting[i]) {
         m_sitting[i]->m_choice = -1;
       }
@@ -1084,7 +1084,7 @@ protected:
   void handle_round(GameServer *server);
   void handle_winner(GameServer *server);
   void countdown_idle(GameServer *server);
-  void handle_departure(int position, GameServer *server);
+  void handle_departure(int32_t position, GameServer *server);
   void send_drop(GameServer *server);
 
   class HeekTimer: public Server::TimerQueue::Timer {
@@ -1110,7 +1110,7 @@ protected:
     int32_t m_score;
     char m_choice;
     char m_wins[3];
-    u_int m_current_game;
+    uint32_t m_current_game;
     bool m_pending_winner;
     Sitter(kinum_t player, int32_t score) :
         m_ki(player), m_score(score), m_choice(-1), m_current_game(0), m_pending_winner(false) {
@@ -1127,34 +1127,34 @@ protected:
   // sitter_t::m_current_game is initialized from this, which is incremented
   // every heek game so we can tell whether the player played during the
   // current game
-  u_int m_current_game;
+  uint32_t m_current_game;
   // when anyone first starts playing a game, a point is preemptively given up
-  u_int m_point_pool;
+  uint32_t m_point_pool;
 
   Sitter *m_sitting[5];
-  u_int m_sitting_ct;
-  u_int m_choice_ct; // number of choices received this round
-  u_int m_pending_winner_ct;
+  uint32_t m_sitting_ct;
+  uint32_t m_choice_ct; // number of choices received this round
+  uint32_t m_pending_winner_ct;
   // this is used only if the game owner leaves while sitting
-  int m_cleanup;
+  int32_t m_cleanup;
 
   HeekTimer *m_timer;
-  static const int choice_delta = 7;
+  static const int32_t choice_delta = 7;
   // the three following timeouts are in case of a misbehaving owner, and
   // shouldn't fire in normal situations
   // (these are 1 second greater than the real animation times)
-  static const int stop_delta = 1;
-  static const int anim_delta = 11;
-  static const int win_delta = 6;
+  static const int32_t stop_delta = 1;
+  static const int32_t anim_delta = 11;
+  static const int32_t win_delta = 6;
 };
 
 bool VarSyncGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, GameServer *server) {
   if (m_owner == 0) {
     m_owner = player;
   }
-  //const u_char *buf = msg->buffer();
-  u_int len = msg->message_len();
-  u_int off = msg->setup_data();
+  //const uint8_t *buf = msg->buffer();
+  uint32_t len = msg->message_len();
+  uint32_t off = msg->setup_data();
   if (off + 1 < len) {
     return false;
   }
@@ -1169,7 +1169,7 @@ bool VarSyncGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, 
     send_join(player, server);
   }
   // send all the vars
-  for (u_int idx = 0; idx < m_vars.size(); idx++) {
+  for (uint32_t idx = 0; idx < m_vars.size(); idx++) {
     GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(m_gameid, idx + 1, m_vars[idx].name,
         m_vars[idx].val);
     server->send_to_ki(player, vmsg);
@@ -1196,8 +1196,8 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
     log_warn(log, "Player %u sent a VarSync message but owner is %u\n", player, m_owner);
     return true;
   }
-  const u_char *buf = msg->buffer();
-  u_int off = msg->body_data();
+  const uint8_t *buf = msg->buffer();
+  uint32_t off = msg->body_data();
   switch (msg->msgtype()) {
   case kVarSyncNumericVarCreate:
     if (msg->message_len() < off + 520) {
@@ -1207,7 +1207,7 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
       UruString varname(buf + off, 512, false, true, true);
       off += 512;
       // check that we don't have one of these already
-      for (u_int idx = 0; idx < m_vars.size(); idx++) {
+      for (uint32_t idx = 0; idx < m_vars.size(); idx++) {
         if (varname == m_vars[idx].name) {
           // hmm...
           log_warn(log, "VarSync NumericVarCreate request for existing "
@@ -1245,7 +1245,7 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
     if (msg->message_len() < off + 12) {
       throw truncated_message("VarSync NumericVarChange too short");
     } else {
-      u_int idx = read32(buf, off);
+      uint32_t idx = read32(buf, off);
       off += 4;
       if (idx > 0 && idx <= m_vars.size()) {
         m_vars[idx - 1].val = read_double(buf, off);
@@ -1290,9 +1290,9 @@ void VarSyncGameMgr::player_left(kinum_t player, GameServer *server) {
 
 bool MarkerGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, GameServer *server) {
   m_owner = player;
-  const u_char *buf = msg->buffer();
-  u_int len = msg->message_len();
-  u_int off = msg->setup_data();
+  const uint8_t *buf = msg->buffer();
+  uint32_t len = msg->message_len();
+  uint32_t off = msg->setup_data();
   if (off + 5 + 516 + 160 < len) {
     return false;
   }
@@ -1321,7 +1321,7 @@ bool MarkerGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, G
     }
   } else {
     // convert template UUID from widestring to "raw" UUID
-    u_char uuid[UUID_RAW_LEN];
+    uint8_t uuid[UUID_RAW_LEN];
     if (uuid_string_to_bytes(uuid, UUID_RAW_LEN, m_template->c_str(), m_template->strlen(), true, true)) {
       // XXX format error in string from client
     } else {
@@ -1351,8 +1351,8 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
         "(kinum=%u)\n", msg->msgtype(), player);
     return true;
   }
-  const u_char *buf = msg->buffer();
-  u_int off = msg->body_data();
+  const uint8_t *buf = msg->buffer();
+  uint32_t off = msg->body_data();
 
   // XXX What happens if someone adds or deletes a marker while another
   // is playing the game? Or renames one? Is that propagated to all current
@@ -1707,7 +1707,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       if (num_markers > 0) {
         // send messages to client
         GameMgr_Marker_MarkerAdded_Message *addmsg;
-        for (u_int i = 0; i < num_markers; i++) {
+        for (uint32_t i = 0; i < num_markers; i++) {
           addmsg = new GameMgr_Marker_MarkerAdded_Message(m_gameid, msg->data(), msg->name(), msg->agename(), msg);
           server->send_to_ki(m_owner, addmsg);
           if (addmsg->del_ref() < 1) {
@@ -1738,7 +1738,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
         // send messages to client
         GameMgr_Marker_MarkerCaptured_Message *captured;
         const int32_t *list = (int32_t*) msg->list();
-        for (u_int i = 0; i < num_markers; i++) {
+        for (uint32_t i = 0; i < num_markers; i++) {
           captured = new GameMgr_Marker_MarkerCaptured_Message(m_gameid, list[2 * i], list[(2 * i) + 1]);
           server->send_to_ki(m_owner, captured);
           if (captured->del_ref() < 1) {
@@ -1860,9 +1860,9 @@ bool BlueSpiralGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t playe
   if (m_owner == 0) {
     m_owner = player;
   }
-  //const u_char *buf = msg->buffer();
-  u_int len = msg->message_len();
-  u_int off = msg->setup_data();
+  //const uint8_t *buf = msg->buffer();
+  uint32_t len = msg->message_len();
+  uint32_t off = msg->setup_data();
   if (off + 1 < len) {
     return false;
   }
@@ -1878,8 +1878,8 @@ bool BlueSpiralGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t playe
 
 bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *server) {
   Logger *log = server->log();
-  const u_char *buf = msg->buffer();
-  u_int off = msg->body_data();
+  const uint8_t *buf = msg->buffer();
+  uint32_t off = msg->body_data();
   switch (msg->msgtype()) {
   case kBlueSpiralGameStart:
     if (player != m_owner) {
@@ -1992,16 +1992,16 @@ void BlueSpiralGameMgr::start_game(GameServer *server) {
   m_next = 0;
   // create new cloth order
   uint16_t data[8];
-  get_random_data((u_char*) &data, 16);
+  get_random_data((uint8_t*) &data, 16);
   // The way this works is, m_order[i] is assigned to the number of values
   // in the array r that are greater than r[i]. (If there are two equal
   // values, the second one is "greater".) This basically means m_order[i]
   // is the index number of r[i] in a sorted r, and since there is a strict
   // ordering, we know the numbers are unique and cover the range 0:6.
   uint16_t *r = (uint16_t*) data;
-  for (u_int i = 0; i < 7; i++) {
-    u_char val = 0;
-    for (u_int j = 0; j < 7; j++) {
+  for (uint32_t i = 0; i < 7; i++) {
+    uint8_t val = 0;
+    for (uint32_t j = 0; j < 7; j++) {
       if (i != j && (r[j] > r[i] || (r[j] == r[i] && j > i))) {
         val++;
       }
@@ -2070,7 +2070,7 @@ void BlueSpiralGameMgr::handle_timeout(BlueSpiralGameMgr::DoorTimer::action_t wh
 HeekGameMgr::HeekGameMgr(uint32_t id) :
     GameMgr(id, Heek), m_state(IDLE), m_current_game(0), m_point_pool(0), m_sitting_ct(0), m_choice_ct(0), m_pending_winner_ct(
         0), m_cleanup(-1), m_timer(NULL) {
-  for (u_int i = 0; i < 5; i++) {
+  for (uint32_t i = 0; i < 5; i++) {
     m_sitting[i] = NULL;
   }
 }
@@ -2101,8 +2101,8 @@ bool HeekGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, Gam
 
 bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *server) {
   Logger *log = server->log();
-  const u_char *buf = msg->buffer();
-  u_int off = msg->body_data();
+  const uint8_t *buf = msg->buffer();
+  uint32_t off = msg->body_data();
   switch (msg->msgtype()) {
   case kHeekPlayGameReq:
     if (msg->message_len() < off + 5 + 512) {
@@ -2113,7 +2113,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
       // I can't do much but ignore it
     } else {
       // position is 0-based
-      u_char position = buf[off++];
+      uint8_t position = buf[off++];
       if (m_sitting[position]) {
         log_err(log, "Player kinum=%u is sitting at Heek position %u but "
             "%u is already there!\n", player, position, m_sitting[position]->m_ki);
@@ -2168,7 +2168,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
         if (m_sitting_ct == 2 && m_state < COUNTDOWN) {
           // previously there was one player
           GameMgr_OneByte_Message *enable = new GameMgr_OneByte_Message(m_gameid, kHeekInterfaceState, 1);
-          for (u_int i = 0; i < 5; i++) {
+          for (uint32_t i = 0; i < 5; i++) {
             if (m_sitting[i] && m_sitting[i] != this_guy) {
               server->send_to_ki(m_sitting[i]->m_ki, enable);
             }
@@ -2234,7 +2234,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
         if (buf[off] > kHeekGameChoiceScissors) {
           log_warn(log, "Player (kinum=%u) sent invalid Heek choice %u\n", player, buf[off]);
         } else {
-          int idx = get_player_index(player);
+          int32_t idx = get_player_index(player);
           if (idx < 0) {
             log_warn(log, "Got Heek choice from non-sitting player kinum=%u\n", player);
           } else {
@@ -2353,7 +2353,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
     return true;
   case kHeekGoodbyeReq:
     {
-      int idx = get_player_index(player);
+      int32_t idx = get_player_index(player);
       if (idx < 0) {
         log_warn(log, "Got Heek goodbye from non-sitting player kinum=%u\n", player);
       } else {
@@ -2395,7 +2395,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
 }
 
 void HeekGameMgr::player_left(kinum_t player, GameServer *server) {
-  int idx = get_player_index(player);
+  int32_t idx = get_player_index(player);
   if (idx >= 0) {
     // if this is the last player, they can't get the point pool because
     // they're already gone
@@ -2451,7 +2451,7 @@ void HeekGameMgr::send_drop(GameServer *server) {
 }
 
 void HeekGameMgr::tell_all_sitters(GameMgrMessage *send, GameServer *server) {
-  for (u_int i = 0; i < 5; i++) {
+  for (uint32_t i = 0; i < 5; i++) {
     if (m_sitting[i]) {
       server->send_to_ki(m_sitting[i]->m_ki, send);
     }
@@ -2491,12 +2491,12 @@ void HeekGameMgr::handle_round(GameServer *server) {
     delete state; // wasn't queued
   }
 
-  u_int i;
+  uint32_t i;
   // keep track of what to do next
   game_state_t next_state = ANIM_WAIT;
 
   // distribute points if any
-  u_int rocks = 0, papers = 0, scissors = 0;
+  uint32_t rocks = 0, papers = 0, scissors = 0;
   for (i = 0; i < 5; i++) {
     if (m_sitting[i]) {
       switch (m_sitting[i]->m_choice) {
@@ -2514,7 +2514,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
       }
     }
   }
-  u_int total = rocks + papers + scissors;
+  uint32_t total = rocks + papers + scissors;
   if (total <= 1) {
     // do nothing
 #ifdef DEBUG_HEEK_STATE
@@ -2524,7 +2524,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
   } else {
     // whee, this is so much fun!
     char totals[5];
-    int max = -5;
+    int32_t max = -5;
     // rules as described in
     // http://www.guildofgreeters.com/images/stories/pdf/Ahyoheek_Rules.pdf
     // except of course it doesn't mention any of the special cases, which
@@ -2550,7 +2550,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
         }
       }
     }
-    u_int game_winners = 0;
+    uint32_t game_winners = 0;
     GameMgr_Heek_WinLose_Message *winlose;
     for (i = 0; i < 5; i++) {
       if (m_sitting[i] && m_sitting[i]->m_choice >= 0) {
@@ -2563,7 +2563,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
 
         if (totals[i] > 0 && totals[i] == max) {
           // this player is a round winner
-          u_int choice = m_sitting[i]->m_choice;
+          uint32_t choice = m_sitting[i]->m_choice;
           if (++(m_sitting[i]->m_wins[choice]) > 2) {
             // and maybe a game winner
             if (m_pending_winner_ct == 0) {
@@ -2579,7 +2579,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
             // didn't win and gets no light changes
           } else {
             // send a LightState for the point just acquired
-            u_int light = 2 * choice;
+            uint32_t light = 2 * choice;
             light += m_sitting[i]->m_wins[choice] - 1;
             GameMgr_Heek_Lights_Message *lightmsg = new GameMgr_Heek_Lights_Message(m_gameid, light,
                 GameMgr_Heek_Lights_Message::On);
@@ -2640,7 +2640,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
       for (i = 0; i < 5; i++) {
         if (m_sitting[i] && m_sitting[i]->m_pending_winner) {
           // send a LightState message to flash both lights
-          u_int light = 2 * (int) m_sitting[i]->m_choice;
+          uint32_t light = 2 * (int32_t) m_sitting[i]->m_choice;
           GameMgr_Heek_Lights_Message *lightmsg = new GameMgr_Heek_Lights_Message(m_gameid, light,
               GameMgr_Heek_Lights_Message::Flash);
           server->send_to_ki(m_sitting[i]->m_ki, lightmsg);
@@ -2687,7 +2687,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
 }
 
 void HeekGameMgr::handle_winner(GameServer *server) {
-  for (int i = 0; i < 5; i++) {
+  for (int32_t i = 0; i < 5; i++) {
     if (m_sitting[i]) {
       if (m_sitting[i]->m_pending_winner) {
         m_sitting[i]->m_pending_winner = false;
@@ -2741,7 +2741,7 @@ void HeekGameMgr::countdown_idle(GameServer *server) {
   }
 }
 
-void HeekGameMgr::handle_departure(int position, GameServer *server) {
+void HeekGameMgr::handle_departure(int32_t position, GameServer *server) {
   if (m_sitting_ct == 1) {
     // last player, reset the game
 #ifdef DEBUG_HEEK_STATE
@@ -2778,7 +2778,7 @@ void HeekGameMgr::handle_departure(int position, GameServer *server) {
     // if there are two at the table, disable everyone's interface because
     // there will only be one now
     else if (m_sitting_ct == 2) {
-      for (int i = 0; i < 5; i++) {
+      for (int32_t i = 0; i < 5; i++) {
         if (m_sitting[i]) {
           server->send_to_ki(m_sitting[i]->m_ki, state);
         }
@@ -2854,7 +2854,7 @@ void HeekGameMgr::handle_timeout(GameServer *server) {
   }
 }
 
-GameMgr* GameState::setup_manager_for(kinum_t player, const u_char *uuid, bool &needs_new_id, uint32_t id1, uint32_t id2) {
+GameMgr* GameState::setup_manager_for(kinum_t player, const uint8_t *uuid, bool &needs_new_id, uint32_t id1, uint32_t id2) {
   needs_new_id = true;
   std::list<GameMgr*>::iterator iter;
   if (!memcmp(uuid, VarSync_UUID, UUID_RAW_LEN)) {

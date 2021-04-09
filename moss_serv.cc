@@ -100,11 +100,11 @@
 
 #include "moss_serv.h"
 
-void Server::internal_setup_logger(int conn_fd, const char *log_level, Logger *to_share, const char *log_dir) {
+void Server::internal_setup_logger(int32_t conn_fd, const char *log_level, Logger *to_share, const char *log_dir) {
   struct sockaddr_in him, me;
   socklen_t himlen, melen;
   uint32_t himaddr, meaddr;
-  int himport, meport, peername_err, sockname_err;
+  int32_t himport, meport, peername_err, sockname_err;
 
   if (!m_is_child) {
     throw std::logic_error("Server::setup_logger called for non-child server");
@@ -186,7 +186,7 @@ Server::connect_to_backend(const struct sockaddr_in *vault_addr) {
     delete vault;
     return NULL;
   }
-  int flags = fcntl(vault->fd(), F_GETFL, NULL);
+  int32_t flags = fcntl(vault->fd(), F_GETFL, NULL);
   if (fcntl(vault->fd(), F_SETFL, flags | O_NONBLOCK)) {
     log_err(m_log, "Error setting socket nonblocking: %s\n", strerror(errno));
     delete vault;
@@ -206,7 +206,7 @@ Server::connect_to_backend(const struct sockaddr_in *vault_addr) {
 
 void* Server::read_keyfile(const char *fname, Logger *log) {
 #ifdef USING_RSA
-  int fd = open(fname, O_RDONLY);
+  int32_t fd = open(fname, O_RDONLY);
   if (fd < 0) {
     log_err(log, "Error opening key file %s\n", fname);
     return NULL;
@@ -220,7 +220,7 @@ void* Server::read_keyfile(const char *fname, Logger *log) {
   return (void *)rsa;
 #else
 #ifdef USING_DH
-  int fd = open(fname, O_RDONLY);
+  int32_t fd = open(fname, O_RDONLY);
   if (fd < 0) {
     log_err(log, "Error opening key file %s\n", fname);
     return NULL;
@@ -238,7 +238,7 @@ void* Server::read_keyfile(const char *fname, Logger *log) {
   dh->g = dhp->g;
   dh->priv_key = dhp->priv_key;
 #else
-  int ok = DH_set0_pqg(dh, dhp->p, NULL, dhp->g);
+  int32_t ok = DH_set0_pqg(dh, dhp->p, NULL, dhp->g);
   if (!ok) {
     log_err(log, "Error setting DH p and g\n");
   }
@@ -272,7 +272,7 @@ void* Server::read_keyfile(const char *fname, Logger *log) {
 #endif /* ! USING_RSA */
 }
 
-void Server::Connection::set_rc4_key(const u_char *session_key) {
+void Server::Connection::set_rc4_key(const uint8_t *session_key) {
 #ifdef HAVE_OPENSSL_RC4
   m_c2s_rc4 = new RC4_KEY;
   m_s2c_rc4 = new RC4_KEY;
@@ -286,7 +286,7 @@ void Server::Connection::set_rc4_key(const u_char *session_key) {
 #endif
 }
 
-Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t inbuflen, const void *keydata, int fd,
+Server::reason_t Server::Connection::setup_rc4_key(const uint8_t *inbuf, size_t inbuflen, const void *keydata, int32_t fd,
     Logger *log) {
 #ifdef DEBUG_ENABLE
   assert(inbuflen <= 64);
@@ -299,21 +299,21 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t i
   }
   RSA *rsa = (RSA *)keydata;
 
-  u_char dkey[64];
-  u_char swapped[64];
-  for (u_int blargh = 0; blargh < inbuflen; blargh++) {
+  uint8_t dkey[64];
+  uint8_t swapped[64];
+  for (uint32_t blargh = 0; blargh < inbuflen; blargh++) {
     swapped[blargh] = inbuf[inbuflen-1-blargh];
   }
-  int dec_res = RSA_private_decrypt(inbuflen, swapped, dkey, rsa, RSA_NO_PADDING);
+  int32_t dec_res = RSA_private_decrypt(inbuflen, swapped, dkey, rsa, RSA_NO_PADDING);
   if (dec_res != 64) {
     log_warn(log, "Decryption produced only %d bytes?!\n", dec_res);
   }
-  for (int blargh = 0; blargh < 32; blargh++) {
-    u_char keep = dkey[63-blargh];
+  for (int32_t blargh = 0; blargh < 32; blargh++) {
+    uint8_t keep = dkey[63-blargh];
     dkey[63-blargh] = dkey[blargh];
     dkey[blargh] = keep;
   }
-  const u_char *finalkey = dkey;
+  const uint8_t *finalkey = dkey;
 #else
 #ifdef USING_DH
   if (!keydata) {
@@ -326,14 +326,14 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t i
     return INTERNAL_ERROR;
   }
 
-  u_char dkey[64];
-  u_char swapped[64];
-  for (u_int blargh = 0; blargh < inbuflen; blargh++) {
+  uint8_t dkey[64];
+  uint8_t swapped[64];
+  for (uint32_t blargh = 0; blargh < inbuflen; blargh++) {
     swapped[blargh] = inbuf[inbuflen-1-blargh];
   }
   BIGNUM *clientkey = BN_new();
   BN_bin2bn(swapped, inbuflen, clientkey);
-  int keysize = DH_compute_key(dkey, clientkey, dh);
+  int32_t keysize = DH_compute_key(dkey, clientkey, dh);
   BN_free(clientkey);
   // usually keysize == 64, but when its most significant bytes are zero
   // DH_compute_key apparently omits them
@@ -341,21 +341,21 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t i
     log_warn(log, "Failed to compute key\n");
     return INTERNAL_ERROR;
   }
-  for (int blargh = 0; blargh < keysize/2; blargh++) {
-    u_char keep = dkey[keysize-1-blargh];
+  for (int32_t blargh = 0; blargh < keysize/2; blargh++) {
+    uint8_t keep = dkey[keysize-1-blargh];
     dkey[keysize-1-blargh] = dkey[blargh];
     dkey[blargh] = keep;
   }
-  for (int i = keysize; i < 7; i++) { // unlikely to ever happen
+  for (int32_t i = keysize; i < 7; i++) { // unlikely to ever happen
     dkey[i] = 0;
   }
-  const u_char *finalkey = dkey;
+  const uint8_t *finalkey = dkey;
 #else
-  const u_char *finalkey = (const u_char*) keydata;
+  const uint8_t *finalkey = (const uint8_t*) keydata;
 #endif /* ! USING_DH */
 #endif /* ! USING_RSA */
 
-  u_char session_key[7];
+  uint8_t session_key[7];
   get_random_data(session_key, 7);
 
 #ifdef I_DONT_NEED_NO_STINKIN_SECURITY
@@ -367,7 +367,7 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t i
   enqueue(response, MessageQueue::NORMAL);
   // we can't set is_encrypted yet or the event loop will encrypt this
   // message
-  for (int i = 0; i < 7; i++) {
+  for (int32_t i = 0; i < 7; i++) {
     session_key[i] ^= finalkey[i];
   }
   try {
@@ -385,7 +385,7 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t i
 }
 
 NetworkMessage*
-Server::BackendConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+Server::BackendConnection::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   return BackendMessage::make_if_enough(buf, len, want_len, become_owner);
 }
 
@@ -427,19 +427,19 @@ const char* Server::reason_to_string(Server::reason_t why) {
 }
 
 #ifdef FORK_ENABLE
-void Server::cleanup_accepted_fds(int fd_to_keep) {
+void Server::cleanup_accepted_fds(int32_t fd_to_keep) {
   if (!m_fds_size) {
     return;
   }
-  int size = *m_fds_size;
-  int *a_fds = *m_accepted_fds;
-  for (int i = 0; i < size; i++) {
+  int32_t size = *m_fds_size;
+  int32_t *a_fds = *m_accepted_fds;
+  for (int32_t i = 0; i < size; i++) {
     if (a_fds[i] >= 0 && a_fds[i] != fd_to_keep) {
       close(a_fds[i]);
     }
   }
 }
-void Server::set_accepted_fds(int **accepted_fds, int *fds_size) {
+void Server::set_accepted_fds(int32_t **accepted_fds, int32_t *fds_size) {
   m_accepted_fds = accepted_fds;
   m_fds_size = fds_size;
 }
@@ -498,15 +498,15 @@ void* serv_main(void *serv) {
   Logger *log = server->log();
   Server::reason_t shutdown_reason = Server::NO_SHUTDOWN;
 
-  int ret;
+  int32_t ret;
 
   // accepted connections
-  int *accepted_fds = NULL;
+  int32_t *accepted_fds = NULL;
   struct timeval *fd_timeouts = NULL;
-  int fds_size = 10;
-  int fds_used = 0;
-  int max_accepted_fds = ACCEPTING_FDS;
-  int accepted_timeout = ACCEPTING_TIMEOUT;
+  int32_t fds_size = 10;
+  int32_t fds_used = 0;
+  int32_t max_accepted_fds = ACCEPTING_FDS;
+  int32_t accepted_timeout = ACCEPTING_TIMEOUT;
   // client & backend connections
   std::list<Server::Connection*> &conns = server->get_conn_list();
   std::list<Server::Connection*>::iterator iter;
@@ -514,15 +514,15 @@ void* serv_main(void *serv) {
 
   // local state
   intptr_t exit_value = 1;
-  int i, j;
+  int32_t i, j;
   struct iovec *iov = NULL;
-  u_int wrote;
+  uint32_t wrote;
 
   // select loop state
-  int *signal_bits = server->get_signal_flags();
+  int32_t *signal_bits = server->get_signal_flags();
   size_t signal_len = server->get_signal_flagct();
   fd_set zerofds, savefds, readfds, writefds;
-  int nfds, save_nfds = 0, fd_ct;
+  int32_t nfds, save_nfds = 0, fd_ct;
   struct timeval timeout, next, now;
 #define IN_SHUTDOWN() (shutdown_reason != Server::NO_SHUTDOWN)
   // this macro makes sure that if we are already in shutdown, we don't
@@ -585,7 +585,7 @@ void* serv_main(void *serv) {
     // fds_size is set == max_accepted_fds. This will disable the growing
     // code and only "waste" 120 bytes.
     fds_size = max_accepted_fds;
-    accepted_fds = new int[fds_size];
+    accepted_fds = new int32_t[fds_size];
     fd_timeouts = new struct timeval[fds_size];
   } catch (const std::bad_alloc&) {
     log_err(log, "Cannot allocate memory, shutting down\n");
@@ -613,7 +613,7 @@ void* serv_main(void *serv) {
   while (1) {
     // process any signals
     if (signal_bits) {
-      for (u_int s = 0; s < signal_len; s++) {
+      for (uint32_t s = 0; s < signal_len; s++) {
         if (signal_bits[s]) {
           CHECK_SHUTDOWN(server->process_signals(),);
           break;
@@ -670,7 +670,7 @@ void* serv_main(void *serv) {
         server->conn_shutdown(conn, Server::QUEUE_DRAINED);
         continue;
       }
-      int include = -1;
+      int32_t include = -1;
       if (!IN_SHUTDOWN() && !conn->in_connect() && !conn->in_shutdown()) {
         Buffer *cbuf = conn->m_bigbuf ? conn->m_bigbuf : conn->m_readbuf;
         if (conn->m_read_fill < cbuf->len()) {
@@ -711,13 +711,13 @@ void* serv_main(void *serv) {
       wfd_list[0] = '\0';
       for (i = 0; i < FD_SETSIZE; i++) {
   if (FD_ISSET(i, &readfds)) {
-    u_int list_off = strlen(rfd_list);
+    uint32_t list_off = strlen(rfd_list);
     if (list_off < 1023) {
       snprintf(rfd_list+list_off, 1024-list_off, " %d", i);
     }
   }
   if (FD_ISSET(i, &writefds)) {
-    u_int list_off = strlen(wfd_list);
+    uint32_t list_off = strlen(wfd_list);
     if (list_off < 1023) {
       snprintf(wfd_list+list_off, 1024-list_off, " %d", i);
     }
@@ -773,13 +773,13 @@ void* serv_main(void *serv) {
   wfd_list[0] = '\0';
   for (i = 0; i < FD_SETSIZE; i++) {
     if (FD_ISSET(i, &readfds)) {
-      u_int list_off = strlen(rfd_list);
+      uint32_t list_off = strlen(rfd_list);
       if (list_off < 1023) {
         snprintf(rfd_list+list_off, 1024-list_off, " %d", i);
       }
     }
     if (FD_ISSET(i, &writefds)) {
-      u_int list_off = strlen(wfd_list);
+      uint32_t list_off = strlen(wfd_list);
       if (list_off < 1023) {
         snprintf(wfd_list+list_off, 1024-list_off, " %d", i);
       }
@@ -792,8 +792,8 @@ void* serv_main(void *serv) {
       // do we need to accept() ?
       if (server->listen_fd() >= 0 && FD_ISSET(server->listen_fd(), &readfds)) {
         struct sockaddr_in addr;
-        u_int socklen = sizeof(struct sockaddr_in);
-        int newfd = accept(server->listen_fd(), (struct sockaddr*) &addr, &socklen);
+        uint32_t socklen = sizeof(struct sockaddr_in);
+        int32_t newfd = accept(server->listen_fd(), (struct sockaddr*) &addr, &socklen);
         if (newfd < 0) {
           if (errno == EAGAIN) {
             log_warn(log, "Listen socket selected for read "
@@ -807,7 +807,7 @@ void* serv_main(void *serv) {
             log_err(log, "Error in accept: %s\n", strerror(errno));
           }
         } else {
-          unsigned int ipaddr = ntohl(addr.sin_addr.s_addr);
+          unsigned int32_t ipaddr = ntohl(addr.sin_addr.s_addr);
           log_debug(log, "Accepted %d from %u.%u.%u.%u:%u\n", newfd, ipaddr >> 24, (ipaddr >> 16) & 0xFF,
               (ipaddr >> 8) & 0xFF, ipaddr & 0xFF, ntohs(addr.sin_port));
 
@@ -826,13 +826,13 @@ void* serv_main(void *serv) {
               }
             }
             if (i == fds_size) {
-              int next_size = fds_size * 2;
+              int32_t next_size = fds_size * 2;
               if (next_size > max_accepted_fds && fds_size < max_accepted_fds) {
                 next_size = max_accepted_fds;
               }
               if (next_size > max_accepted_fds) {
                 // eject older fds
-                int count = 0, j;
+                int32_t count = 0, j;
                 i = -1;
                 for (j = 0; j < fds_size; j++) {
                   if (fd_timeouts[j].tv_sec < now.tv_sec + (accepted_timeout / 2)) {
@@ -869,10 +869,10 @@ void* serv_main(void *serv) {
                 fd_timeouts[i].tv_usec = now.tv_usec;
                 fds_used++;
               } else {
-                int *new_a_fds = NULL;
+                int32_t *new_a_fds = NULL;
                 struct timeval *new_fd_ts = NULL;
                 try {
-                  new_a_fds = new int[next_size];
+                  new_a_fds = new int32_t[next_size];
                   new_fd_ts = new struct timeval[next_size];
 
                   memcpy(new_a_fds, accepted_fds, fds_size);
@@ -915,7 +915,7 @@ void* serv_main(void *serv) {
         i = j = 0;
         while (j < fds_used && i < fds_size) {
           if (accepted_fds[i] >= 0 && FD_ISSET(accepted_fds[i], &readfds)) {
-            u_char type;
+            uint8_t type;
             ret = read(accepted_fds[i], &type, 1);
             if (ret <= 0) {
               if (ret < 0) {
@@ -972,7 +972,7 @@ void* serv_main(void *serv) {
         if (FD_ISSET(conn->fd(), &readfds)) {
           fd_used = true;
           Buffer *cbuf = conn->m_bigbuf ? conn->m_bigbuf : conn->m_readbuf;
-          int to_read = cbuf->len() - conn->m_read_fill;
+          int32_t to_read = cbuf->len() - conn->m_read_fill;
           if (to_read <= 0) {
             // XXX we have a protocol problem; the Server should clear
             // out the buffer if an oversize message is in progress
@@ -1029,7 +1029,7 @@ void* serv_main(void *serv) {
               if (!msg) {
                 if (to_read > 0) {
                   if (conn->m_bigbuf) {
-                    if (to_read != (int) cbuf->len()) {
+                    if (to_read != (int32_t) cbuf->len()) {
                       log_err(log, "Connection on %d message length changed "
                           "from %u to %u!\n", conn->fd(), cbuf->len(), to_read);
                       // serious problem
@@ -1107,7 +1107,7 @@ void* serv_main(void *serv) {
           fd_used = true;
           if (!IN_SHUTDOWN() && conn->in_connect()) {
             // see if it succeeded
-            socklen_t socketlen = sizeof(int);
+            socklen_t socketlen = sizeof(int32_t);
             if ((getsockopt(conn->fd(), SOL_SOCKET, SO_ERROR, &ret, &socketlen) < 0) || ret) {
               // it did not
               log_warn(log, "Backend connection on %d connect failed: %s\n", conn->fd(), strerror(ret));
@@ -1154,7 +1154,7 @@ void* serv_main(void *serv) {
               continue;
             }
           } else if (ret > 0) {
-            wrote = (u_int) ret;
+            wrote = (uint32_t) ret;
             if (!conn->is_encrypted()) {
               conn->msg_queue()->iovecs_written_bytes(wrote);
             } else {

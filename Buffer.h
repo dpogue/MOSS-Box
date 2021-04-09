@@ -37,7 +37,7 @@ public:
   }
 
   // copylen is ignored if own_buffer is false; -1 means copy whole length
-  Buffer(size_t len, const u_char *orig_buf, bool owns_buffer = true, int copylen = -1) :
+  Buffer(size_t len, const uint8_t *orig_buf, bool owns_buffer = true, int32_t copylen = -1) :
       m_buflen(len), m_buf(NULL), m_owns_buf(false) {
 
     init(owns_buffer);
@@ -45,7 +45,7 @@ public:
       memcpy(m_buf, orig_buf, copylen >= 0 ? copylen : len);
     } else {
       // XXX yuck, look for a better answer
-      m_buf = const_cast<u_char*>(orig_buf);
+      m_buf = const_cast<uint8_t*>(orig_buf);
     }
   }
 
@@ -56,15 +56,15 @@ public:
   }
 
   // Change the buffer to unowned, useful when keeping temporary Buffers
-  // around as u_char*s in NetworkMessages. Note that this means something
-  // else is responsible for delete[]ing the u_char* so beware dangling
+  // around as uint8_t*s in NetworkMessages. Note that this means something
+  // else is responsible for delete[]ing the uint8_t* so beware dangling
   // pointers.
   void make_unowned() {
     m_owns_buf = false;
   }
 
   // Change buffer to owned. Note there is no copy. This means that this
-  // Buffer will delete[] the u_char*.
+  // Buffer will delete[] the uint8_t*.
   void make_owned() {
     m_owns_buf = true;
   }
@@ -74,7 +74,7 @@ public:
     return m_owns_buf;
   }
 
-  u_char* buffer() const {
+  uint8_t* buffer() const {
     return m_buf;
   }
   size_t len() const {
@@ -84,13 +84,13 @@ public:
 protected:
   void init(bool owns_buffer) {
     if (owns_buffer) {
-      m_buf = new u_char[m_buflen];
+      m_buf = new uint8_t[m_buflen];
       m_owns_buf = true;
     }
   }
 
   size_t m_buflen;
-  u_char *m_buf;
+  uint8_t *m_buf;
   bool m_owns_buf;
 };
 

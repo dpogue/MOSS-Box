@@ -47,7 +47,7 @@ public:
    * instances do not typically "own" the buffer so they don't free it.
    */
   // throws overlong_message
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len) {
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len) {
     return NULL;
   }
 
@@ -64,13 +64,13 @@ public:
    * Messages read from the network should also implement whatever accessors
    * are required.
    */
-  virtual int type() const {
+  virtual int32_t type() const {
     return m_type;
   }
   virtual size_t message_len() const {
     return m_buflen;
   }
-  virtual const u_char* buffer() const {
+  virtual const uint8_t* buffer() const {
     return m_buf;
   }
 
@@ -89,10 +89,10 @@ public:
    * calls del_ref() and deletes the message if the value returned is < 1.
    */
   // these functions return the refcount
-  virtual int add_ref() {
+  virtual int32_t add_ref() {
     return 1;
   }
-  virtual int del_ref() {
+  virtual int32_t del_ref() {
     return 0;
   }
 
@@ -111,22 +111,22 @@ public:
    * connections; for those a buffer is filled instead.
    */
   // fill_iovecs returns the number of iovecs filled
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
     return 0;
   }
   // returns the number of excess bytes in byte_ct
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
     *msg_done = true;
     return byte_ct;
   }
   // fill_buffer returns the number of bytes filled
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
     *msg_done = true;
     return 0;
   }
 
 protected:
-  NetworkMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  NetworkMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       m_type(msg_type), m_buflen(msg_len), m_buf(NULL) {
     // XXX yuck, look for a better answer
     // plan: make m_buf const, and introduce a m_obuf for "owned" data;
@@ -135,18 +135,18 @@ protected:
     // assign it to m_obuf and m_buf as well
     // finally, have ~NetworkMessage delete m_obuf if not null, never delete
     // m_buf in child classes
-    m_buf = const_cast<u_char*>(msg_buf);
+    m_buf = const_cast<uint8_t*>(msg_buf);
   }
-  NetworkMessage(int msg_type) :
+  NetworkMessage(int32_t msg_type) :
       m_type(msg_type), m_buflen(0), m_buf(NULL) {
   }
 
-  int m_type;
+  int32_t m_type;
 
   size_t m_buflen;
-  u_char *m_buf;
+  uint8_t *m_buf;
 
-  static const int zero;
+  static const int32_t zero;
 
 private:
   // do not allow copying of these objects
@@ -166,14 +166,14 @@ public:
 
 class UnknownMessage: public NetworkMessage {
 public:
-  UnknownMessage(const u_char *msg_buf, size_t msg_len) :
+  UnknownMessage(const uint8_t *msg_buf, size_t msg_len) :
       NetworkMessage(msg_buf, msg_len, -1) {
   }
 };
 
 class NegotiationMessage: public NetworkMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len, int type);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len, int32_t type);
 
   bool check_useable() const;
   virtual size_t message_len() const;
@@ -181,22 +181,22 @@ public:
   /*
    * Additional accessors
    */
-  int client_version() const {
+  int32_t client_version() const {
     if (m_type == TYPE_FILE) {
       return read32(m_buf, 34);
     } else {
       return read32(m_buf, 2);
     }
   }
-  int release_number() const {
+  int32_t release_number() const {
     return read32(m_buf, 10);
   }
-  const u_char* uuid() const {
+  const uint8_t* uuid() const {
     return m_buf + 14;
   }
 
 protected:
-  NegotiationMessage(const u_char *msg_buf, size_t msg_len, int msg_type) :
+  NegotiationMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       NetworkMessage(msg_buf, msg_len, msg_type) {
   }
 };
@@ -206,16 +206,16 @@ public:
   /*
    * This class copies the buffer passed in.
    */
-  NonceResponse(const u_char *msg_buf, size_t len);
+  NonceResponse(const uint8_t *msg_buf, size_t len);
 
   virtual ~NonceResponse() {
     if (m_buf)
       delete[] m_buf;
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 #ifdef DEBUG_ENABLE
   virtual bool persistable() const { return true; } // copies buffer

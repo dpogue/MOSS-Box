@@ -34,12 +34,12 @@
 #include "UruString.h"
 #include "PlKey.h"
 
-u_int PlKey::read_in(const u_char *buf, size_t buflen) {
+uint32_t PlKey::read_in(const uint8_t *buf, size_t buflen) {
   if (buflen < 1) {
     throw truncated_message("Buffer too short for plKey");
   }
 
-  u_int needlen = 11;
+  uint32_t needlen = 11;
 #ifndef OLD_STYLE
   needlen += 4;
 #endif
@@ -50,7 +50,7 @@ u_int PlKey::read_in(const u_char *buf, size_t buflen) {
     throw truncated_message("Buffer too short for plKey");
   }
 
-  u_int offset = 0;
+  uint32_t offset = 0;
   m_flags = buf[offset++];
   m_pageid = read32(buf, offset);
   offset += 4;
@@ -85,8 +85,8 @@ u_int PlKey::read_in(const u_char *buf, size_t buflen) {
   return offset;
 }
 
-u_int PlKey::send_len() const {
-  u_int len = 9;
+uint32_t PlKey::send_len() const {
+  uint32_t len = 9;
 #ifndef OLD_STYLE
   len += 4;
 #endif
@@ -104,12 +104,12 @@ u_int PlKey::send_len() const {
   return len;
 }
 
-u_int PlKey::write_out(u_char *buf, size_t buflen, bool bitflip) const {
+uint32_t PlKey::write_out(uint8_t *buf, size_t buflen, bool bitflip) const {
   if (buflen < send_len()) {
     // XXX programmer error
     return 0;
   }
-  u_int offset = 0;
+  uint32_t offset = 0;
   buf[offset++] = m_flags;
   write32(buf, offset, m_pageid);
   offset += 4;
@@ -125,7 +125,7 @@ u_int PlKey::write_out(u_char *buf, size_t buflen, bool bitflip) const {
   offset += 4;
 #endif
   if (m_name) {
-    u_int l = m_name->send_len(true, false, false);
+    uint32_t l = m_name->send_len(true, false, false);
     memcpy(buf + offset, m_name->get_str(true, false, false, bitflip), l);
     offset += l;
   } else {
@@ -142,7 +142,7 @@ u_int PlKey::write_out(u_char *buf, size_t buflen, bool bitflip) const {
 }
 
 char* PlKey::format() {
-  u_int len = sizeof("Page ID: 0x12345678 Page Type: 0x1234 "
+  uint32_t len = sizeof("Page ID: 0x12345678 Page Type: 0x1234 "
       "Object Type: 0x1234 Name:  Index:  ClientID:  ") + 20;
   if (m_name) {
     len += m_name->strlen();
@@ -152,7 +152,7 @@ char* PlKey::format() {
   if (buf) {
     snprintf(buf, len, "PageID: 0x%08x Page Type: 0x%04x Object Type: 0x%04x Name: %s ", m_pageid, m_pagetype, m_objtype,
         m_name ? m_name->c_str() : "");
-    u_int at = strlen(buf);
+    uint32_t at = strlen(buf);
     if (m_flags & 0x01) {
       snprintf(buf + at, len - at, "Index: %u ClientID: %u", m_index, m_clientid);
     }
@@ -188,7 +188,7 @@ void PlKey::make_null() {
   m_pageid = 0xFFFFFFFF;
 }
 
-u_int PlKey::write_null_key(u_char *buf, size_t buflen) {
+uint32_t PlKey::write_null_key(uint8_t *buf, size_t buflen) {
   if (buflen < 15) {
     // XXX programmer error
     return 0;

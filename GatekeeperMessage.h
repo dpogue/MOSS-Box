@@ -36,9 +36,9 @@ public:
   /*
    * This class copies the buffer passed in.
    */
-  GatekeeperPingMessage(const u_char *msg_buf, size_t len) :
+  GatekeeperPingMessage(const uint8_t *msg_buf, size_t len) :
       NetworkMessage(kGateKeeper2Cli_PingReply) {
-    m_buf = new u_char[len];
+    m_buf = new uint8_t[len];
     m_buflen = len;
     memcpy(m_buf, msg_buf, len);
   }
@@ -52,9 +52,9 @@ public:
     return true;
   }
 
-  u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 #ifdef DEBUG_ENABLE
   virtual bool persistable() const { return true; } // copies buffer
@@ -63,7 +63,7 @@ public:
 
 class GatekeeperClientMessage: public NetworkMessage {
 public:
-  static NetworkMessage* make_if_enough(const u_char *buf, size_t len);
+  static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len);
 
   bool check_useable() const {
     return true;
@@ -84,9 +84,9 @@ public:
 
 protected:
   uint32_t m_reqid;
-  u_char m_unknown;
+  uint8_t m_unknown;
 
-  GatekeeperClientMessage(const u_char *msg_buf, size_t len, uint16_t type) :
+  GatekeeperClientMessage(const uint8_t *msg_buf, size_t len, uint16_t type) :
       NetworkMessage(NULL, len, type) {
     m_reqid = read32(msg_buf, 2);
     m_unknown = msg_buf[6];
@@ -108,9 +108,9 @@ public:
       delete[] m_buf;
   }
 
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at);
-  virtual u_int iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done);
-  virtual u_int fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at);
+  virtual uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done);
+  virtual uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done);
 
 #ifdef DEBUG_ENABLE
   virtual bool persistable() const { return true; }

@@ -85,13 +85,13 @@ void MessageQueue::reset_head() {
   }
 }
 
-u_int MessageQueue::fill_iovecs(struct iovec *iov, u_int iov_ct) {
-  u_int how_many = 0;
+uint32_t MessageQueue::fill_iovecs(struct iovec *iov, uint32_t iov_ct) {
+  uint32_t how_many = 0;
   std::deque<Entry>::iterator iter = m_queue.begin();
 
   while (how_many < iov_ct && iter != m_queue.end()) {
 #ifdef DEBUG_ENABLE
-    u_int previous_how_many = how_many;
+    uint32_t previous_how_many = how_many;
 #endif
     how_many += iter->msg->fill_iovecs(iov + how_many, iov_ct - how_many, iter->so_far);
 #ifdef DEBUG_ENABLE
@@ -108,12 +108,12 @@ u_int MessageQueue::fill_iovecs(struct iovec *iov, u_int iov_ct) {
   return how_many;
 }
 
-void MessageQueue::iovecs_written_bytes(u_int byte_ct) {
+void MessageQueue::iovecs_written_bytes(uint32_t byte_ct) {
   std::deque<Entry>::iterator iter = m_queue.begin();
 
   while (byte_ct > 0 && iter != m_queue.end()) {
     bool msg_done;
-    u_int bytes = iter->msg->iovecs_written_bytes(byte_ct, iter->so_far, &msg_done);
+    uint32_t bytes = iter->msg->iovecs_written_bytes(byte_ct, iter->so_far, &msg_done);
     if (msg_done) {
       byte_ct = bytes;
       if (iter->msg->del_ref() < 1) {
@@ -137,13 +137,13 @@ void MessageQueue::iovecs_written_bytes(u_int byte_ct) {
   }
 }
 
-u_int MessageQueue::fill_buffer(u_char *buf, u_int buflen) {
-  u_int how_many = 0;
+uint32_t MessageQueue::fill_buffer(uint8_t *buf, uint32_t buflen) {
+  uint32_t how_many = 0;
   std::deque<Entry>::iterator iter = m_queue.begin();
 
   while (how_many < buflen && iter != m_queue.end()) {
     bool msg_done;
-    u_int filled = iter->msg->fill_buffer(buf + how_many, buflen - how_many, iter->so_far, &msg_done);
+    uint32_t filled = iter->msg->fill_buffer(buf + how_many, buflen - how_many, iter->so_far, &msg_done);
     how_many += filled;
 #ifdef DEBUG_ENABLE
     // we test iter->so_far != 0 so that a message could turn itself into
@@ -251,17 +251,17 @@ void MultiWriterMessageQueue::reset_head() {
 
 // XXX we want the queue *readers* to minimize their locks, but this will
 // be sure to work correctly for now
-u_int MultiWriterMessageQueue::fill_iovecs(struct iovec *iov, u_int iov_ct) {
+uint32_t MultiWriterMessageQueue::fill_iovecs(struct iovec *iov, uint32_t iov_ct) {
 #ifdef QUEUE_PARANOIA
   assert(pthread_self() == m_owner_tid);
 #endif
   pthread_mutex_lock(&m_mutex);
-  u_int ret = MessageQueue::fill_iovecs(iov, iov_ct);
+  uint32_t ret = MessageQueue::fill_iovecs(iov, iov_ct);
   pthread_mutex_unlock(&m_mutex);
   return ret;
 }
 
-void MultiWriterMessageQueue::iovecs_written_bytes(u_int byte_ct) {
+void MultiWriterMessageQueue::iovecs_written_bytes(uint32_t byte_ct) {
 #ifdef QUEUE_PARANOIA
   assert(pthread_self() == m_owner_tid);
 #endif
@@ -270,12 +270,12 @@ void MultiWriterMessageQueue::iovecs_written_bytes(u_int byte_ct) {
   pthread_mutex_unlock(&m_mutex);
 }
 
-u_int MultiWriterMessageQueue::fill_buffer(u_char *buf, u_int buflen) {
+uint32_t MultiWriterMessageQueue::fill_buffer(uint8_t *buf, uint32_t buflen) {
 #ifdef QUEUE_PARANOIA
   assert(pthread_self() == m_owner_tid);
 #endif
   pthread_mutex_lock(&m_mutex);
-  u_int ret = MessageQueue::fill_buffer(buf, buflen);
+  uint32_t ret = MessageQueue::fill_buffer(buf, buflen);
   pthread_mutex_unlock(&m_mutex);
   return ret;
 }

@@ -76,7 +76,7 @@
 #include "GameServer.h"
 #include "GameHandler.h"
 
-GameServer::GameServer(const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, const u_char *uuid,
+GameServer::GameServer(const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, const uint8_t *uuid,
     const char *filename, uint32_t connect_ipaddr, AgeDesc *age, std::list<SDLDesc*> &sdl) :
     Server(server_dir, is_a_thread), m_vault_addr(vault_address), m_vault(NULL), m_timed_shutdown(false), m_shutdown_timer(
         NULL), m_joiners(0), m_client_queue(NULL), m_fake_signal(0), m_filename(NULL), m_age(age), m_group_owner(0) {
@@ -131,7 +131,7 @@ GameServer::~GameServer() {
   }
 }
 
-int GameServer::init() {
+int32_t GameServer::init() {
   // log my identity information
   char my_uuid[UUID_STR_LEN];
   format_uuid(m_age_uuid, my_uuid);
@@ -143,7 +143,7 @@ int GameServer::init() {
 
   // read in SDL, if present
   std::string sdldir = std::string(m_serv_dir) + PATH_SEPARATOR + "SDL" + PATH_SEPARATOR + m_filename;
-  int ret = SDLDesc::parse_directory(m_log, m_agesdl, sdldir, false, false);
+  int32_t ret = SDLDesc::parse_directory(m_log, m_agesdl, sdldir, false, false);
   if (ret > 0) {
     // try a single file
     std::string sdlfile = sdldir + ".sdl";
@@ -275,7 +275,7 @@ bool GameServer::shutdown(reason_t reason) {
 }
 
 NetworkMessage*
-GameServer::GameConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
+GameServer::GameConnection::make_if_enough(const uint8_t *buf, size_t len, int32_t *want_len, bool become_owner) {
   NetworkMessage *msg = NULL;
   bool became_owner = false;
 
@@ -306,7 +306,7 @@ GameServer::GameConnection::make_if_enough(const u_char *buf, size_t len, int *w
       // (just this once)
 #ifndef NO_ENCRYPTION
       set_encrypted();
-      decrypt((u_char*) buf, len);
+      decrypt((uint8_t*) buf, len);
 #endif
     }
     msg = GameMessage::make_if_enough(buf, len, want_len, become_owner);
@@ -454,8 +454,8 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
             bool someone_missing = false;
             // note, this depends on check_usable to prevent running off
             // the end of the buffer
-            u_int recip_offset = prop->body_offset();
-            const u_char *msg_buf = prop->buffer();
+            uint32_t recip_offset = prop->body_offset();
+            const uint8_t *msg_buf = prop->buffer();
             if (pri == MessageQueue::VOICE) {
               recip_offset += read16(msg_buf, recip_offset + 2);
               recip_offset += 4;
@@ -463,12 +463,12 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
               recip_offset += read32(msg_buf, recip_offset + 5);
               recip_offset += 10;
             }
-            u_int start_recips = recip_offset;
-            u_int recip_ct = msg_buf[recip_offset++];
+            uint32_t start_recips = recip_offset;
+            uint32_t recip_ct = msg_buf[recip_offset++];
             // now we are at the recipients
 
             bool did_timestamp = false;
-            for (u_int recip = 0; recip < recip_ct; recip++) {
+            for (uint32_t recip = 0; recip < recip_ct; recip++) {
               kinum_t recip_ki = read32(msg_buf, recip_offset);
               recip_offset += 4;
 
@@ -633,7 +633,7 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
 }
 
 Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *in) {
-  int msg_type = in->type();
+  int32_t msg_type = in->type();
 
   if (msg_type == -1) {
     // unrecognized message
@@ -674,7 +674,7 @@ Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *
     {
       KillClient_BackendMessage *msg = (KillClient_BackendMessage*) in;
       if (msg->why() != KillClient_BackendMessage::AUTH_DISCONNECT) {
-        log_debug(m_log, "Backend sent ADMIN_KILL_CLIENT with reason %d\n", (int )msg->why());
+        log_debug(m_log, "Backend sent ADMIN_KILL_CLIENT with reason %d\n", (int32_t )msg->why());
         break;
       }
       kinum_t kill_this_un = msg->kinum();
@@ -888,12 +888,12 @@ Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *
       TrackMsgForward_BackendMessage *msg = (TrackMsgForward_BackendMessage*) in;
 
       log_msgs(m_log, "TRACK_INTERAGE_FWD received\n");
-      u_int recip_offset = msg->recips_offset();
-      const u_char *msg_body = msg->fwd_msg();
-      u_int msg_len = msg->fwd_msg_len();
+      uint32_t recip_offset = msg->recips_offset();
+      const uint8_t *msg_body = msg->fwd_msg();
+      uint32_t msg_len = msg->fwd_msg_len();
       // the message should be correctness-checked by the game server though
       if (recip_offset < msg_len) {
-        u_int recip_ct = msg_body[recip_offset++];
+        uint32_t recip_ct = msg_body[recip_offset++];
         PlNetMsgGameMessageDirected *fwd = new PlNetMsgGameMessageDirected(msg);
         while (recip_ct > 0 && recip_offset + 4 <= msg_len) {
           kinum_t recip_ki = read32(msg_body, recip_offset);
@@ -1116,16 +1116,16 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
           continue;
         }
         if (s->name_equals("CloneMessage")) {
-          const u_char *sdl_buf = s->vars()[0]->m_value[0].v_creatable;
+          const uint8_t *sdl_buf = s->vars()[0]->m_value[0].v_creatable;
           if (!sdl_buf) {
             log_err(m_log, "CloneMessage SDL is missing its data!\n");
             // well, throw that one away, it's useless
           } else {
-            u_int clone_len = read32(sdl_buf, 0);
+            uint32_t clone_len = read32(sdl_buf, 0);
             if (clone_len < 16) {
               log_err(m_log, "CloneMessage submessage is truncated!\n");
             } else {
-              u_char is_player = sdl_buf[4];
+              uint8_t is_player = sdl_buf[4];
               uint16_t submsg_type = read16(sdl_buf, 14);
 
               // I don't like these special casing the fireflies but I don't
@@ -1200,7 +1200,7 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
           // tell other clients this one is leaving
           GameConnection *gc = (GameConnection*) c;
           if (gc->state() >= STATE_REQUESTED && unload_msg) {
-            for (u_int i = 0; i < unload_msgs.size(); i++) {
+            for (uint32_t i = 0; i < unload_msgs.size(); i++) {
               unload_msg = unload_msgs[i];
               unload_msg->add_ref();
               c->enqueue(unload_msg);
@@ -1218,7 +1218,7 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
 
 #ifndef STANDALONE
     if (unload_msg) {
-      for (u_int i = 0; i < unload_msgs.size(); i++) {
+      for (uint32_t i = 0; i < unload_msgs.size(); i++) {
         unload_msg = unload_msgs[i];
         if (unload_msg->del_ref() < 1) {
           delete unload_msg;
@@ -1422,7 +1422,7 @@ void GameServer::get_queued_connections() {
             log_debug(m_log, "Handling data sent by the client on fd %d "
                 "before receiving the JoinAgeReply\n", conn->fd());
             Buffer *cbuf = conn->m_readbuf;
-            int to_read;
+            int32_t to_read;
             do {
               try {
                 msg = conn->make_if_enough(cbuf->buffer() + conn->m_read_off,
@@ -1612,9 +1612,9 @@ Server::reason_t GameServer::handle_join_request(Connection *conn, NetworkMessag
 
 #ifdef FORK_GAME_TOO
 NetworkMessage * 
-GameServer::DispatcherConnection::make_if_enough(const u_char *buf,
+GameServer::DispatcherConnection::make_if_enough(const uint8_t *buf,
              size_t len,
-             int *want_len,
+             int32_t *want_len,
              bool become_owner) {
 }
 
@@ -1627,7 +1627,7 @@ GameServer::DispatcherConnection::forward_conn(GameConnection *game_conn) {
 }
 #endif /* FORK_GAME_TOO */
 
-Server::reason_t GameServer::GameSignalProcessor::signalled(int *todo, Server *s) {
+Server::reason_t GameServer::GameSignalProcessor::signalled(int32_t *todo, Server *s) {
   GameServer *gs = (GameServer*) s;
   gs->get_queued_connections();
   return NO_SHUTDOWN;

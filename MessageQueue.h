@@ -74,9 +74,9 @@ public:
    * not known until after the write, so nothing is dequeued until
    * iovecs_written_bytes() provides the number of bytes written.
    */
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct);
-  virtual void iovecs_written_bytes(u_int byte_ct);
-  virtual u_int fill_buffer(u_char *buf, u_int buflen);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct);
+  virtual void iovecs_written_bytes(uint32_t byte_ct);
+  virtual uint32_t fill_buffer(uint8_t *buf, uint32_t buflen);
 
 protected:
 
@@ -99,7 +99,7 @@ protected:
     }
 
     NetworkMessage *msg;
-    u_int so_far;
+    uint32_t so_far;
 
 #ifdef DO_PRIORITIES
     MessageQueue::priority_t priority;
@@ -144,9 +144,9 @@ public:
   virtual size_t size();
   virtual void clear_queue();
   virtual void reset_head();
-  virtual u_int fill_iovecs(struct iovec *iov, u_int iov_ct);
-  virtual void iovecs_written_bytes(u_int byte_ct);
-  virtual u_int fill_buffer(u_char *buf, u_int buflen);
+  virtual uint32_t fill_iovecs(struct iovec *iov, uint32_t iov_ct);
+  virtual void iovecs_written_bytes(uint32_t byte_ct);
+  virtual uint32_t fill_buffer(uint8_t *buf, uint32_t buflen);
 
 protected:
   pthread_t m_owner_tid;
@@ -155,18 +155,18 @@ protected:
 
 #ifdef DO_PRIORITIES
   // current state of queue
-  int m_data_queued;
-  int m_avatar_ct;
-  int m_voice_ct;
+  int32_t m_data_queued;
+  int32_t m_avatar_ct;
+  int32_t m_voice_ct;
 
-  int m_bandwidth_1min;
-  int m_bandwidth_5min;
+  int32_t m_bandwidth_1min;
+  int32_t m_bandwidth_5min;
 
   // settings
-  int m_avatar_high_water_mark;
-  int m_avatar_low_water_mark;
-  int m_voice_high_water_mark;
-  int m_voice_low_water_mark;
+  int32_t m_avatar_high_water_mark;
+  int32_t m_avatar_low_water_mark;
+  int32_t m_voice_high_water_mark;
+  int32_t m_voice_low_water_mark;
 #endif
 };
 

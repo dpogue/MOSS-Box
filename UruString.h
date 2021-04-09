@@ -42,7 +42,7 @@ public:
   // not. Strings may be wide (UTF-16LE) or not, and strings may have a 16-bit
   // length field or not. If buflen is < 0, it is assumed that length checking
   // has already been done.
-  UruString(const u_char *inbuf, int buflen, bool has_length, bool is_wide, bool copy = true);
+  UruString(const uint8_t *inbuf, int32_t buflen, bool has_length, bool is_wide, bool copy = true);
 
   // If "other" has a pointer to a non-copied string, expect the new
   // UruString to as well, unless copy is forced to true. If "other"
@@ -65,7 +65,7 @@ public:
   // these assignment operators take C strings (no length, one-byte chars,
   // null terminator) and copy the data (note: arrival_len will be 0)
   UruString& operator=(const char *c_str);
-  UruString& operator=(const u_char *c_str);
+  UruString& operator=(const uint8_t *c_str);
   // this copies as well
   UruString& operator=(const std::string &str);
   ~UruString();
@@ -92,7 +92,7 @@ public:
   // NOTE: if this is called more than once, the first string will be
   // clobbered and the pointer invalidated. Copy the UruString object if
   // you need to do two non C-string conversions at the same time.
-  const u_char* const get_str(bool include_length, bool as_wide, bool include_null, bool bitflip = false);
+  const uint8_t* const get_str(bool include_length, bool as_wide, bool include_null, bool bitflip = false);
 
   // this function returns the total buffer length required to send
   // the string with the requested characteristics
@@ -124,8 +124,8 @@ public:
   // strings in m_cstr always have the 2-byte length field and a null
   // terminator -- effective type: C|HAS_LEN|NO_NULL (terminator not in length)
   char *m_cstr;
-  u_char *m_altstr;
-  int m_alt_type;
+  uint8_t *m_altstr;
+  int32_t m_alt_type;
   // strings not owned are not deleted in the destructor
   bool m_owns_cstr;
   bool m_owns_altstr;

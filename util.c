@@ -42,9 +42,9 @@
 #include "machine_arch.h"
 #include "util.h"
 
-void gen_uuid(u_char *buf, int as_text) {
-  u_char mybuf[16];
-  u_char *use_buf = (as_text ? mybuf : buf);
+void gen_uuid(uint8_t *buf, int32_t as_text) {
+  uint8_t mybuf[16];
+  uint8_t *use_buf = (as_text ? mybuf : buf);
   get_random_data(use_buf, 16);
   /* since this is a random UUID there is actually no need to do any
    byte-swapping to little-endian */
@@ -60,15 +60,15 @@ void gen_uuid(u_char *buf, int as_text) {
   }
 }
 
-int uuid_string_to_bytes(u_char *buf, u_int buflen, const char *uuid_string, u_int uuid_string_len, int have_dashes,
-    int byteswap) {
-  u_int i;
-  u_char *bufp, upper, lower;
+int32_t uuid_string_to_bytes(uint8_t *buf, uint32_t buflen, const char *uuid_string, uint32_t uuid_string_len, int32_t have_dashes,
+    int32_t byteswap) {
+  uint32_t i;
+  uint8_t *bufp, upper, lower;
 
   if (((have_dashes && uuid_string_len < 36) || (!have_dashes && uuid_string_len < 32)) || buflen < 16) {
     return -1;
   }
-  bufp = (u_char*) uuid_string;
+  bufp = (uint8_t*) uuid_string;
   for (i = 0; i < 16; i++) {
     if (have_dashes && (i == 4 || i == 6 || i == 8 || i == 10)) {
       /* skip '-' */
@@ -92,7 +92,7 @@ int uuid_string_to_bytes(u_char *buf, u_int buflen, const char *uuid_string, u_i
     do_conversion(upper);
     do_conversion(lower);
 #undef do_conversion
-    u_int loc = i;
+    uint32_t loc = i;
     if (byteswap) {
       if (i < 4) {
         loc = 3 - i;
@@ -109,21 +109,21 @@ int uuid_string_to_bytes(u_char *buf, u_int buflen, const char *uuid_string, u_i
   return 0;
 }
 
-int uuid_bytes_to_string(u_char *buf, u_int buflen, const u_char *uuid_bytes, u_int uuid_bytes_len, int want_dashes,
-    int byteswap) {
-  u_int i;
-  u_char *bufp, upper, lower;
+int32_t uuid_bytes_to_string(uint8_t *buf, uint32_t buflen, const uint8_t *uuid_bytes, uint32_t uuid_bytes_len, int32_t want_dashes,
+    int32_t byteswap) {
+  uint32_t i;
+  uint8_t *bufp, upper, lower;
 
   if (((want_dashes && buflen < 36) || (!want_dashes && buflen < 32)) || uuid_bytes_len < 16) {
     return -1;
   }
-  bufp = (u_char*) buf;
+  bufp = (uint8_t*) buf;
   for (i = 0; i < 16; i++) {
     if (want_dashes && (i == 4 || i == 6 || i == 8 || i == 10)) {
       /* add '-' */
       *bufp++ = '-';
     }
-    u_int loc = i;
+    uint32_t loc = i;
     if (byteswap) {
       if (i < 4) {
         loc = 3 - i;
@@ -152,7 +152,7 @@ int uuid_bytes_to_string(u_char *buf, u_int buflen, const u_char *uuid_bytes, u_
   return 0;
 }
 
-int recursive_mkdir(const char *pathname, mode_t mode) {
+int32_t recursive_mkdir(const char *pathname, mode_t mode) {
   char path[PATH_MAX];
   char *p = NULL;
   char *d;
@@ -193,7 +193,7 @@ void do_random_seed() {
 #endif
 }
 
-void get_random_data(u_char *buf, u_int buflen) {
+void get_random_data(uint8_t *buf, uint32_t buflen) {
 #ifdef HAVE_OPENSSL
   /* XXX NOTE: see OpenSSL RAND_add and RAND_event man page when considering
      Windows: we may need to manually seed the PRNG and use only
@@ -205,19 +205,19 @@ void get_random_data(u_char *buf, u_int buflen) {
    XXX also, are random() and srandom() thread-safe?
    XXX consider /dev/urandom instead (but not for Windows; look into
    Windows API) */
-  u_int bitsleft = 0;
+  uint32_t bitsleft = 0;
   /* it is rather unclear whether or not, on a 64-bit machine, random()
    returns 64-bit numbers; the man pages all say "long" implying yes, but
    they also seem to say that the value returned is a 31-bit nonnegative
    number implying it should be treated as a 32-bit number regardless */
   uint64_t bucket = 0;
-  u_int i = 0;
+  uint32_t i = 0;
   while (i < buflen) {
     uint64_t r = (random() & 0x7fffffff);
     bucket |= r << bitsleft;
     bitsleft += 31;
     if (buflen - i < 4) {
-      u_int j;
+      uint32_t j;
       for (j = 0; j < buflen - i; j++) {
         buf[i + j] = (bucket >> (j * 8)) & 0xff;
       }
@@ -238,7 +238,7 @@ void get_random_data(u_char *buf, u_int buflen) {
 const char* resolve_hostname(const char *hostname, uint32_t *ipaddr) {
 #ifdef HAVE_GETADDRINFO
   struct addrinfo hints, *addrs;
-  int err;
+  int32_t err;
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = PF_INET; /* ask for IPv4 */

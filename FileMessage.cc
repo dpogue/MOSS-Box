@@ -44,13 +44,13 @@
 #include "FileTransaction.h"
 #include "FileMessage.h"
 
-extern const int FileServerMessage::zero = 0;
+extern const int32_t FileServerMessage::zero = 0;
 
-NetworkMessage* FileClientMessage::make_if_enough(const u_char *buf, size_t len) {
+NetworkMessage* FileClientMessage::make_if_enough(const uint8_t *buf, size_t len) {
   if (len < 4) {
     return NULL;
   }
-  u_int msg_len = read32(buf, 0);
+  uint32_t msg_len = read32(buf, 0);
   if (msg_len > 536/*max File message size*/) {
     throw overlong_message(msg_len);
   }
@@ -64,7 +64,7 @@ NetworkMessage* FileClientMessage::make_if_enough(const u_char *buf, size_t len)
   if (msg_len < 8) {
     return new UnknownMessage(buf, msg_len);
   }
-  int type = read32(buf, 4);
+  int32_t type = read32(buf, 4);
   switch (type) {
   case ManifestRequestTrans:
   case DownloadRequestTrans:
@@ -102,20 +102,20 @@ FileServerMessage::FileServerMessage(FileClientMessage *ping) :
     NetworkMessage(NULL, 0, PingRequestTrans), m_transaction(NULL) {
 
   m_buflen = ping->message_len();
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   memcpy(m_buf, ping->buffer(), m_buflen);
 }
 
-FileServerMessage::FileServerMessage(FileTransaction *trans, int reply_type) :
+FileServerMessage::FileServerMessage(FileTransaction *trans, int32_t reply_type) :
     NetworkMessage(NULL, 0, reply_type), m_transaction(trans) {
 
   status_code_t status = trans->status();
   m_buflen = 28;
-  m_buf = new u_char[m_buflen];
-  int len = (status == NO_ERROR ? trans->chunk_length() : 0);
+  m_buf = new uint8_t[m_buflen];
+  int32_t len = (status == NO_ERROR ? trans->chunk_length() : 0);
   write32(m_buf, 4, m_type);
   write32(m_buf, 8, trans->request_id());
-  write32(m_buf, 12, (int) status);
+  write32(m_buf, 12, (int32_t) status);
   // XXX unknown
   write32(m_buf, 16, status == NO_ERROR ? (m_type == ManifestRequestTrans ? 1 : 4) : 0);
   write32(m_buf, 20, status == NO_ERROR ? trans->file_len() : 0);
@@ -127,20 +127,20 @@ FileServerMessage::FileServerMessage(FileTransaction *trans, int reply_type) :
   write32(m_buf, 0, len);
 }
 
-FileServerMessage::FileServerMessage(uint32_t reqid, status_code_t status, int build_no) :
+FileServerMessage::FileServerMessage(uint32_t reqid, status_code_t status, int32_t build_no) :
     NetworkMessage(NULL, 0, BuildIdRequestTrans), m_transaction(NULL) {
 
   m_buflen = 20;
-  m_buf = new u_char[m_buflen];
+  m_buf = new uint8_t[m_buflen];
   write32(m_buf, 0, 20);
   write32(m_buf, 4, m_type);
   write32(m_buf, 8, reqid);
-  write32(m_buf, 12, (int) status);
+  write32(m_buf, 12, (int32_t) status);
   write32(m_buf, 16, build_no);
 }
 
-u_int FileServerMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
-  u_int i = 0;
+uint32_t FileServerMessage::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t start_at) {
+  uint32_t i = 0;
 
   if (start_at < m_buflen) {
     iov[i].iov_base = m_buf + start_at;
@@ -154,7 +154,7 @@ u_int FileServerMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int star
     start_at -= m_buflen;
     i += m_transaction->fill_iovecs(iov + i, iov_ct - i, &start_at);
     if (m_type == ManifestRequestTrans && i < iov_ct && start_at < 2) {
-      iov[i].iov_base = (u_char*) &zero;
+      iov[i].iov_base = (uint8_t*) &zero;
       iov[i].iov_len = 2 - start_at;
       i++;
     }
@@ -164,7 +164,7 @@ u_int FileServerMessage::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int star
   return i;
 }
 
-u_int FileServerMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
+uint32_t FileServerMessage::iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *msg_done) {
   if (start_at < m_buflen) {
     if (byte_ct + start_at < m_buflen) {
       *msg_done = false;
@@ -194,8 +194,8 @@ u_int FileServerMessage::iovecs_written_bytes(u_int byte_ct, u_int start_at, boo
   return byte_ct;
 }
 
-u_int FileServerMessage::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
-  u_int offset = 0;
+uint32_t FileServerMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, bool *msg_done) {
+  uint32_t offset = 0;
 
   *msg_done = true;
   if (start_at < m_buflen) {

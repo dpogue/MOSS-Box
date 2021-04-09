@@ -96,14 +96,14 @@ public:
   /*
    * Utility function: dump buffer contents.
    */
-  void dump_contents(level_t level, const u_char *buf, size_t len);
+  void dump_contents(level_t level, const uint8_t *buf, size_t len);
 
 protected:
   FILE *m_logf;
   char *m_log_prefix;
   level_t m_log_level;
   pthread_mutex_t *m_mutex;
-  u_int *m_refct;
+  uint32_t *m_refct;
 
   void setup_logger(const char *system, const char *filename);
 
