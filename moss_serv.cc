@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  * This is the main loop for each connection, be it a thread or a separate
@@ -100,8 +100,7 @@
 
 #include "moss_serv.h"
 
-void Server::internal_setup_logger(int conn_fd, const char *log_level,
-				   Logger *to_share, const char *log_dir) {
+void Server::internal_setup_logger(int conn_fd, const char *log_level, Logger *to_share, const char *log_dir) {
   struct sockaddr_in him, me;
   socklen_t himlen, melen;
   uint32_t himaddr, meaddr;
@@ -114,43 +113,38 @@ void Server::internal_setup_logger(int conn_fd, const char *log_level,
 
   himlen = melen = sizeof(struct sockaddr_in);
   peername_err = sockname_err = 0;
-  if (getpeername(conn_fd, (struct sockaddr *)&him, &himlen)) {
+  if (getpeername(conn_fd, (struct sockaddr*) &him, &himlen)) {
     peername_err = errno;
     // shut up compiler
     himport = 0;
     himaddr = 0;
-  }
-  else {
+  } else {
     himport = ntohs(him.sin_port);
     himaddr = ntohl(him.sin_addr.s_addr);
   }
-  if (getsockname(conn_fd, (struct sockaddr *)&me, &melen)) {
+  if (getsockname(conn_fd, (struct sockaddr*) &me, &melen)) {
     sockname_err = errno;
     m_ipaddr = 0;
     // shut up compiler
     meport = 0;
     meaddr = 0;
-  }
-  else {
+  } else {
     meport = ntohs(me.sin_port);
     meaddr = ntohl(me.sin_addr.s_addr);
     m_ipaddr = me.sin_addr.s_addr;
   }
 
   char sys_str[100];
-  snprintf(sys_str, 100, "%s.%x:%s%u", type_name(),
-	   peername_err ? 0 : himaddr, peername_err ? "error " : "",
-	   peername_err ? peername_err : himport);
+  snprintf(sys_str, 100, "%s.%x:%s%u", type_name(), peername_err ? 0 : himaddr, peername_err ? "error " : "",
+      peername_err ? peername_err : himport);
 
   if (to_share) {
     m_log = new Logger(sys_str, to_share, level);
-  }
-  else {
+  } else {
     size_t len = strlen(log_dir) + 100;
     char *temp_str = new char[len];
-    snprintf(temp_str, len, "%s/%s.%x:%s%u.log", log_dir, type_name(),
-	     peername_err ? 0 : himaddr, peername_err ? "error" : "",
-	     peername_err ? peername_err : himport);
+    snprintf(temp_str, len, "%s/%s.%x:%s%u.log", log_dir, type_name(), peername_err ? 0 : himaddr,
+        peername_err ? "error" : "", peername_err ? peername_err : himport);
     m_log = new Logger(type_name(), temp_str, level);
     delete[] temp_str;
   }
@@ -158,41 +152,31 @@ void Server::internal_setup_logger(int conn_fd, const char *log_level,
   // log about the connection
 
   if (peername_err && peername_err != ENOTCONN) {
-    log_warn(m_log, "Error in getpeername: %s\n",
-	     strerror(peername_err));
+    log_warn(m_log, "Error in getpeername: %s\n", strerror(peername_err));
   }
   if (sockname_err) {
-    log_warn(m_log, "Error in getsockname: %s\n",
-	     strerror(sockname_err));
+    log_warn(m_log, "Error in getsockname: %s\n", strerror(sockname_err));
   }
   if (!peername_err && !sockname_err) {
     log_debug(m_log, "Connection: (client) %u.%u.%u.%u:%u <->"
-	      " %u.%u.%u.%u:%u (server)\n", 
-	      himaddr >> 24, (himaddr >> 16) & 0xFF, (himaddr >> 8) & 0xFF,
-	      himaddr & 0xFF, ntohs(him.sin_port),
-	      meaddr >> 24, (meaddr >> 16) & 0xFF, (meaddr >> 8) & 0xFF,
-	      meaddr & 0xFF, ntohs(me.sin_port));
-  }
-  else if (peername_err && !sockname_err) {
+        " %u.%u.%u.%u:%u (server)\n", himaddr >> 24, (himaddr >> 16) & 0xFF, (himaddr >> 8) & 0xFF, himaddr & 0xFF,
+        ntohs(him.sin_port), meaddr >> 24, (meaddr >> 16) & 0xFF, (meaddr >> 8) & 0xFF, meaddr & 0xFF,
+        ntohs(me.sin_port));
+  } else if (peername_err && !sockname_err) {
     log_debug(m_log, "%sConnection: (client) unknown <->"
-	      " %u.%u.%u.%u:%u (server)\n", 
-	      peername_err == ENOTCONN ? "DEAD " : "",
-	      meaddr >> 24, (meaddr >> 16) & 0xFF, (meaddr >> 8) & 0xFF,
-	      meaddr & 0xFF, ntohs(me.sin_port));
-  }
-  else if (sockname_err && !peername_err) {
+        " %u.%u.%u.%u:%u (server)\n", peername_err == ENOTCONN ? "DEAD " : "", meaddr >> 24, (meaddr >> 16) & 0xFF,
+        (meaddr >> 8) & 0xFF, meaddr & 0xFF, ntohs(me.sin_port));
+  } else if (sockname_err && !peername_err) {
     log_debug(m_log, "Connection: (client) %u.%u.%u.%u:%u <->"
-	      " unknown (server)\n", 
-	      himaddr >> 24, (himaddr >> 16) & 0xFF, (himaddr >> 8) & 0xFF,
-	      himaddr & 0xFF, ntohs(him.sin_port));
-  }
-  else {
+        " unknown (server)\n", himaddr >> 24, (himaddr >> 16) & 0xFF, (himaddr >> 8) & 0xFF, himaddr & 0xFF,
+        ntohs(him.sin_port));
+  } else {
     log_debug(m_log, "Connection: (client) unknown <->"
-	      " unknown (server) [something is very broken]\n");
+        " unknown (server) [something is very broken]\n");
   }
 }
 
-Server::BackendConnection *
+Server::BackendConnection*
 Server::connect_to_backend(const struct sockaddr_in *vault_addr) {
   BackendConnection *vault = new BackendConnection();
   vault->set_in_connect(false);
@@ -203,17 +187,15 @@ Server::connect_to_backend(const struct sockaddr_in *vault_addr) {
     return NULL;
   }
   int flags = fcntl(vault->fd(), F_GETFL, NULL);
-  if (fcntl(vault->fd(), F_SETFL, flags|O_NONBLOCK)) {
+  if (fcntl(vault->fd(), F_SETFL, flags | O_NONBLOCK)) {
     log_err(m_log, "Error setting socket nonblocking: %s\n", strerror(errno));
     delete vault;
     return NULL;
   }
-  if (connect(vault->fd(),
-	      (const sockaddr *)vault_addr, sizeof(struct sockaddr_in))) {
+  if (connect(vault->fd(), (const sockaddr*) vault_addr, sizeof(struct sockaddr_in))) {
     if (errno == EINPROGRESS) {
       vault->set_in_connect(true);
-    }
-    else {
+    } else {
       log_err(m_log, "Error in connect(): %s\n", strerror(errno));
       delete vault;
       return NULL;
@@ -222,7 +204,7 @@ Server::connect_to_backend(const struct sockaddr_in *vault_addr) {
   return vault;
 }
 
-void * Server::read_keyfile(const char *fname, Logger *log) {
+void* Server::read_keyfile(const char *fname, Logger *log) {
 #ifdef USING_RSA
   int fd = open(fname, O_RDONLY);
   if (fd < 0) {
@@ -304,10 +286,8 @@ void Server::Connection::set_rc4_key(const u_char *session_key) {
 #endif
 }
 
-Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf,
-						   size_t inbuflen,
-						   const void *keydata,
-						   int fd, Logger *log) {
+Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf, size_t inbuflen, const void *keydata, int fd,
+    Logger *log) {
 #ifdef DEBUG_ENABLE
   assert(inbuflen <= 64);
 #endif
@@ -371,7 +351,7 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf,
   }
   const u_char *finalkey = dkey;
 #else
-  const u_char *finalkey = (const u_char *)keydata;
+  const u_char *finalkey = (const u_char*) keydata;
 #endif /* ! USING_DH */
 #endif /* ! USING_RSA */
 
@@ -392,27 +372,25 @@ Server::reason_t Server::Connection::setup_rc4_key(const u_char *inbuf,
   }
   try {
     set_rc4_key(session_key);
-  }
-  catch (const std::bad_alloc &) {
+  } catch (const std::bad_alloc&) {
     log_err(log, "Cannot allocate memory for RC4 state\n");
     return INTERNAL_ERROR;
   }
 #if defined(USING_RSA) || defined(USING_DH)
   log_debug(log, "Session key for fd %d: %02X%02X%02X%02X%02X%02X%02X\n", fd,
-	    session_key[0], session_key[1], session_key[2], session_key[3],
-	    session_key[4], session_key[5], session_key[6]);
+      session_key[0], session_key[1], session_key[2], session_key[3],
+      session_key[4], session_key[5], session_key[6]);
 #endif
   return NO_SHUTDOWN;
 }
 
-NetworkMessage * 
-Server::BackendConnection::make_if_enough(const u_char *buf, size_t len,
-					  int *want_len, bool become_owner) {
+NetworkMessage*
+Server::BackendConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
   return BackendMessage::make_if_enough(buf, len, want_len, become_owner);
 }
 
-const char * Server::reason_to_string(Server::reason_t why) {
-  switch(why) {
+const char* Server::reason_to_string(Server::reason_t why) {
+  switch (why) {
   case Server::NO_SHUTDOWN:
     return "No shutdown requested";
   case Server::FORGET_THIS_CONNECTION:
@@ -468,7 +446,8 @@ void Server::set_accepted_fds(int **accepted_fds, int *fds_size) {
 #endif
 
 // ok, this is a hack but it gets me what I need!
-Server::TimerQueue::TimerQueue() : Connection(-255, (MessageQueue*)1) {
+Server::TimerQueue::TimerQueue() :
+    Connection(-255, (MessageQueue*) 1) {
   m_msg_queue = NULL;
   if (m_readbuf) {
     delete m_readbuf;
@@ -491,9 +470,7 @@ void Server::TimerQueue::insert(Server::TimerQueue::Timer *el) {
 }
 
 void Server::TimerQueue::handle_timeout(struct timeval &time) {
-  while (m_queue.size() > 0
-	 && (timeval_lessthan(m_queue[0]->m_when, time)
-	     || m_queue[0]->m_cancelled)) {
+  while (m_queue.size() > 0 && (timeval_lessthan(m_queue[0]->m_when, time) || m_queue[0]->m_cancelled)) {
     Timer *t = m_queue[0];
     if (!t->m_cancelled) {
       t->callback();
@@ -509,17 +486,14 @@ void Server::TimerQueue::set_timeout() {
   if (m_queue.size() == 0) {
     // disable timeout
     m_interval = 0;
-  }
-  else {
+  } else {
     m_interval = 1;
     m_timeout = m_queue[0]->m_when;
   }
 }
 
-
-
-void * serv_main(void *serv) {
-  Server *server = (Server *)serv;
+void* serv_main(void *serv) {
+  Server *server = (Server*) serv;
 
   Logger *log = server->log();
   Server::reason_t shutdown_reason = Server::NO_SHUTDOWN;
@@ -554,15 +528,15 @@ void * serv_main(void *serv) {
   // this macro makes sure that if we are already in shutdown, we don't
   // re-shutdown or worse, clear shutdown_reason
 #define CHECK_SHUTDOWN(e, control) { \
-	  Server::reason_t resp = (e); \
-	  if (resp != Server::NO_SHUTDOWN) { \
-	    if (!IN_SHUTDOWN()) { \
-	      shutdown_reason = resp; \
-	      server->shutdown(resp); \
+    Server::reason_t resp = (e); \
+    if (resp != Server::NO_SHUTDOWN) { \
+      if (!IN_SHUTDOWN()) { \
+        shutdown_reason = resp; \
+        server->shutdown(resp); \
             } \
-	    control; \
-	  } \
-	}
+      control; \
+    } \
+  }
 
   if (server->is_thread()) {
     // clear out signal mask, but only when a thread
@@ -577,28 +551,24 @@ void * serv_main(void *serv) {
     // "main" thread, but let us see if it makes a difference
     sigaddset(&sigs, SIGQUIT);
     pthread_sigmask(SIG_BLOCK, &sigs, NULL);
-  }
-  else {
+  } else {
     // pid_t is 4 bytes even on 64-bit machines, so this is safe
-    server->set_id((uint32_t)getpid());
+    server->set_id((uint32_t) getpid());
   }
 
   log_info(log, "%s startup\n", server->type_name());
   try {
     ret = server->init();
     UruString::setup_thread_iconv();
-  }
-  catch (const std::bad_alloc &) {
+  } catch (const std::bad_alloc&) {
     log_err(log, "Cannot allocate memory in init(), shutting down\n");
     goto quitting;
   }
   if (ret) {
     // we can't expect to forge on
     if (server->is_child()) {
-      log_debug(log,
-		"Closing client connection because of an error in init()\n");
-    }
-    else {
+      log_debug(log, "Closing client connection because of an error in init()\n");
+    } else {
       log_debug(log, "Quitting because of an error in init()\n");
     }
     goto quitting;
@@ -617,8 +587,7 @@ void * serv_main(void *serv) {
     fds_size = max_accepted_fds;
     accepted_fds = new int[fds_size];
     fd_timeouts = new struct timeval[fds_size];
-  }
-  catch (const std::bad_alloc &) {
+  } catch (const std::bad_alloc&) {
     log_err(log, "Cannot allocate memory, shutting down\n");
     goto quitting;
   }
@@ -639,28 +608,26 @@ void * serv_main(void *serv) {
     save_nfds = server->listen_fd() + 1;
   }
   gettimeofday(&next, NULL);
-  next.tv_sec += (3600*24); /* once a day */
+  next.tv_sec += (3600 * 24); /* once a day */
 
   while (1) {
     // process any signals
     if (signal_bits) {
       for (u_int s = 0; s < signal_len; s++) {
-	if (signal_bits[s]) {
-	  CHECK_SHUTDOWN(server->process_signals(),);
-	  break;
-	}
+        if (signal_bits[s]) {
+          CHECK_SHUTDOWN(server->process_signals(),);
+          break;
+        }
       }
     }
     // check for explicit shutdown request
-    CHECK_SHUTDOWN((server->shutdown_requested()
-		    ? Server::SERVER_SHUTDOWN : Server::NO_SHUTDOWN),);
+    CHECK_SHUTDOWN((server->shutdown_requested() ? Server::SERVER_SHUTDOWN : Server::NO_SHUTDOWN),);
     // set up and check the listen socket
     writefds = zerofds;
     if (IN_SHUTDOWN()) {
       readfds = zerofds;
       nfds = 0;
-    }
-    else {
+    } else {
       readfds = savefds;
       nfds = save_nfds;
     }
@@ -669,7 +636,7 @@ void * serv_main(void *serv) {
       log_info(log, "I am alive!\n");
       // log only once if the server was asleep (suspended) for > 1 day
       do {
-	next.tv_sec += (3600*24);
+        next.tv_sec += (3600 * 24);
       } while (timeval_lessthan(next, now));
     }
     timeout = next;
@@ -677,60 +644,56 @@ void * serv_main(void *serv) {
     i = j = 0;
     while (j < fds_used && i < fds_size) {
       if (accepted_fds[i] >= 0) {
-	FD_SET(accepted_fds[i], &readfds);
-	if (timeval_lessthan(fd_timeouts[i], timeout)) {
-	  timeout = fd_timeouts[i];
-	}
-	if (accepted_fds[i] >= nfds) {
-	  nfds = accepted_fds[i]+1;
-	}
-	j++;
+        FD_SET(accepted_fds[i], &readfds);
+        if (timeval_lessthan(fd_timeouts[i], timeout)) {
+          timeout = fd_timeouts[i];
+        }
+        if (accepted_fds[i] >= nfds) {
+          nfds = accepted_fds[i] + 1;
+        }
+        j++;
       }
       i++;
     }
     // now pick up the active connections
-    for (iter = conns.begin(); iter != conns.end(); ) {
+    for (iter = conns.begin(); iter != conns.end();) {
       // conn_shutdown() may invalidate the iterator, so take care with it
       conn = *iter;
       iter++;
       if (conn->m_interval && timeval_lessthan(conn->m_timeout, timeout)) {
-	timeout = conn->m_timeout;
+        timeout = conn->m_timeout;
       }
       if (conn->fd() < 0) {
-	continue;
+        continue;
       }
-      if (conn->in_shutdown()
-	  && conn->queue_size() == 0 && conn->m_write_fill == 0) {
-	server->conn_shutdown(conn, Server::QUEUE_DRAINED);
-	continue;
+      if (conn->in_shutdown() && conn->queue_size() == 0 && conn->m_write_fill == 0) {
+        server->conn_shutdown(conn, Server::QUEUE_DRAINED);
+        continue;
       }
       int include = -1;
       if (!IN_SHUTDOWN() && !conn->in_connect() && !conn->in_shutdown()) {
-	Buffer *cbuf = conn->m_bigbuf ? conn->m_bigbuf : conn->m_readbuf;
-	if (conn->m_read_fill < cbuf->len()) {
-	  FD_SET(conn->fd(), &readfds);
-	  include = conn->fd();
-	}
+        Buffer *cbuf = conn->m_bigbuf ? conn->m_bigbuf : conn->m_readbuf;
+        if (conn->m_read_fill < cbuf->len()) {
+          FD_SET(conn->fd(), &readfds);
+          include = conn->fd();
+        }
       }
-      if ((!IN_SHUTDOWN() && conn->in_connect())
-	  || conn->queue_size() > 0 || conn->m_write_fill != 0) {
-	FD_SET(conn->fd(), &writefds);
-	include = conn->fd();
+      if ((!IN_SHUTDOWN() && conn->in_connect()) || conn->queue_size() > 0 || conn->m_write_fill != 0) {
+        FD_SET(conn->fd(), &writefds);
+        include = conn->fd();
       }
       if (include >= nfds) {
-	nfds = include+1;
+        nfds = include + 1;
       }
     }
 
     if (IN_SHUTDOWN() && nfds == 0) {
       // all done
-      log_info(log, "Server shutdown for reason: %s\n",
-	       Server::reason_to_string(shutdown_reason));
+      log_info(log, "Server shutdown for reason: %s\n", Server::reason_to_string(shutdown_reason));
 
-      if (shutdown_reason == Server::SERVER_SHUTDOWN
-	  ||shutdown_reason == Server::CLIENT_CLOSE
-	  || shutdown_reason == Server::CLIENT_TIMEOUT) {
-	exit_value = 0;
+      if (shutdown_reason == Server::SERVER_SHUTDOWN || shutdown_reason == Server::CLIENT_CLOSE
+          || shutdown_reason == Server::CLIENT_TIMEOUT) {
+        exit_value = 0;
       }
       goto quitting;
     }
@@ -747,18 +710,18 @@ void * serv_main(void *serv) {
       rfd_list[0] = '\0';
       wfd_list[0] = '\0';
       for (i = 0; i < FD_SETSIZE; i++) {
-	if (FD_ISSET(i, &readfds)) {
-	  u_int list_off = strlen(rfd_list);
-	  if (list_off < 1023) {
-	    snprintf(rfd_list+list_off, 1024-list_off, " %d", i);
-	  }
-	}
-	if (FD_ISSET(i, &writefds)) {
-	  u_int list_off = strlen(wfd_list);
-	  if (list_off < 1023) {
-	    snprintf(wfd_list+list_off, 1024-list_off, " %d", i);
-	  }
-	}
+  if (FD_ISSET(i, &readfds)) {
+    u_int list_off = strlen(rfd_list);
+    if (list_off < 1023) {
+      snprintf(rfd_list+list_off, 1024-list_off, " %d", i);
+    }
+  }
+  if (FD_ISSET(i, &writefds)) {
+    u_int list_off = strlen(wfd_list);
+    if (list_off < 1023) {
+      snprintf(wfd_list+list_off, 1024-list_off, " %d", i);
+    }
+  }
       }
       log_debug(log, "Write fds BEFORE:%s\n", wfd_list);
       log_debug(log, "Read fds BEFORE:%s\n", rfd_list);
@@ -769,519 +732,448 @@ void * serv_main(void *serv) {
     if (fd_ct < 0) {
       // error
       if (errno == EINTR) {
+      } else if (errno == EINVAL) {
+        // bad timeout parameter
+        log_err(log, "Bad timeout parameter %d.%06d!\n", timeout.tv_sec, timeout.tv_usec);
+      } else {
+        log_err(log, "Error in select: %s\n", strerror(errno));
+        CHECK_SHUTDOWN(Server::SELECT_ERROR,);
+        continue;
       }
-      else if (errno == EINVAL) {
-	// bad timeout parameter
-	log_err(log, "Bad timeout parameter %d.%06d!\n",
-		timeout.tv_sec, timeout.tv_usec);
-      }
-      else {
-	log_err(log, "Error in select: %s\n", strerror(errno));
-	CHECK_SHUTDOWN(Server::SELECT_ERROR,);
-	continue;
-      }
-    }
-    else if (fd_ct == 0) {
+    } else if (fd_ct == 0) {
       // timeout
       j = fds_used;
       i = 0;
       while (j > 0 && i < fds_size) {
-	if (accepted_fds[i] >= 0) {
-	  j--;
-	  if (timeval_lessthan(fd_timeouts[i], now)) {
-	    // no data came in the timeout interval
-	    log_debug(log, "Timeout for connection on %d\n", accepted_fds[i]);
-	    close(accepted_fds[i]);
-	    accepted_fds[i] = -1;
-	    fds_used--;
-	  }
-	}
+        if (accepted_fds[i] >= 0) {
+          j--;
+          if (timeval_lessthan(fd_timeouts[i], now)) {
+            // no data came in the timeout interval
+            log_debug(log, "Timeout for connection on %d\n", accepted_fds[i]);
+            close(accepted_fds[i]);
+            accepted_fds[i] = -1;
+            fds_used--;
+          }
+        }
       }
-      for (iter = conns.begin(); iter != conns.end(); ) {
-	// conn_timeout() may invalidate the iterator, so take care with it
-	conn = *iter;
-	iter++;
-	if (conn->m_interval && timeval_lessthan(conn->m_timeout, now)) {
-	  CHECK_SHUTDOWN(server->conn_timeout(conn, Server::CLIENT_TIMEOUT),
-			 break);
-	}
+      for (iter = conns.begin(); iter != conns.end();) {
+        // conn_timeout() may invalidate the iterator, so take care with it
+        conn = *iter;
+        iter++;
+        if (conn->m_interval && timeval_lessthan(conn->m_timeout, now)) {
+          CHECK_SHUTDOWN(server->conn_timeout(conn, Server::CLIENT_TIMEOUT), break);
+        }
       }
-    }
-    else {
+    } else {
 #ifdef DEBUG_ENABLE
       if (0) {
-	char rfd_list[1024];
-	char wfd_list[1024];
-	rfd_list[0] = '\0';
-	wfd_list[0] = '\0';
-	for (i = 0; i < FD_SETSIZE; i++) {
-	  if (FD_ISSET(i, &readfds)) {
-	    u_int list_off = strlen(rfd_list);
-	    if (list_off < 1023) {
-	      snprintf(rfd_list+list_off, 1024-list_off, " %d", i);
-	    }
-	  }
-	  if (FD_ISSET(i, &writefds)) {
-	    u_int list_off = strlen(wfd_list);
-	    if (list_off < 1023) {
-	      snprintf(wfd_list+list_off, 1024-list_off, " %d", i);
-	    }
-	  }
-	}
-	log_debug(log, "Read fds AFTER:%s\n", rfd_list);
-	log_debug(log, "Write fds AFTER:%s\n", wfd_list);
+  char rfd_list[1024];
+  char wfd_list[1024];
+  rfd_list[0] = '\0';
+  wfd_list[0] = '\0';
+  for (i = 0; i < FD_SETSIZE; i++) {
+    if (FD_ISSET(i, &readfds)) {
+      u_int list_off = strlen(rfd_list);
+      if (list_off < 1023) {
+        snprintf(rfd_list+list_off, 1024-list_off, " %d", i);
+      }
+    }
+    if (FD_ISSET(i, &writefds)) {
+      u_int list_off = strlen(wfd_list);
+      if (list_off < 1023) {
+        snprintf(wfd_list+list_off, 1024-list_off, " %d", i);
+      }
+    }
+  }
+  log_debug(log, "Read fds AFTER:%s\n", rfd_list);
+  log_debug(log, "Write fds AFTER:%s\n", wfd_list);
       }
 #endif
       // do we need to accept() ?
-      if (server->listen_fd() >= 0
-	  && FD_ISSET(server->listen_fd(), &readfds)) {
-	struct sockaddr_in addr;
-	u_int socklen = sizeof(struct sockaddr_in);
-	int newfd = accept(server->listen_fd(),
-			   (struct sockaddr *)&addr, &socklen);
-	if (newfd < 0) {
-	  if (errno == EAGAIN) {
-	    log_warn(log, "Listen socket selected for read "
-		     "but nothing to accept()\n");
-	  }
-	  else if (errno == ECONNABORTED) {
-	    log_warn(log, "Connection aborted\n");
-	  }
-	  else if (errno == EMFILE || errno == ENFILE) {
-	    // XXX out of fd's
-	    log_err(log, "Out of file descriptors in accept!\n");
-	  }
-	  else {
-	    log_err(log, "Error in accept: %s\n", strerror(errno));
-	  }
-	}
-	else {
-	  unsigned int ipaddr = ntohl(addr.sin_addr.s_addr);
-	  log_debug(log, "Accepted %d from %u.%u.%u.%u:%u\n", newfd,
-		    ipaddr >> 24, (ipaddr >> 16) & 0xFF,
-		    (ipaddr >> 8) & 0xFF, ipaddr & 0xFF,
-		    ntohs(addr.sin_port));
+      if (server->listen_fd() >= 0 && FD_ISSET(server->listen_fd(), &readfds)) {
+        struct sockaddr_in addr;
+        u_int socklen = sizeof(struct sockaddr_in);
+        int newfd = accept(server->listen_fd(), (struct sockaddr*) &addr, &socklen);
+        if (newfd < 0) {
+          if (errno == EAGAIN) {
+            log_warn(log, "Listen socket selected for read "
+                "but nothing to accept()\n");
+          } else if (errno == ECONNABORTED) {
+            log_warn(log, "Connection aborted\n");
+          } else if (errno == EMFILE || errno == ENFILE) {
+            // XXX out of fd's
+            log_err(log, "Out of file descriptors in accept!\n");
+          } else {
+            log_err(log, "Error in accept: %s\n", strerror(errno));
+          }
+        } else {
+          unsigned int ipaddr = ntohl(addr.sin_addr.s_addr);
+          log_debug(log, "Accepted %d from %u.%u.%u.%u:%u\n", newfd, ipaddr >> 24, (ipaddr >> 16) & 0xFF,
+              (ipaddr >> 8) & 0xFF, ipaddr & 0xFF, ntohs(addr.sin_port));
 
-	  ret = fcntl(newfd, F_GETFL, NULL);
-	  if (fcntl(newfd, F_SETFL, ret|O_NONBLOCK)) {
-	    log_err(log, "Error setting %d nonblocking: %s\n",
-		    newfd, strerror(errno));
-	    close(newfd);
-	  }
-	  else {
-	    for (i = 0; i < fds_size; i++) {
-	      if (accepted_fds[i] < 0) {
-		accepted_fds[i] = newfd;
-		fd_timeouts[i].tv_sec = now.tv_sec+accepted_timeout;
-		fd_timeouts[i].tv_usec = now.tv_usec;
-		fds_used++;
-		break;
-	      }
-	    }
-	    if (i == fds_size) {
-	      int next_size = fds_size * 2;
-	      if (next_size > max_accepted_fds && fds_size < max_accepted_fds) {
-		next_size = max_accepted_fds;
-	      }
-	      if (next_size > max_accepted_fds) {
-		// eject older fds
-		int count = 0, j;
-		i = -1;
-		for (j = 0; j < fds_size; j++) {
-		  if (fd_timeouts[j].tv_sec < now.tv_sec+(accepted_timeout/2)) {
-		    count++;
-		    close(accepted_fds[j]);
-		    fds_used--;
-		    accepted_fds[j] = -1;
-		    i = j;
-		  }
-		}
-		if (i < 0) {
-		  // we closed nothing
-		  log_warn(log, "Max connections in less than "
-			   "timeout/2 seconds: possible DoS\n");
-		  // this is not perfectly fair but it's simple
-		  for (j = 0; j < fds_size; j++) {
-		    if (j > 0
-			&& fd_timeouts[j].tv_sec < fd_timeouts[j-1].tv_sec) {
-		      close(accepted_fds[j]);
-		      fds_used--;
-		      accepted_fds[j] = -1;
-		      i = j;
-		      break;
-		    }
-		  }
-		  if (j == fds_size) {
-		    close(accepted_fds[0]);
-		    fds_used--;
-		    accepted_fds[0] = -1;
-		    i = 0;
-		  }
-		}
-		accepted_fds[i] = newfd;
-		fd_timeouts[i].tv_sec = now.tv_sec+accepted_timeout;
-		fd_timeouts[i].tv_usec = now.tv_usec;
-		fds_used++;
-	      }
-	      else {
-		int *new_a_fds = NULL;
-		struct timeval *new_fd_ts = NULL;
-		try {
-		  new_a_fds = new int[next_size];
-		  new_fd_ts = new struct timeval[next_size];
+          ret = fcntl(newfd, F_GETFL, NULL);
+          if (fcntl(newfd, F_SETFL, ret | O_NONBLOCK)) {
+            log_err(log, "Error setting %d nonblocking: %s\n", newfd, strerror(errno));
+            close(newfd);
+          } else {
+            for (i = 0; i < fds_size; i++) {
+              if (accepted_fds[i] < 0) {
+                accepted_fds[i] = newfd;
+                fd_timeouts[i].tv_sec = now.tv_sec + accepted_timeout;
+                fd_timeouts[i].tv_usec = now.tv_usec;
+                fds_used++;
+                break;
+              }
+            }
+            if (i == fds_size) {
+              int next_size = fds_size * 2;
+              if (next_size > max_accepted_fds && fds_size < max_accepted_fds) {
+                next_size = max_accepted_fds;
+              }
+              if (next_size > max_accepted_fds) {
+                // eject older fds
+                int count = 0, j;
+                i = -1;
+                for (j = 0; j < fds_size; j++) {
+                  if (fd_timeouts[j].tv_sec < now.tv_sec + (accepted_timeout / 2)) {
+                    count++;
+                    close(accepted_fds[j]);
+                    fds_used--;
+                    accepted_fds[j] = -1;
+                    i = j;
+                  }
+                }
+                if (i < 0) {
+                  // we closed nothing
+                  log_warn(log, "Max connections in less than "
+                      "timeout/2 seconds: possible DoS\n");
+                  // this is not perfectly fair but it's simple
+                  for (j = 0; j < fds_size; j++) {
+                    if (j > 0 && fd_timeouts[j].tv_sec < fd_timeouts[j - 1].tv_sec) {
+                      close(accepted_fds[j]);
+                      fds_used--;
+                      accepted_fds[j] = -1;
+                      i = j;
+                      break;
+                    }
+                  }
+                  if (j == fds_size) {
+                    close(accepted_fds[0]);
+                    fds_used--;
+                    accepted_fds[0] = -1;
+                    i = 0;
+                  }
+                }
+                accepted_fds[i] = newfd;
+                fd_timeouts[i].tv_sec = now.tv_sec + accepted_timeout;
+                fd_timeouts[i].tv_usec = now.tv_usec;
+                fds_used++;
+              } else {
+                int *new_a_fds = NULL;
+                struct timeval *new_fd_ts = NULL;
+                try {
+                  new_a_fds = new int[next_size];
+                  new_fd_ts = new struct timeval[next_size];
 
-		  memcpy(new_a_fds, accepted_fds, fds_size);
-		  memcpy(new_fd_ts, fd_timeouts, fds_size);
-		  delete[] accepted_fds;
-		  delete[] fd_timeouts;
-		  fds_size = next_size;
-		  accepted_fds = new_a_fds;
-		  fd_timeouts = new_fd_ts;
+                  memcpy(new_a_fds, accepted_fds, fds_size);
+                  memcpy(new_fd_ts, fd_timeouts, fds_size);
+                  delete[] accepted_fds;
+                  delete[] fd_timeouts;
+                  fds_size = next_size;
+                  accepted_fds = new_a_fds;
+                  fd_timeouts = new_fd_ts;
 
-		  accepted_fds[i] = newfd;
-		  fd_timeouts[i].tv_sec = now.tv_sec+accepted_timeout;
-		  fd_timeouts[i].tv_usec = now.tv_usec;
-		  fds_used++;
-		  for (i++; i < fds_size; i++) {
-		    accepted_fds[i] = -1;
-		  }
-		}
-		catch (const std::bad_alloc&) {
-		  // man do we have a serious problem
-		  if (new_a_fds) {
-		    delete[] new_a_fds;
-		  }
-		  if (new_fd_ts) {
-		    delete[] new_fd_ts;
-		  }
-		  log_err(log,
-			  "Cannot allocate memory for accepted fds list!\n");
-		  // drop connection, nothing else we can do
-		  close(newfd);
-		}
-	      }
-	    }
-	  }
-	}
-	// decrement count of file descriptors selected
-	fd_ct--;
+                  accepted_fds[i] = newfd;
+                  fd_timeouts[i].tv_sec = now.tv_sec + accepted_timeout;
+                  fd_timeouts[i].tv_usec = now.tv_usec;
+                  fds_used++;
+                  for (i++; i < fds_size; i++) {
+                    accepted_fds[i] = -1;
+                  }
+                } catch (const std::bad_alloc&) {
+                  // man do we have a serious problem
+                  if (new_a_fds) {
+                    delete[] new_a_fds;
+                  }
+                  if (new_fd_ts) {
+                    delete[] new_fd_ts;
+                  }
+                  log_err(log, "Cannot allocate memory for accepted fds list!\n");
+                  // drop connection, nothing else we can do
+                  close(newfd);
+                }
+              }
+            }
+          }
+        }
+        // decrement count of file descriptors selected
+        fd_ct--;
       }
 
       // now, check on previously accepted fds
       if (server->listen_fd() >= 0 && fd_ct > 0) {
-	i = j = 0;
-	while (j < fds_used && i < fds_size) {
-	  if (accepted_fds[i] >= 0 && FD_ISSET(accepted_fds[i], &readfds)) {
-	    u_char type;
-	    ret = read(accepted_fds[i], &type, 1);
-	    if (ret <= 0) {
-	      if (ret < 0) {
-		if (errno == EAGAIN) {
-		  /*log_warn(log, "Socket selected for read but "
-			   "nothing to read()\n");*/
-		  // this is ok if the client is slow to send the data after
-		  // connecting, so just try again (next time data should
-		  // be present)
-		}
-		else {
-		  log_err(log, "Error reading type on %d: %s\n",
-			  accepted_fds[i], strerror(errno));
-		  close(accepted_fds[i]);
-		  accepted_fds[i] = -1;
-		  fds_used--;
-		}
-	      }
-	      else {
-		// EOF
-		log_debug(log, "Unexpected early EOF on %d\n",
-			  accepted_fds[i]);
-		close(accepted_fds[i]);
-		accepted_fds[i] = -1;
-		fds_used--;
-	      }
-	    }
-	    else {
-	      server->add_client_conn(accepted_fds[i], type);
-	      accepted_fds[i] = -1;
-	      fds_used--;
-	    }
-	    // decrement count of file descriptors selected
-	    fd_ct--;
-	  }
-	  if (accepted_fds[i] >= 0) {
-	    j++;
-	  }
-	  i++;
-	}
+        i = j = 0;
+        while (j < fds_used && i < fds_size) {
+          if (accepted_fds[i] >= 0 && FD_ISSET(accepted_fds[i], &readfds)) {
+            u_char type;
+            ret = read(accepted_fds[i], &type, 1);
+            if (ret <= 0) {
+              if (ret < 0) {
+                if (errno == EAGAIN) {
+                  /*log_warn(log, "Socket selected for read but "
+                   "nothing to read()\n");*/
+                  // this is ok if the client is slow to send the data after
+                  // connecting, so just try again (next time data should
+                  // be present)
+                } else {
+                  log_err(log, "Error reading type on %d: %s\n", accepted_fds[i], strerror(errno));
+                  close(accepted_fds[i]);
+                  accepted_fds[i] = -1;
+                  fds_used--;
+                }
+              } else {
+                // EOF
+                log_debug(log, "Unexpected early EOF on %d\n", accepted_fds[i]);
+                close(accepted_fds[i]);
+                accepted_fds[i] = -1;
+                fds_used--;
+              }
+            } else {
+              server->add_client_conn(accepted_fds[i], type);
+              accepted_fds[i] = -1;
+              fds_used--;
+            }
+            // decrement count of file descriptors selected
+            fd_ct--;
+          }
+          if (accepted_fds[i] >= 0) {
+            j++;
+          }
+          i++;
+        }
       }
 
       // check connections
       bool fd_used = false;
-      for (iter = conns.begin(); iter != conns.end(); ) {
-	// conn_shutdown() may invalidate the iterator, so take care with it
-	conn = *iter;
-	iter++;
-	if (fd_used) {
-	  fd_ct--;
-	}
-	if (fd_ct <= 0) {
-	  break;
-	}
-	fd_used = false;
-	if (conn->fd() < 0) {
-	  continue;
-	}
-	if (FD_ISSET(conn->fd(), &readfds)) {
-	  fd_used = true;
-	  Buffer *cbuf = conn->m_bigbuf ? conn->m_bigbuf : conn->m_readbuf;
-	  int to_read = cbuf->len() - conn->m_read_fill;
-	  if (to_read <= 0) {
-	    // XXX we have a protocol problem; the Server should clear
-	    // out the buffer if an oversize message is in progress
-	    log_err(log, "Read buffer on %d overfull, a protocol error "
-		    "happened somewhere\n", conn->fd());
-	    if (log) {
-	      log->dump_contents(Logger::LOG_ERR,
-					 cbuf->buffer(),
-					 conn->m_read_fill);
-	    }
-	    CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::PROTOCOL_ERROR),
-			   break);
-	    continue;
-	  }
-	  ret = read(conn->fd(), cbuf->buffer() + conn->m_read_fill, to_read);
-	  if (ret < 0) {
-	    if (errno == EAGAIN) {
-	      log_warn(log,
-		       "Socket %d selected for read but nothing to read()\n",
-		       conn->fd());
-	    }
-	    else if (errno == EINTR) {
-	    }
-	    else if (errno == ECONNRESET) {
-	      log_debug(log, "Peer on %d reset connection\n", conn->fd());
-	      CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::CLIENT_CLOSE),
-			     break);
-	      continue;
-	    }
-	    else {
-	      log_err(log, "Error in read on %d: %s\n",
-		      conn->fd(), strerror(errno));
-	      CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::READ_ERROR),
-			     break);
-	      continue;
-	    }
-	  }
-	  else if (ret == 0) {
-	    log_debug(log, "Peer on %d closed connection\n", conn->fd());
-	    CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::CLIENT_CLOSE),
-			   break);
-	    continue;
-	  }
-	  else {
-	    conn->m_lastread = now;
-	    if (conn->is_encrypted()) {
-	      conn->decrypt(cbuf->buffer() + conn->m_read_fill, ret);
-	    }
-	    conn->m_read_fill += ret;
+      for (iter = conns.begin(); iter != conns.end();) {
+        // conn_shutdown() may invalidate the iterator, so take care with it
+        conn = *iter;
+        iter++;
+        if (fd_used) {
+          fd_ct--;
+        }
+        if (fd_ct <= 0) {
+          break;
+        }
+        fd_used = false;
+        if (conn->fd() < 0) {
+          continue;
+        }
+        if (FD_ISSET(conn->fd(), &readfds)) {
+          fd_used = true;
+          Buffer *cbuf = conn->m_bigbuf ? conn->m_bigbuf : conn->m_readbuf;
+          int to_read = cbuf->len() - conn->m_read_fill;
+          if (to_read <= 0) {
+            // XXX we have a protocol problem; the Server should clear
+            // out the buffer if an oversize message is in progress
+            log_err(log, "Read buffer on %d overfull, a protocol error "
+                "happened somewhere\n", conn->fd());
+            if (log) {
+              log->dump_contents(Logger::LOG_ERR, cbuf->buffer(), conn->m_read_fill);
+            }
+            CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::PROTOCOL_ERROR), break);
+            continue;
+          }
+          ret = read(conn->fd(), cbuf->buffer() + conn->m_read_fill, to_read);
+          if (ret < 0) {
+            if (errno == EAGAIN) {
+              log_warn(log, "Socket %d selected for read but nothing to read()\n", conn->fd());
+            } else if (errno == EINTR) {
+            } else if (errno == ECONNRESET) {
+              log_debug(log, "Peer on %d reset connection\n", conn->fd());
+              CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::CLIENT_CLOSE), break);
+              continue;
+            } else {
+              log_err(log, "Error in read on %d: %s\n", conn->fd(), strerror(errno));
+              CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::READ_ERROR), break);
+              continue;
+            }
+          } else if (ret == 0) {
+            log_debug(log, "Peer on %d closed connection\n", conn->fd());
+            CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::CLIENT_CLOSE), break);
+            continue;
+          } else {
+            conn->m_lastread = now;
+            if (conn->is_encrypted()) {
+              conn->decrypt(cbuf->buffer() + conn->m_read_fill, ret);
+            }
+            conn->m_read_fill += ret;
 
-	    NetworkMessage *msg = NULL;
-	    Server::reason_t conn_reason = Server::NO_SHUTDOWN;
-	    do {
-	      try {
-		msg = conn->make_if_enough(cbuf->buffer()+conn->m_read_off,
-					   conn->m_read_fill-conn->m_read_off,
-					   &to_read, conn->m_bigbuf != NULL);
-	      }
-	      catch (const overlong_message &e) {
-		log_net(log, "Message on %d too long: claimed %d bytes\n",
-			conn->fd(), e.claimed_len());
-		if (log) {
-		  log->dump_contents(Logger::LOG_DEBUG,
-				     cbuf->buffer()+conn->m_read_off,
-				     conn->m_read_fill-conn->m_read_off);
-		}
-		// we cannot continue, but it may not be cause to shut down
-		conn_reason = Server::PROTOCOL_ERROR;
-		CHECK_SHUTDOWN(server->conn_shutdown(conn, conn_reason),);
-		break; // pop out of do..while loop
-	      }
-	      if (!msg) {
-		if (to_read > 0) {
-		  if (conn->m_bigbuf) {
-		    if (to_read != (int)cbuf->len()) {
-		      log_err(log, "Connection on %d message length changed "
-			      "from %u to %u!\n", conn->fd(), cbuf->len(),
-			      to_read);
-		      // serious problem
-		      conn_reason = Server::INTERNAL_ERROR;
-		      CHECK_SHUTDOWN(server->conn_shutdown(conn, conn_reason),);
-		    }
-		  }
-		  else if (to_read > BUFSIZE) {
-		    log_debug(log, "This is a large %s message (%u)\n",
-			      server->type_name(), to_read);
-		    // the checks that throw overlong_message are intended to
-		    // ensure that to_read is a reasonable size (and not
-		    // something to DoS me)
-		    conn->m_bigbuf
-		      = new Buffer(to_read, cbuf->buffer()+conn->m_read_off,
-				   true, conn->m_read_fill-conn->m_read_off);
-		    conn->m_read_fill -= conn->m_read_off;
-		    conn->m_read_off = 0;
-		  }
-		}
-		break; // pop out of do..while loop
-	      }
-	      if (conn->m_bigbuf) {
-		// we asked the new message to become owner of the data buffer
-		conn->m_bigbuf->make_unowned();
-	      }
+            NetworkMessage *msg = NULL;
+            Server::reason_t conn_reason = Server::NO_SHUTDOWN;
+            do {
+              try {
+                msg = conn->make_if_enough(cbuf->buffer() + conn->m_read_off,
+                    conn->m_read_fill - conn->m_read_off, &to_read, conn->m_bigbuf != NULL);
+              } catch (const overlong_message &e) {
+                log_net(log, "Message on %d too long: claimed %d bytes\n", conn->fd(), e.claimed_len());
+                if (log) {
+                  log->dump_contents(Logger::LOG_DEBUG, cbuf->buffer() + conn->m_read_off,
+                      conn->m_read_fill - conn->m_read_off);
+                }
+                // we cannot continue, but it may not be cause to shut down
+                conn_reason = Server::PROTOCOL_ERROR;
+                CHECK_SHUTDOWN(server->conn_shutdown(conn, conn_reason),);
+                break; // pop out of do..while loop
+              }
+              if (!msg) {
+                if (to_read > 0) {
+                  if (conn->m_bigbuf) {
+                    if (to_read != (int) cbuf->len()) {
+                      log_err(log, "Connection on %d message length changed "
+                          "from %u to %u!\n", conn->fd(), cbuf->len(), to_read);
+                      // serious problem
+                      conn_reason = Server::INTERNAL_ERROR;
+                      CHECK_SHUTDOWN(server->conn_shutdown(conn, conn_reason),);
+                    }
+                  } else if (to_read > BUFSIZE) {
+                    log_debug(log, "This is a large %s message (%u)\n", server->type_name(), to_read);
+                    // the checks that throw overlong_message are intended to
+                    // ensure that to_read is a reasonable size (and not
+                    // something to DoS me)
+                    conn->m_bigbuf = new Buffer(to_read, cbuf->buffer() + conn->m_read_off, true,
+                        conn->m_read_fill - conn->m_read_off);
+                    conn->m_read_fill -= conn->m_read_off;
+                    conn->m_read_off = 0;
+                  }
+                }
+                break; // pop out of do..while loop
+              }
+              if (conn->m_bigbuf) {
+                // we asked the new message to become owner of the data buffer
+                conn->m_bigbuf->make_unowned();
+              }
 #ifdef DEBUG_ENABLE
-	      size_t used_len = msg->message_len();
+        size_t used_len = msg->message_len();
 #endif
-	      conn->m_read_off += msg->message_len();
+              conn->m_read_off += msg->message_len();
 
-	      conn_reason = server->message_read(conn, msg);
-	      if (conn_reason != Server::NO_SHUTDOWN) {
-		if (conn_reason == Server::FORGET_THIS_CONNECTION) {
-		  // we are not allowed to dereference conn --
-		  // server->message_read() had better have removed the
-		  // conn from the list!
-		}
-		else {
-		  CHECK_SHUTDOWN(server->conn_shutdown(conn, conn_reason),);
-		}
-		break; // pop out of do..while loop
-	      }
-	      else if (conn->m_bigbuf) {
-		delete conn->m_bigbuf;
-		conn->m_bigbuf = NULL;
-		conn->m_read_fill = 0;
-		break; // we are done with all that's been read, by definition
-	      }
+              conn_reason = server->message_read(conn, msg);
+              if (conn_reason != Server::NO_SHUTDOWN) {
+                if (conn_reason == Server::FORGET_THIS_CONNECTION) {
+                  // we are not allowed to dereference conn --
+                  // server->message_read() had better have removed the
+                  // conn from the list!
+                } else {
+                  CHECK_SHUTDOWN(server->conn_shutdown(conn, conn_reason),);
+                }
+                break; // pop out of do..while loop
+              } else if (conn->m_bigbuf) {
+                delete conn->m_bigbuf;
+                conn->m_bigbuf = NULL;
+                conn->m_read_fill = 0;
+                break; // we are done with all that's been read, by definition
+              }
 #ifdef DEBUG_ENABLE
-	      else {
-		// this should cause all kinds of nice problems if a message
-		// is being used after this moment, but it still refers to
-		// the contents of the read buffer
-		memset(cbuf->buffer()+conn->m_read_off-used_len,
-		       0xf0, used_len);
-	      }
+        else {
+    // this should cause all kinds of nice problems if a message
+    // is being used after this moment, but it still refers to
+    // the contents of the read buffer
+    memset(cbuf->buffer()+conn->m_read_off-used_len,
+           0xf0, used_len);
+        }
 #endif
-	    } while (msg && (conn->m_read_fill > conn->m_read_off));
+            } while (msg && (conn->m_read_fill > conn->m_read_off));
 
-	    if (IN_SHUTDOWN()) {
-	      break;
-	    }
-	    else if (conn_reason != Server::NO_SHUTDOWN) {
-	      continue; // go on to next connection
-	    }
+            if (IN_SHUTDOWN()) {
+              break;
+            } else if (conn_reason != Server::NO_SHUTDOWN) {
+              continue; // go on to next connection
+            }
 
-	    if (conn->m_read_off < conn->m_read_fill) {
-	      if (conn->m_read_off > 0) {
-		conn->m_read_fill -= conn->m_read_off;
-		memmove(conn->m_readbuf->buffer(),
-			conn->m_readbuf->buffer()+conn->m_read_off,
-			conn->m_read_fill);
-	      }
-	    }
-	    else {
-	      conn->m_read_fill = 0;
-	    }
-	    conn->m_read_off = 0;
-	  }
-	}
-	if (FD_ISSET(conn->fd(), &writefds)) {
-	  fd_used = true;
-	  if (!IN_SHUTDOWN() && conn->in_connect()) {
-	    // see if it succeeded
-	    socklen_t socketlen = sizeof(int);
-	    if ((getsockopt(conn->fd(), SOL_SOCKET, SO_ERROR,
-			   &ret, &socketlen) < 0) || ret) {
-	      // it did not
-	      log_warn(log,
-		       "Backend connection on %d connect failed: %s\n",
-		       conn->fd(), strerror(ret));
-	      CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::WRITE_ERROR),
-			     break);
-	    }
-	    else {
-	      server->conn_completed(conn);
-	    }
-	    continue;
-	  }
-	  ret = 0;
-	  if (conn->is_encrypted()) {
-	    // when the connection is encrypted, we have to write to a buffer
-	    // so it can be encrypted
-	    wrote
-	      = conn->msg_queue()->fill_buffer(
-					conn->m_writebuf+conn->m_write_fill,
-					BUFSIZE-conn->m_write_fill);
-	    if (wrote > 0) {
-	      conn->encrypt(conn->m_writebuf+conn->m_write_fill, wrote);
-	      conn->m_write_fill += wrote;
-	    }
-	    if (conn->m_write_fill > 0) {
-	      ret = write(conn->fd(), conn->m_writebuf, conn->m_write_fill);
-	    }
-	  }
-	  else {
-	    // when the connection is unencrypted, we can use writev() and
-	    // avoid copying
-	    wrote = conn->msg_queue()->fill_iovecs(iov, MAX_IOVEC_COUNT);
-	    if (wrote > 0) {
-	      ret = writev(conn->fd(), iov, wrote);
-	    }
-	  }
-	  if (ret < 0) {
-	    if (errno == EPIPE) {
-	      // EOF
-	      log_debug(log, "Peer on %d closed connection\n", conn->fd());
-	      CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::CLIENT_CLOSE),
-			     break);
-	      continue;
-	    }
-	    else if (errno == EAGAIN) {
-	      log_warn(log, "Socket %d selected for write but "
-		       "could not write()\n", conn->fd());
-	    }
-	    else if (errno == EINTR) {
-	    }
-	    else {
-	      log_err(log, "Error in write on %d: %s\n",
-		      conn->fd(), strerror(errno));
-	      CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::WRITE_ERROR),
-			     break);
-	      continue;
-	    }
-	  }
-	  else if (ret > 0) {
-	    wrote = (u_int)ret;
-	    if (!conn->is_encrypted()) {
-	      conn->msg_queue()->iovecs_written_bytes(wrote);
-	    }
-	    else {
-	      if (conn->m_write_fill > wrote) {
-		conn->m_write_fill -= wrote;
-		memmove(conn->m_writebuf, conn->m_writebuf+ret,
-			conn->m_write_fill);
-	      }
-	      else {
-		conn->m_write_fill = 0;
-	      }
-	    }
-	  }
-	}
+            if (conn->m_read_off < conn->m_read_fill) {
+              if (conn->m_read_off > 0) {
+                conn->m_read_fill -= conn->m_read_off;
+                memmove(conn->m_readbuf->buffer(), conn->m_readbuf->buffer() + conn->m_read_off,
+                    conn->m_read_fill);
+              }
+            } else {
+              conn->m_read_fill = 0;
+            }
+            conn->m_read_off = 0;
+          }
+        }
+        if (FD_ISSET(conn->fd(), &writefds)) {
+          fd_used = true;
+          if (!IN_SHUTDOWN() && conn->in_connect()) {
+            // see if it succeeded
+            socklen_t socketlen = sizeof(int);
+            if ((getsockopt(conn->fd(), SOL_SOCKET, SO_ERROR, &ret, &socketlen) < 0) || ret) {
+              // it did not
+              log_warn(log, "Backend connection on %d connect failed: %s\n", conn->fd(), strerror(ret));
+              CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::WRITE_ERROR), break);
+            } else {
+              server->conn_completed(conn);
+            }
+            continue;
+          }
+          ret = 0;
+          if (conn->is_encrypted()) {
+            // when the connection is encrypted, we have to write to a buffer
+            // so it can be encrypted
+            wrote = conn->msg_queue()->fill_buffer(conn->m_writebuf + conn->m_write_fill,
+            BUFSIZE - conn->m_write_fill);
+            if (wrote > 0) {
+              conn->encrypt(conn->m_writebuf + conn->m_write_fill, wrote);
+              conn->m_write_fill += wrote;
+            }
+            if (conn->m_write_fill > 0) {
+              ret = write(conn->fd(), conn->m_writebuf, conn->m_write_fill);
+            }
+          } else {
+            // when the connection is unencrypted, we can use writev() and
+            // avoid copying
+            wrote = conn->msg_queue()->fill_iovecs(iov, MAX_IOVEC_COUNT);
+            if (wrote > 0) {
+              ret = writev(conn->fd(), iov, wrote);
+            }
+          }
+          if (ret < 0) {
+            if (errno == EPIPE) {
+              // EOF
+              log_debug(log, "Peer on %d closed connection\n", conn->fd());
+              CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::CLIENT_CLOSE), break);
+              continue;
+            } else if (errno == EAGAIN) {
+              log_warn(log, "Socket %d selected for write but "
+                  "could not write()\n", conn->fd());
+            } else if (errno == EINTR) {
+            } else {
+              log_err(log, "Error in write on %d: %s\n", conn->fd(), strerror(errno));
+              CHECK_SHUTDOWN(server->conn_shutdown(conn, Server::WRITE_ERROR), break);
+              continue;
+            }
+          } else if (ret > 0) {
+            wrote = (u_int) ret;
+            if (!conn->is_encrypted()) {
+              conn->msg_queue()->iovecs_written_bytes(wrote);
+            } else {
+              if (conn->m_write_fill > wrote) {
+                conn->m_write_fill -= wrote;
+                memmove(conn->m_writebuf, conn->m_writebuf + ret, conn->m_write_fill);
+              } else {
+                conn->m_write_fill = 0;
+              }
+            }
+          }
+        }
       } // for
     }
   } // while (1)
 
   // we should not get here
 
- quitting:
-  UruString::clear_thread_iconv();
+  quitting: UruString::clear_thread_iconv();
   if (iov) {
     delete[] iov;
   }
@@ -1289,8 +1181,8 @@ void * serv_main(void *serv) {
     i = 0;
     while (fds_used > 0 && i < fds_size) {
       if (accepted_fds[i] >= 0) {
-	close(accepted_fds[i]);
-	fds_used--;
+        close(accepted_fds[i]);
+        fds_used--;
       }
       i++;
     }
@@ -1300,5 +1192,5 @@ void * serv_main(void *serv) {
     delete[] fd_timeouts;
   }
   server->signal_parent();
-  return (void *)exit_value;
+  return (void*) exit_value;
 }

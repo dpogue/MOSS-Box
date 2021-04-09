@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /* 
  * This file contains a wrapper main() function for standalone forked
@@ -89,7 +89,7 @@
 
 #ifdef FORK_GAME_TOO
 static const char *usage = "moss_auth|moss_file|agename "
-			   "<file no> <config file>\n";
+         "<file no> <config file>\n";
 #else
 static const char *usage = "moss_auth|moss_file <file no> <config file>\n";
 #endif
@@ -103,11 +103,11 @@ static void sig_handler(int sig) {
   }
 }
 
-class ShutdownProcessor : public Server::SignalProcessor {
+class ShutdownProcessor: public Server::SignalProcessor {
 public:
   Server::reason_t signalled(int *todo, Server *s) {
     return Server::SERVER_SHUTDOWN;
-  }  
+  }
 };
 
 int main(int argc, char *argv[]) {
@@ -137,11 +137,9 @@ int main(int argc, char *argv[]) {
 
   /* configuration controls */
 
-  char *vault_addr_name, *log_dir, *log_level, *auth_dir, *file_dir, *game_dir,
-    *auth_key_file, *game_key_file;
+  char *vault_addr_name, *log_dir, *log_level, *auth_dir, *file_dir, *game_dir, *auth_key_file, *game_key_file;
   int vault_port;
-  vault_addr_name = log_dir = log_level = auth_dir = file_dir = game_dir
-    = auth_key_file = NULL;
+  vault_addr_name = log_dir = log_level = auth_dir = file_dir = game_dir = auth_key_file = NULL;
   ConfigParser *disp_config = new ConfigParser();
 
   if (is_auth || is_game) {
@@ -152,26 +150,20 @@ int main(int argc, char *argv[]) {
   if (is_auth) {
     disp_config->register_config("auth_log_level", &log_level, "NET");
     disp_config->register_config("auth_download_dir", &auth_dir, "auth");
-    disp_config->register_config("auth_key_file", &auth_key_file,
-				 "./auth_key.der");
-  }
-  else if (is_game) {
+    disp_config->register_config("auth_key_file", &auth_key_file, "./auth_key.der");
+  } else if (is_game) {
     disp_config->register_config("game_log_level", &log_level, "NET");
     disp_config->register_config("game_data_dir", &game_dir, "auth");
-    disp_config->register_config("game_key_file", &game_key_file,
-				 "./game_key.der");
-  }
-  else {
+    disp_config->register_config("game_key_file", &game_key_file, "./game_key.der");
+  } else {
     disp_config->register_config("file_log_level", &log_level, "NET");
     disp_config->register_config("file_download_dir", &file_dir, "file");
   }
 
   try {
     disp_config->read_config(argv[2], false);
-  }
-  catch (const parse_error &e) {
-    fprintf(stderr, "Error reading config file %s line %u: %s\n",
-	    argv[2], e.lineno(), e.what());
+  } catch (const parse_error &e) {
+    fprintf(stderr, "Error reading config file %s line %u: %s\n", argv[2], e.lineno(), e.what());
   }
 
   delete disp_config;
@@ -186,17 +178,14 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Invalid vault_port: %d\n", vault_port);
       return 1;
     }
-    vault_addr.sin_port = (uint16_t)htons(vault_port);
+    vault_addr.sin_port = (uint16_t) htons(vault_port);
     if (vault_addr_name && vault_addr_name[0] != '\0') {
-      const char *result = resolve_hostname(vault_addr_name,
-					    &vault_addr.sin_addr.s_addr);
+      const char *result = resolve_hostname(vault_addr_name, &vault_addr.sin_addr.s_addr);
       if (result) {
-	fprintf(stderr, "Could not resolve \"%s\": %s", vault_addr_name,
-		result);
-	return 1;
+        fprintf(stderr, "Could not resolve \"%s\": %s", vault_addr_name, result);
+        return 1;
       }
-    }
-    else {
+    } else {
       vault_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     }
   }
@@ -207,27 +196,22 @@ int main(int argc, char *argv[]) {
     log_level = strdup("debug");
   }
 
-  if ((is_auth && auth_dir) || (!is_auth && !is_game && file_dir)
-      || (is_game && game_dir)) {
+  if ((is_auth && auth_dir) || (!is_auth && !is_game && file_dir) || (is_game && game_dir)) {
     struct stat s;
     const char *dir = (is_auth ? auth_dir : (is_game ? game_dir : file_dir));
     ret = stat(dir, &s);
     if (ret < 0) {
       fprintf(stderr, "Required directory %s does not exist\n", dir);
       return 1;
-    }
-    else if (!(S_ISDIR(s.st_mode))) {
+    } else if (!(S_ISDIR(s.st_mode))) {
       fprintf(stderr, "%s is not a directory\n", dir);
       return 1;
     }
-  }
-  else if (is_auth) {
+  } else if (is_auth) {
     auth_dir = strdup(".");
-  }
-  else if (is_game) {
+  } else if (is_game) {
     game_dir = strdup(".");
-  }
-  else {
+  } else {
     file_dir = strdup(".");
   }
 
@@ -245,12 +229,12 @@ int main(int argc, char *argv[]) {
 #if defined(USING_RSA) || defined(USING_DH)
       const char *use_file = "./auth_key.der";
       if (auth_key_file && auth_key_file[0] != '\0') {
-	use_file = auth_key_file;
+  use_file = auth_key_file;
       }
 
       void *newkey = Server::read_keyfile(use_file, NULL);
       if (newkey) {
-	((AuthServer*)server)->setkey(newkey);
+  ((AuthServer*)server)->setkey(newkey);
       }
 #endif
     }
@@ -263,8 +247,7 @@ int main(int argc, char *argv[]) {
       server = new FileServer(fd, file_dir, false);
     }
     processor = new ShutdownProcessor();
-  }
-  catch (const std::bad_alloc &) {
+  } catch (const std::bad_alloc&) {
     fprintf(stderr, "Could not allocate memory initializing server!\n");
     return 1;
   }
@@ -276,25 +259,21 @@ int main(int argc, char *argv[]) {
   sigemptyset(&sig.sa_mask);
   sig.sa_handler = SIG_IGN;
   if (sigaction(SIGPIPE, &sig, NULL)) {
-    log_err(server->log(),
-	    "Error setting SIGPIPE to SIG_IGN! (%s)\n", strerror(errno));
+    log_err(server->log(), "Error setting SIGPIPE to SIG_IGN! (%s)\n", strerror(errno));
   }
   if (sigaction(SIGHUP, &sig, NULL)) {
     // we don't have config reload, so just ignore the signal
-    log_err(server->log(),
-	    "Error setting SIGHUP to SIG_IGN! (%s)\n", strerror(errno));
+    log_err(server->log(), "Error setting SIGHUP to SIG_IGN! (%s)\n", strerror(errno));
   }
   sig.sa_handler = sig_handler;
   if (sigaction(SIGTERM, &sig, NULL)) {
-    log_err(server->log(),
-	    "Error setting SIGTERM handler! (%s)\n", strerror(errno));
+    log_err(server->log(), "Error setting SIGTERM handler! (%s)\n", strerror(errno));
   }
   if (sigaction(SIGINT, &sig, NULL)) {
-    log_err(server->log(),
-	    "Error setting SIGINT handler! (%s)\n", strerror(errno));
+    log_err(server->log(), "Error setting SIGINT handler! (%s)\n", strerror(errno));
   }
 
-  ret = (long)serv_main(server);
+  ret = (long) serv_main(server);
 
   delete server;
   delete processor;

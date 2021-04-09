@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  * Functions and macros that should be generally useful in random places.
@@ -26,7 +26,6 @@
 //#include <sys/stat.h>
 //
 //#include "machine_arch.h"
-
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
@@ -75,7 +74,6 @@ extern "C" {
     } \
   } while (0);
 
-
 /*
  * MIN and MAX
  */
@@ -83,7 +81,6 @@ extern "C" {
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
-
 
 /*
  * UUID manipulations.
@@ -96,10 +93,8 @@ extern "C" {
  * This formats a "little-endian" UUID (byteswaps the first 8 bytes).
  */
 inline void format_uuid(const u_char *buf, char *uuid) {
-  snprintf(uuid, UUID_STR_LEN,
-	   "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-	   read32(buf, 0), read16(buf, 4), read16(buf, 6), buf[8], buf[9],
-	   buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]);
+  snprintf(uuid, UUID_STR_LEN, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x", read32(buf, 0), read16(buf, 4),
+      read16(buf, 6), buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]);
 }
 
 /*
@@ -120,18 +115,15 @@ void gen_uuid(u_char *buf, int as_text);
  * results in bytes in the following order:
  * 44 33 22 11 66 55 88 77 99 00 aa bb cc dd ee ff
  */
-int uuid_string_to_bytes(u_char *buf, u_int buflen,
-			 const char *uuid_string, u_int uuid_string_len,
-			 int have_dashes, int byteswap);
+int uuid_string_to_bytes(u_char *buf, u_int buflen, const char *uuid_string, u_int uuid_string_len, int have_dashes,
+    int byteswap);
 
 /*
  * This function converts 16 bytes to a string form of the UUID, placing it
  * in the buffer 'buf' and null-terminating it.
  */
-int uuid_bytes_to_string(u_char *buf, u_int buflen,
-			 const u_char *uuid_bytes, u_int uuid_bytes_len,
-			 int want_dashes, int byteswap);
-
+int uuid_bytes_to_string(u_char *buf, u_int buflen, const u_char *uuid_bytes, u_int uuid_bytes_len, int want_dashes,
+    int byteswap);
 
 /*
  * Utilities.
@@ -143,7 +135,7 @@ void get_random_data(u_char *buf, u_int buflen);
  * This is a wrapper for (hopefully) thread-safe name resolution. It returns
  * NULL on success, and an error string on failure.
  */
-const char * resolve_hostname(const char *hostname, uint32_t *ipaddr);
+const char* resolve_hostname(const char *hostname, uint32_t *ipaddr);
 
 #ifdef __cplusplus
 }

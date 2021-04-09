@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -45,14 +45,13 @@ void MessageQueue::enqueue(NetworkMessage *msg, priority_t p) {
   if (!msg->persistable()) {
     // this message refers to memory that may be freed or overwritten!
     throw std::logic_error("Message not marked as persistable "
-			   "has been enqueued");
+         "has been enqueued");
   }
 #endif
   Entry e(msg, p);
   if (p == FRONT) {
     m_queue.push_front(e);
-  }
-  else {
+  } else {
     m_queue.push_back(e);
   }
 }
@@ -72,8 +71,7 @@ void MessageQueue::clear_queue() {
   iter = m_queue.begin();
   if (iter->so_far != 0) {
     iter++;
-  }
-  else {
+  } else {
     if (iter->msg->del_ref() < 1) {
       delete iter->msg;
     }
@@ -95,15 +93,14 @@ u_int MessageQueue::fill_iovecs(struct iovec *iov, u_int iov_ct) {
 #ifdef DEBUG_ENABLE
     u_int previous_how_many = how_many;
 #endif
-    how_many += iter->msg->fill_iovecs(iov + how_many, iov_ct - how_many,
-				       iter->so_far);
+    how_many += iter->msg->fill_iovecs(iov + how_many, iov_ct - how_many, iter->so_far);
 #ifdef DEBUG_ENABLE
     // we test iter->so_far != 0 so that a message could turn itself into
     // a zero-length message without tripping this test (none do so right
     // now but I can imagine it happening someday)
     if (previous_how_many == how_many && iter->so_far) {
       throw std::logic_error("We called fill_iovecs on a message which "
-			     "was already fully written!");
+           "was already fully written!");
     }
 #endif
     iter++;
@@ -116,16 +113,14 @@ void MessageQueue::iovecs_written_bytes(u_int byte_ct) {
 
   while (byte_ct > 0 && iter != m_queue.end()) {
     bool msg_done;
-    u_int bytes = iter->msg->iovecs_written_bytes(byte_ct, iter->so_far,
-						  &msg_done);
+    u_int bytes = iter->msg->iovecs_written_bytes(byte_ct, iter->so_far, &msg_done);
     if (msg_done) {
       byte_ct = bytes;
       if (iter->msg->del_ref() < 1) {
-	delete iter->msg;
+        delete iter->msg;
       }
       iter++;
-    }
-    else {
+    } else {
       iter->so_far += byte_ct;
       break;
     }
@@ -148,8 +143,7 @@ u_int MessageQueue::fill_buffer(u_char *buf, u_int buflen) {
 
   while (how_many < buflen && iter != m_queue.end()) {
     bool msg_done;
-    u_int filled = iter->msg->fill_buffer(buf + how_many, buflen - how_many,
-					  iter->so_far, &msg_done);
+    u_int filled = iter->msg->fill_buffer(buf + how_many, buflen - how_many, iter->so_far, &msg_done);
     how_many += filled;
 #ifdef DEBUG_ENABLE
     // we test iter->so_far != 0 so that a message could turn itself into
@@ -157,16 +151,15 @@ u_int MessageQueue::fill_buffer(u_char *buf, u_int buflen) {
     // now but I can imagine it happening someday)
     if (filled == 0 && iter->so_far) {
       throw std::logic_error("We called fill_buffer on a message which "
-			     "was already fully written!");
+           "was already fully written!");
     }
 #endif
     if (msg_done) {
       if (iter->msg->del_ref() < 1) {
-	delete iter->msg;
+        delete iter->msg;
       }
       iter++;
-    }
-    else {
+    } else {
       iter->so_far += filled;
       break;
     }
@@ -184,7 +177,7 @@ void MultiWriterMessageQueue::enqueue(NetworkMessage *msg, priority_t p) {
   if (!msg->persistable()) {
     // this message refers to memory that may be freed or overwritten!
     throw std::logic_error("Message not marked as persistable "
-			   "has been enqueued");
+         "has been enqueued");
   }
 #endif
   bool is_owner = (pthread_self() == m_owner_tid);
@@ -195,8 +188,7 @@ void MultiWriterMessageQueue::enqueue(NetworkMessage *msg, priority_t p) {
   if (!m_draining || is_owner) {
     if (p == FRONT) {
       m_queue.push_front(e);
-    }
-    else {
+    } else {
       m_queue.push_back(e);
     }
 #ifdef DO_PRIORITIES

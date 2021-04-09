@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -47,7 +47,7 @@ void gen_uuid(u_char *buf, int as_text) {
   u_char *use_buf = (as_text ? mybuf : buf);
   get_random_data(use_buf, 16);
   /* since this is a random UUID there is actually no need to do any
-     byte-swapping to little-endian */
+   byte-swapping to little-endian */
 
   /* clock_seq_hi_and_reserved = byte 8 */
   use_buf[8] &= 0x3f;
@@ -60,18 +60,15 @@ void gen_uuid(u_char *buf, int as_text) {
   }
 }
 
-int uuid_string_to_bytes(u_char *buf, u_int buflen,
-			 const char *uuid_string, u_int uuid_string_len,
-			 int have_dashes, int byteswap) {
+int uuid_string_to_bytes(u_char *buf, u_int buflen, const char *uuid_string, u_int uuid_string_len, int have_dashes,
+    int byteswap) {
   u_int i;
   u_char *bufp, upper, lower;
 
-  if (((have_dashes && uuid_string_len < 36)
-       || (!have_dashes && uuid_string_len < 32))
-      || buflen < 16) {
+  if (((have_dashes && uuid_string_len < 36) || (!have_dashes && uuid_string_len < 32)) || buflen < 16) {
     return -1;
   }
-  bufp = (u_char*)uuid_string;
+  bufp = (u_char*) uuid_string;
   for (i = 0; i < 16; i++) {
     if (have_dashes && (i == 4 || i == 6 || i == 8 || i == 10)) {
       /* skip '-' */
@@ -98,15 +95,13 @@ int uuid_string_to_bytes(u_char *buf, u_int buflen,
     u_int loc = i;
     if (byteswap) {
       if (i < 4) {
-	loc = 3 - i;
-      }
-      else if (i < 8) {
-	if (i & 0x1) {
-	  loc = i - 1;
-	}
-	else {
-	  loc = i + 1;
-	}
+        loc = 3 - i;
+      } else if (i < 8) {
+        if (i & 0x1) {
+          loc = i - 1;
+        } else {
+          loc = i + 1;
+        }
       }
     }
     buf[loc] = (upper << 4) | lower;
@@ -114,17 +109,15 @@ int uuid_string_to_bytes(u_char *buf, u_int buflen,
   return 0;
 }
 
-int uuid_bytes_to_string(u_char *buf, u_int buflen,
-			 const u_char *uuid_bytes, u_int uuid_bytes_len,
-			 int want_dashes, int byteswap) {
+int uuid_bytes_to_string(u_char *buf, u_int buflen, const u_char *uuid_bytes, u_int uuid_bytes_len, int want_dashes,
+    int byteswap) {
   u_int i;
   u_char *bufp, upper, lower;
 
-  if (((want_dashes && buflen < 36) || (!want_dashes && buflen < 32))
-      || uuid_bytes_len < 16) {
+  if (((want_dashes && buflen < 36) || (!want_dashes && buflen < 32)) || uuid_bytes_len < 16) {
     return -1;
   }
-  bufp = (u_char*)buf;
+  bufp = (u_char*) buf;
   for (i = 0; i < 16; i++) {
     if (want_dashes && (i == 4 || i == 6 || i == 8 || i == 10)) {
       /* add '-' */
@@ -133,15 +126,13 @@ int uuid_bytes_to_string(u_char *buf, u_int buflen,
     u_int loc = i;
     if (byteswap) {
       if (i < 4) {
-	loc = 3 - i;
-      }
-      else if (i < 8) {
-	if (i & 0x1) {
-	  loc = i - 1;
-	}
-	else {
-	  loc = i + 1;
-	}
+        loc = 3 - i;
+      } else if (i < 8) {
+        if (i & 0x1) {
+          loc = i - 1;
+        } else {
+          loc = i + 1;
+        }
       }
     }
     upper = uuid_bytes[loc] >> 4;
@@ -161,7 +152,7 @@ int uuid_bytes_to_string(u_char *buf, u_int buflen,
   return 0;
 }
 
-int recursive_mkdir( const char *pathname, mode_t mode ) {
+int recursive_mkdir(const char *pathname, mode_t mode) {
   char path[PATH_MAX];
   char *p = NULL;
   char *d;
@@ -169,18 +160,19 @@ int recursive_mkdir( const char *pathname, mode_t mode ) {
 
   snprintf(path, sizeof(path), "%s", pathname);
   len = strlen(path);
-  if (path[len-1] == PATH_SEPARATOR[0])  {
-      path[len-1] = 0;
+  if (path[len - 1] == PATH_SEPARATOR[0]) {
+    path[len - 1] = 0;
   }
 
-  for (p=path+1, d=p; *p; p++, d++)  {
+  for (p = path + 1, d = p; *p; p++, d++) {
     if (*p == PATH_SEPARATOR[0]) {
-      while (*p && (*(p+1) == PATH_SEPARATOR[0])) p++;
+      while (*p && (*(p + 1) == PATH_SEPARATOR[0]))
+        p++;
       *d = '\0';
       if (mkdir(path, mode) && (errno != EEXIST)) {
         return -1;
       }
-    *d = PATH_SEPARATOR[0];
+      *d = PATH_SEPARATOR[0];
     } else {
       *d = *p;
     }
@@ -210,24 +202,24 @@ void get_random_data(u_char *buf, u_int buflen) {
   RAND_bytes(buf, buflen);
 #else
   /* XXX in the future decide if better random numbers must be used
-     XXX also, are random() and srandom() thread-safe?
-     XXX consider /dev/urandom instead (but not for Windows; look into
-         Windows API) */
+   XXX also, are random() and srandom() thread-safe?
+   XXX consider /dev/urandom instead (but not for Windows; look into
+   Windows API) */
   u_int bitsleft = 0;
   /* it is rather unclear whether or not, on a 64-bit machine, random()
-     returns 64-bit numbers; the man pages all say "long" implying yes, but
-     they also seem to say that the value returned is a 31-bit nonnegative
-     number implying it should be treated as a 32-bit number regardless */
+   returns 64-bit numbers; the man pages all say "long" implying yes, but
+   they also seem to say that the value returned is a 31-bit nonnegative
+   number implying it should be treated as a 32-bit number regardless */
   uint64_t bucket = 0;
   u_int i = 0;
   while (i < buflen) {
     uint64_t r = (random() & 0x7fffffff);
     bucket |= r << bitsleft;
     bitsleft += 31;
-    if (buflen-i < 4) {
+    if (buflen - i < 4) {
       u_int j;
-      for (j = 0; j < buflen-i; j++) {
-	buf[i+j] = (bucket >> (j*8)) & 0xff;
+      for (j = 0; j < buflen - i; j++) {
+        buf[i + j] = (bucket >> (j * 8)) & 0xff;
       }
       return;
     }
@@ -243,7 +235,7 @@ void get_random_data(u_char *buf, u_int buflen) {
 #endif /* ! HAVE_OPENSSL */
 }
 
-const char * resolve_hostname(const char *hostname, uint32_t *ipaddr) {
+const char* resolve_hostname(const char *hostname, uint32_t *ipaddr) {
 #ifdef HAVE_GETADDRINFO
   struct addrinfo hints, *addrs;
   int err;
@@ -268,7 +260,7 @@ const char * resolve_hostname(const char *hostname, uint32_t *ipaddr) {
   if (!h_ent) {
     return hstrerror(h_errno);
   }
-  *ipaddr = *((uint32_t *)h_ent->h_addr);
+  *ipaddr = *((uint32_t*) h_ent->h_addr);
   return NULL;
 #endif /* HAVE_GETADDRINFO */
 }

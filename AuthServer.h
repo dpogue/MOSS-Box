@@ -1,22 +1,22 @@
 /* -*- c++ -*- */
 
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  * AuthServer is the class representing an auth server connection. It has a
@@ -39,15 +39,20 @@
 //
 //#include "moss_serv.h"
 
-class AuthServer : public Server {
+class AuthServer: public Server {
 public:
-  AuthServer(int the_fd, const char *server_dir, bool is_a_thread,
-	     struct sockaddr_in &vault_address);
-  void setkey(void *keydata) { m_keydata = keydata; }
+  AuthServer(int the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address);
+  void setkey(void *keydata) {
+    m_keydata = keydata;
+  }
   virtual ~AuthServer();
 
-  int type() const { return TYPE_AUTH; }
-  const char * type_name() const { return "auth"; }
+  int type() const {
+    return TYPE_AUTH;
+  }
+  const char* type_name() const {
+    return "auth";
+  }
 
   int init();
   bool shutdown(reason_t reason);
@@ -74,17 +79,15 @@ public:
     IN_GAME = 10
   } state_t;
 
-  class AuthConnection : public Server::Connection {
+  class AuthConnection: public Server::Connection {
   public:
-    AuthConnection(int the_fd, state_t &state, Logger *log)
-      : Connection(the_fd), m_state(state), m_log(log)
-    {
-      m_interval = KEEPALIVE_INTERVAL*4;
+    AuthConnection(int the_fd, state_t &state, Logger *log) :
+        Connection(the_fd), m_state(state), m_log(log) {
+      m_interval = KEEPALIVE_INTERVAL * 4;
       gettimeofday(&m_timeout, NULL);
       m_timeout.tv_sec += m_interval;
     }
-    NetworkMessage * make_if_enough(const u_char *buf, size_t len,
-				    int *want_len, bool become_owner=false);
+    NetworkMessage* make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner = false);
   private:
     state_t &m_state;
     Logger *m_log;
@@ -97,8 +100,8 @@ protected:
   struct sockaddr_in m_vault_addr;
   Connection *m_vault;
 
-  const char * state_string() {
-    switch(m_state) {
+  const char* state_string() {
+    switch (m_state) {
     case START:
       return "START";
     case NEGOTIATION_DONE:

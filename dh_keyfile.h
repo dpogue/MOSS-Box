@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2018  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2018  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  * The following OpenSSL ASN1 goo is because OpenSSL does not already have
@@ -39,8 +39,8 @@ typedef struct {
   BIGNUM *priv_key;
 } dh_params;
 
-dh_params * create_dh_params() {
-  dh_params *params = (dh_params*)malloc(sizeof(dh_params));
+dh_params* create_dh_params() {
+  dh_params *params = (dh_params*) malloc(sizeof(dh_params));
   memset(params, 0, sizeof(dh_params));
   return params;
 }
@@ -51,24 +51,28 @@ dh_params * create_dh_params() {
  * that, so we have this cleanup function.
  */
 void cleanup_dh_params(dh_params *params) {
-  if (params->p) BN_free(params->p);
-  if (params->g) BN_free(params->g);
-  if (params->priv_key) BN_free(params->priv_key);
+  if (params->p)
+    BN_free(params->p);
+  if (params->g)
+    BN_free(params->g);
+  if (params->priv_key)
+    BN_free(params->priv_key);
 }
 
 #if OPENSSL_VERSION_NUMBER >= 0x00909000L
 static int cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it,
-	      void *exarg)
+        void *exarg)
 #else
 static int cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it)
 #endif
-{
+    {
   if (operation == ASN1_OP_NEW_PRE) {
-    *pval = (ASN1_VALUE *)create_dh_params();
-    if(*pval) return 2;
+    *pval = (ASN1_VALUE*) create_dh_params();
+    if (*pval)
+      return 2;
     return 0;
-  } else if(operation == ASN1_OP_FREE_PRE) {
-    dh_params *params = (dh_params*)*pval;
+  } else if (operation == ASN1_OP_FREE_PRE) {
+    dh_params *params = (dh_params*) *pval;
     cleanup_dh_params(params);
     free(params);
     *pval = NULL;
@@ -81,7 +85,7 @@ ASN1_SEQUENCE_cb(CyanDHParams, cb) = {
   ASN1_SIMPLE(dh_params, p, BIGNUM),
   ASN1_SIMPLE(dh_params, g, BIGNUM),
   ASN1_SIMPLE(dh_params, priv_key, BIGNUM)
-} ASN1_SEQUENCE_END_cb(dh_params, CyanDHParams)
+}ASN1_SEQUENCE_END_cb(dh_params, CyanDHParams)
 IMPLEMENT_ASN1_FUNCTIONS_name(dh_params, CyanDHParams)
 
 #define i2d_CyanDHParams_bio(bp,x) \

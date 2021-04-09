@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -31,11 +31,9 @@
 #include "constants.h"
 #include "NetworkMessage.h"
 
-
 extern const int NetworkMessage::zero = 0;
 
-NetworkMessage * NegotiationMessage::make_if_enough(const u_char *buf,
-						    size_t len, int type) {
+NetworkMessage* NegotiationMessage::make_if_enough(const u_char *buf, size_t len, int type) {
   if (len < 1) {
     return NULL;
   }
@@ -69,8 +67,7 @@ NetworkMessage * NegotiationMessage::make_if_enough(const u_char *buf,
 
 bool NegotiationMessage::check_useable() const {
   if ((m_type == TYPE_FILE && m_buflen >= 38)
-      || ((m_type == TYPE_AUTH || m_type == TYPE_GAME
-	   || m_type == TYPE_GATEKEEPER) && m_buflen >= 30)
+      || ((m_type == TYPE_AUTH || m_type == TYPE_GAME || m_type == TYPE_GATEKEEPER) && m_buflen >= 30)
       || (m_type == TYPE_NONCE && m_buflen >= 2)) {
     return true;
   }
@@ -85,25 +82,23 @@ bool NegotiationMessage::check_useable() const {
 // payload.
 size_t NegotiationMessage::message_len() const {
   if (m_type == TYPE_NONCE) {
-    return m_buflen+1;
-  }
-  else {
+    return m_buflen + 1;
+  } else {
     return m_buflen;
   }
 }
 
-NonceResponse::NonceResponse(const u_char *msg_buf, size_t len)
-  : NetworkMessage(TYPE_NONCE_RESPONSE) {
+NonceResponse::NonceResponse(const u_char *msg_buf, size_t len) :
+    NetworkMessage(TYPE_NONCE_RESPONSE) {
 
   m_buf = new u_char[len + 2];
   m_buflen = len + 2;
-  m_buf[0] = (u_char)m_type;
+  m_buf[0] = (u_char) m_type;
   m_buf[1] = m_buflen;
-  memcpy(m_buf+2, msg_buf, len);
+  memcpy(m_buf + 2, msg_buf, len);
 }
 
-u_int NonceResponse::fill_iovecs(struct iovec *iov, u_int iov_ct,
-				 u_int start_at) {
+u_int NonceResponse::fill_iovecs(struct iovec *iov, u_int iov_ct, u_int start_at) {
   if (iov_ct < 1 || start_at >= m_buflen) {
     return 0;
   }
@@ -112,20 +107,17 @@ u_int NonceResponse::fill_iovecs(struct iovec *iov, u_int iov_ct,
   return 1;
 }
 
-u_int NonceResponse::iovecs_written_bytes(u_int byte_ct, u_int start_at,
-					  bool *msg_done) {
+u_int NonceResponse::iovecs_written_bytes(u_int byte_ct, u_int start_at, bool *msg_done) {
   if (byte_ct >= m_buflen - start_at) {
     *msg_done = true;
     return byte_ct - (m_buflen - start_at);
-  }
-  else {
+  } else {
     *msg_done = false;
     return 0;
   }
 }
 
-u_int NonceResponse::fill_buffer(u_char *buffer, size_t len,
-				 u_int start_at, bool *msg_done) {
+u_int NonceResponse::fill_buffer(u_char *buffer, size_t len, u_int start_at, bool *msg_done) {
   if (len <= 0 || start_at >= m_buflen) {
     *msg_done = true;
     return 0;
@@ -134,8 +126,7 @@ u_int NonceResponse::fill_buffer(u_char *buffer, size_t len,
   if (len < len_to_write) {
     len_to_write = len;
     *msg_done = false;
-  }
-  else {
+  } else {
     *msg_done = true;
   }
   memcpy(buffer, m_buf + start_at, len_to_write);

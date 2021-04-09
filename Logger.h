@@ -1,22 +1,22 @@
 /* -*- c++ -*- */
 
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  * Logger does what it sounds like. It provides an object with methods to
@@ -35,7 +35,6 @@
 //
 //#include <stdarg.h> /* or varargs.h if no stdarg.h */
 //#include <pthread.h>
-
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
 
@@ -52,10 +51,7 @@ public:
    * The logging heirarchy.
    */
   typedef enum {
-    NONE = 0,
-    LOG_MSGS,
-    LOG_DEBUG,
-    LOG_NET,	// unrecognized, incorrectly parsed, etc. network messages
+    NONE = 0, LOG_MSGS, LOG_DEBUG, LOG_NET, // unrecognized, incorrectly parsed, etc. network messages
     LOG_WARN,
     LOG_INFO,
     LOG_ERR
@@ -72,7 +68,7 @@ public:
     return (level >= m_log_level);
   }
   static level_t str_to_level(const char *name);
-  static const char * level_to_str(level_t level);
+  static const char* level_to_str(level_t level);
 
   /*
    * If the filename specified in the constructor cannot be opened for
@@ -81,8 +77,8 @@ public:
    * get_lock(Logger::LOG_ERR) (the highest log level); if it's NULL, then
    * the open failed. Don't forget to release the lock if it's non-NULL...
    */
-  Logger(const char *system, const char *filename, level_t level=LOG_NET);
-  Logger(const char *system, Logger *to_share, level_t level=LOG_NET);
+  Logger(const char *system, const char *filename, level_t level = LOG_NET);
+  Logger(const char *system, Logger *to_share, level_t level = LOG_NET);
   virtual ~Logger();
 
   /*
@@ -93,8 +89,8 @@ public:
    * pointer to a "static" buffer (one per instance, not one per function
    * call), so should be called only while the lock is held.
    */
-  FILE * get_lock(level_t level);
-  const char * get_prefix(level_t level);
+  FILE* get_lock(level_t level);
+  const char* get_prefix(level_t level);
   void release_lock();
 
   /*
@@ -114,8 +110,8 @@ protected:
 private:
   // don't copy
   Logger();
-  Logger(Logger &);
-  Logger & operator=(const Logger &);
+  Logger(Logger&);
+  Logger& operator=(const Logger&);
 };
 
 /*
@@ -134,15 +130,13 @@ inline void log_err(Logger *logger, const char *fmt, ...) {
       vfprintf(f, fmt, ap);
       fflush(f);
       logger->release_lock();
-    }
-    else {
+    } else {
       vfprintf(stderr, fmt, ap);
-      fflush(stderr);
+      fflush (stderr);
     }
-  }
-  else {
+  } else {
     vfprintf(stderr, fmt, ap);
-    fflush(stderr);
+    fflush (stderr);
   }
   va_end(ap);
 }
@@ -152,8 +146,7 @@ inline void log_err(Logger *logger, const char *fmt, ...) {
 #define log_debug(logger, ...) log_at(Logger::LOG_DEBUG, logger, __VA_ARGS__)
 #define log_msgs(logger, ...) log_at(Logger::LOG_MSGS, logger, __VA_ARGS__)
 
-inline void log_at(Logger::level_t level, Logger *logger,
-		   const char *fmt, ...) {
+inline void log_at(Logger::level_t level, Logger *logger, const char *fmt, ...) {
   va_list ap;
 
   if (logger) {
@@ -169,8 +162,7 @@ inline void log_at(Logger::level_t level, Logger *logger,
   }
 }
 
-inline void log_raw(Logger::level_t level, Logger *logger,
-		    const char *fmt, ...) {
+inline void log_raw(Logger::level_t level, Logger *logger, const char *fmt, ...) {
   va_list ap;
 
   if (logger) {
