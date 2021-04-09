@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -83,12 +83,8 @@
 #include "moss_serv.h"
 #include "GatekeeperServer.h"
 
-GatekeeperServer::GatekeeperServer(int the_fd, const char *server_dir,
-				   bool is_a_thread,
-				   struct sockaddr_in &vault_address)
-  : Server(server_dir, is_a_thread),
-    m_state(START), m_vault_addr(vault_address), m_vault(NULL)
-{
+GatekeeperServer::GatekeeperServer(int the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address) :
+    Server(server_dir, is_a_thread), m_state(START), m_vault_addr(vault_address), m_vault(NULL) {
   Connection *conn = new GatekeeperConnection(the_fd, m_state, m_log);
   m_conns.push_back(conn);
 }
@@ -119,8 +115,7 @@ int GatekeeperServer::init() {
       // make sure to send hello
       conn_completed(m_vault);
     }
-  }
-  else {
+  } else {
     // error was already logged
     return -1;
   }
@@ -131,7 +126,7 @@ bool GatekeeperServer::shutdown(reason_t reason) {
   log_info(m_log, "Shutdown started\n");
   // there are no messages that need to be sent anywhere
   std::list<Connection*>::iterator iter;
-  for (iter = m_conns.begin(); iter != m_conns.end(); ) {
+  for (iter = m_conns.begin(); iter != m_conns.end();) {
     Connection *conn = *iter;
     delete conn;
     iter = m_conns.erase(iter);
@@ -139,44 +134,36 @@ bool GatekeeperServer::shutdown(reason_t reason) {
   return true;
 }
 
-NetworkMessage *
-GatekeeperServer::GatekeeperConnection::make_if_enough(const u_char *buf,
-						       size_t len,
-						       int *want_len,
-						       bool become_owner) {
+NetworkMessage*
+GatekeeperServer::GatekeeperConnection::make_if_enough(const u_char *buf, size_t len, int *want_len, bool become_owner) {
   NetworkMessage *msg = NULL;
 
   *want_len = -1;
   if (m_state < NEGOTIATION_DONE) {
     msg = NegotiationMessage::make_if_enough(buf, len, TYPE_GATEKEEPER);
-  }
-  else if (m_state < NONCE_DONE) {
+  } else if (m_state < NONCE_DONE) {
     if (len < 2) {
       return NULL;
     }
     if (buf[0] != TYPE_NONCE) {
-      log_net(m_log, "Unknown message type during negotiation: %u\n",
-	      buf[0] & 0xFF);
+      log_net(m_log, "Unknown message type during negotiation: %u\n", buf[0] & 0xFF);
       msg = new UnknownMessage(buf, len);
-    }
-    else {
-      msg = NegotiationMessage::make_if_enough(buf+1, len-1, TYPE_NONCE);
+    } else {
+      msg = NegotiationMessage::make_if_enough(buf + 1, len - 1, TYPE_NONCE);
       if (msg && (msg->message_len() < len)) {
-	log_warn(m_log, "Client sent stuff before key was computed!\n");
-	if (m_log) {
-	  m_log->dump_contents(Logger::LOG_WARN, buf+msg->message_len(),
-			       len-msg->message_len());
-	}
+        log_warn(m_log, "Client sent stuff before key was computed!\n");
+        if (m_log) {
+          m_log->dump_contents(Logger::LOG_WARN, buf + msg->message_len(), len - msg->message_len());
+        }
       }
     }
-  }
-  else {
+  } else {
     if (!m_is_encrypted && len > 0 && m_state == NONCE_DONE) {
       // turn on encryption, and then decrypt the read buffer
       // (just this once)
 #ifndef NO_ENCRYPTION
       set_encrypted();
-      decrypt((u_char*)buf, len);
+      decrypt((u_char*) buf, len);
 #endif
     }
     msg = GatekeeperClientMessage::make_if_enough(buf, len);
@@ -186,22 +173,21 @@ GatekeeperServer::GatekeeperConnection::make_if_enough(const u_char *buf,
     // this should never happen
 #ifdef DEBUG_ENABLE
     throw std::logic_error("GatekeeperConnection ownership of buffer "
-			   "not taken");
+         "not taken");
 #endif
     delete[] buf;
   }
   return msg;
 }
 
-Server::reason_t GatekeeperServer::message_read(Connection *conn,
-						NetworkMessage *in) {
+Server::reason_t GatekeeperServer::message_read(Connection *conn, NetworkMessage *in) {
   if (conn == m_vault) {
     Connection *client = NULL;
     std::list<Connection*>::iterator iter;
     for (iter = m_conns.begin(); iter != m_conns.end(); iter++) {
       if ((*iter) != m_vault) {
-	client = *iter;
-	break;
+        client = *iter;
+        break;
       }
     }
     if (!client) {
@@ -212,75 +198,60 @@ Server::reason_t GatekeeperServer::message_read(Connection *conn,
     }
 
     switch (in->type()) {
-    case (ADMIN_HELLO|FROM_SERVER):
+    case (ADMIN_HELLO | FROM_SERVER):
       {
-	Hello_BackendMessage *msg = (Hello_BackendMessage *)in;
-	log_msgs(m_log, "Backend connection protocol version %u\n",
-		 msg->peer_info());
-	// no more required at this time (all speak version 0)
+        Hello_BackendMessage *msg = (Hello_BackendMessage*) in;
+        log_msgs(m_log, "Backend connection protocol version %u\n", msg->peer_info());
+        // no more required at this time (all speak version 0)
       }
       break;
-    case (TRACK_FIND_SERVICE|FROM_SERVER):
+    case (TRACK_FIND_SERVICE | FROM_SERVER):
       {
-	TrackFindService_FromBackendMessage *msg
-	  = (TrackFindService_FromBackendMessage *)in;
-	GatekeeperServerMessage *reply;
+        TrackFindService_FromBackendMessage *msg = (TrackFindService_FromBackendMessage*) in;
+        GatekeeperServerMessage *reply;
 
-	uint32_t ipaddr = INADDR_ANY;
-	if ((msg->addrtype()
-	     == TrackFindService_FromBackendMessage::ST_HOSTNAME)
-	    && msg->name()->strlen() != 0) {
-	  // resolve the hostname now (originating dispatcher had
-	  // always_resolve set)
-	  const char *result = resolve_hostname(msg->name()->c_str(),
-						&ipaddr);
-	  if (result) {
-	    log_warn(m_log, "Could not resolve \"%s\" for client: %s\n",
-		     msg->name()->c_str(), result);
-	  }
-	}
-	else if (msg->addrtype()
-		 == TrackFindService_FromBackendMessage::ST_IPADDR) {
-	  ipaddr = msg->address(); // no swapping; big-endian
-	}
+        uint32_t ipaddr = INADDR_ANY;
+        if ((msg->addrtype() == TrackFindService_FromBackendMessage::ST_HOSTNAME) && msg->name()->strlen() != 0) {
+          // resolve the hostname now (originating dispatcher had
+          // always_resolve set)
+          const char *result = resolve_hostname(msg->name()->c_str(), &ipaddr);
+          if (result) {
+            log_warn(m_log, "Could not resolve \"%s\" for client: %s\n", msg->name()->c_str(), result);
+          }
+        } else if (msg->addrtype() == TrackFindService_FromBackendMessage::ST_IPADDR) {
+          ipaddr = msg->address(); // no swapping; big-endian
+        }
 
-	if (msg->addrtype() == TrackFindService_FromBackendMessage::ST_NONE
-	    || ipaddr == INADDR_ANY) {
-	  // There is not much we can do. The client will hang if we do
-	  // anything but provide a working address. Sending an empty string
-	  // will make UruLauncher wedge upon using the Cancel button.
-	  // Sending *some* address makes the Cancel button work, so use
-	  // 0.0.0.0 to make sure no connections happen.
-	  reply = new GatekeeperServerMessage(msg->is_file(),
-					      msg->reqid(), "0.0.0.0");
-	}
-	else {
-	  char addrtext[INET_ADDRSTRLEN];
-	  if (!inet_ntop(AF_INET, &ipaddr, addrtext, INET_ADDRSTRLEN)) {
-	    // cannot format address... again, send 0.0.0.0 to stop things
-	    log_err(m_log, "Cannot format IP address 0x%08x!\n", ipaddr);
-	    reply = new GatekeeperServerMessage(msg->is_file(),
-						msg->reqid(), "0.0.0.0");
-	  }
-	  else {
-	    reply = new GatekeeperServerMessage(msg->is_file(), msg->reqid(),
-						addrtext);
-	  }
-	}
-	client->enqueue(reply);
+        if (msg->addrtype() == TrackFindService_FromBackendMessage::ST_NONE || ipaddr == INADDR_ANY) {
+          // There is not much we can do. The client will hang if we do
+          // anything but provide a working address. Sending an empty string
+          // will make UruLauncher wedge upon using the Cancel button.
+          // Sending *some* address makes the Cancel button work, so use
+          // 0.0.0.0 to make sure no connections happen.
+          reply = new GatekeeperServerMessage(msg->is_file(), msg->reqid(), "0.0.0.0");
+        } else {
+          char addrtext[INET_ADDRSTRLEN];
+          if (!inet_ntop(AF_INET, &ipaddr, addrtext, INET_ADDRSTRLEN)) {
+            // cannot format address... again, send 0.0.0.0 to stop things
+            log_err(m_log, "Cannot format IP address 0x%08x!\n", ipaddr);
+            reply = new GatekeeperServerMessage(msg->is_file(), msg->reqid(), "0.0.0.0");
+          } else {
+            reply = new GatekeeperServerMessage(msg->is_file(), msg->reqid(), addrtext);
+          }
+        }
+        client->enqueue(reply);
       }
       break;
     case -1:
       // unrecognized message
       log_err(m_log, "Unrecognized backend message received\n");
       if (m_log) {
-	m_log->dump_contents(Logger::LOG_ERR, in->buffer(), in->message_len());
+        m_log->dump_contents(Logger::LOG_ERR, in->buffer(), in->message_len());
       }
       delete in;
       return PROTOCOL_ERROR;
     default:
-      log_warn(m_log, "Unrecognized backend message type 0x%08x\n",
-	       in->type());
+      log_warn(m_log, "Unrecognized backend message type 0x%08x\n", in->type());
     }
     delete in;
     return NO_SHUTDOWN;
@@ -291,36 +262,33 @@ Server::reason_t GatekeeperServer::message_read(Connection *conn,
       // unrecognized message
       log_net(m_log, "Unrecognized message during negotiation\n");
       if (m_log) {
-	m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
+        m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
       }
       delete in;
       return PROTOCOL_ERROR;
     }
     if (in->check_useable()) {
-      NegotiationMessage *msg = (NegotiationMessage *)in;
+      NegotiationMessage *msg = (NegotiationMessage*) in;
       if (m_log && m_log->would_log_at(Logger::LOG_INFO)) {
-	char uuid[UUID_STR_LEN];
-	format_uuid(msg->uuid(), uuid);
-	log_info(m_log, "Client version: %u Release: %u UUID: %s\n",
-		 msg->client_version(), msg->release_number(), uuid);
+        char uuid[UUID_STR_LEN];
+        format_uuid(msg->uuid(), uuid);
+        log_info(m_log, "Client version: %u Release: %u UUID: %s\n", msg->client_version(), msg->release_number(),
+            uuid);
       }
-    }
-    else {
+    } else {
       // well, I don't *need* that info...
       log_warn(m_log, "Negotiation message too short!\n");
       if (m_log) {
-	m_log->dump_contents(Logger::LOG_WARN,
-			     in->buffer(), in->message_len());
+        m_log->dump_contents(Logger::LOG_WARN, in->buffer(), in->message_len());
       }
     }
     m_state = NEGOTIATION_DONE;
-  }
-  else if (m_state < NONCE_DONE) {
+  } else if (m_state < NONCE_DONE) {
     if (in->type() == -1) {
       // unrecognized message
       log_net(m_log, "Unrecognized message during negotiation\n");
       if (m_log) {
-	m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
+        m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
       }
       delete in;
       return PROTOCOL_ERROR;
@@ -331,21 +299,19 @@ Server::reason_t GatekeeperServer::message_read(Connection *conn,
       log_msgs(m_log, "Setting up session key (fd %d)\n", conn->fd());
 #if defined(USING_RSA) || defined(USING_DH)
       reason_t key_okay = conn->setup_rc4_key(in->buffer()+1,
-					      in->message_len()-2, m_keydata,
-					      conn->fd(), m_log);
+                in->message_len()-2, m_keydata,
+                conn->fd(), m_log);
       if (key_okay != NO_SHUTDOWN) {
-	// problem is already logged
-	delete in;
-	return key_okay;
+  // problem is already logged
+  delete in;
+  return key_okay;
       }
 #endif
       m_state = NONCE_DONE;
-    }
-    else {
+    } else {
       log_warn(m_log, "Nonce message too short!\n");
       if (m_log) {
-	m_log->dump_contents(Logger::LOG_WARN,
-			     in->buffer(), in->message_len());
+        m_log->dump_contents(Logger::LOG_WARN, in->buffer(), in->message_len());
       }
       delete in;
       return PROTOCOL_ERROR;
@@ -358,29 +324,26 @@ Server::reason_t GatekeeperServer::message_read(Connection *conn,
     if (in->type() == -1) {
       // unrecognized message
       if (in->message_len() <= 0) {
-	log_warn(m_log, "Gatekeeper message with length %d\n",
-		 in->message_len());
-	delete in;
-	return PROTOCOL_ERROR;
+        log_warn(m_log, "Gatekeeper message with length %d\n", in->message_len());
+        delete in;
+        return PROTOCOL_ERROR;
       }
       log_net(m_log, "Unrecognized gatekeeper message\n");
       if (m_log) {
-	m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
+        m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
       }
-    }
-    else {
+    } else {
       // normal message processing
       if (in->type() == kGateKeeper2Cli_PingReply) {
-	gettimeofday(&conn->m_timeout, NULL);
-	conn->m_timeout.tv_sec += conn->m_interval;
-	conn->enqueue(in);
-	// we do not want to delete the message, so skip the end
-	return NO_SHUTDOWN;
+        gettimeofday(&conn->m_timeout, NULL);
+        conn->m_timeout.tv_sec += conn->m_interval;
+        conn->enqueue(in);
+        // we do not want to delete the message, so skip the end
+        return NO_SHUTDOWN;
       }
-      GatekeeperClientMessage *gin = (GatekeeperClientMessage*)in;
-      TrackFindService_ToBackendMessage *query
-	= new TrackFindService_ToBackendMessage(m_ipaddr, m_id, gin->reqid(),
-						0, gin->wants_file());
+      GatekeeperClientMessage *gin = (GatekeeperClientMessage*) in;
+      TrackFindService_ToBackendMessage *query = new TrackFindService_ToBackendMessage(m_ipaddr, m_id, gin->reqid(), 0,
+          gin->wants_file());
       m_vault->enqueue(query);
     }
   }
@@ -396,21 +359,16 @@ void GatekeeperServer::conn_completed(Connection *conn) {
     gettimeofday(&conn->m_timeout, NULL);
     conn->m_timeout.tv_sec += conn->m_interval;
 
-    Hello_BackendMessage *msg = new Hello_BackendMessage(m_ipaddr, m_id,
-							 type());
+    Hello_BackendMessage *msg = new Hello_BackendMessage(m_ipaddr, m_id, type());
     conn->enqueue(msg);
-  }
-  else {
-    log_warn(m_log, "Unknown outgoing connection (fd %d) completed!\n",
-	     conn->fd());
+  } else {
+    log_warn(m_log, "Unknown outgoing connection (fd %d) completed!\n", conn->fd());
   }
 }
 
-Server::reason_t GatekeeperServer::conn_timeout(Connection *conn,
-						Server::reason_t why) {
+Server::reason_t GatekeeperServer::conn_timeout(Connection *conn, Server::reason_t why) {
   if (conn == m_vault) {
-    TrackPing_BackendMessage *msg
-      = new TrackPing_BackendMessage(m_ipaddr, m_id);
+    TrackPing_BackendMessage *msg = new TrackPing_BackendMessage(m_ipaddr, m_id);
     m_vault->enqueue(msg);
     m_vault->m_timeout.tv_sec += m_vault->m_interval;
     return NO_SHUTDOWN;
@@ -419,8 +377,7 @@ Server::reason_t GatekeeperServer::conn_timeout(Connection *conn,
   return why;
 }
 
-Server::reason_t GatekeeperServer::conn_shutdown(Connection *conn,
-						 Server::reason_t why) {
+Server::reason_t GatekeeperServer::conn_shutdown(Connection *conn, Server::reason_t why) {
   if (conn == m_vault) {
     if (why == CLIENT_CLOSE) {
       why = BACKEND_ERROR;

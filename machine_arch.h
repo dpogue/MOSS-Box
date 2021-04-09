@@ -1,20 +1,20 @@
 /*
-  MOSS - A server for the Myst Online: Uru Live client/protocol
-  Copyright (C) 2008-2011  a'moaca'
+ MOSS - A server for the Myst Online: Uru Live client/protocol
+ Copyright (C) 2008-2011  a'moaca'
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  * Macros and such to handle different machine architectures, and to some
@@ -42,10 +42,10 @@
 #ifndef htole32
 #ifdef WORDS_BIGENDIAN
 #define htole16(x) \
-	(((x) >> 8 & 0x00ff) | ((x) << 8 & 0xff00))
+  (((x) >> 8 & 0x00ff) | ((x) << 8 & 0xff00))
 #define htole32(x) \
-	(((x) >> 24 & 0x000000ff) | ((x) >> 8 & 0x0000ff00) | \
-	 ((x) << 8 & 0x00ff0000) | ((x) << 24 & 0xff000000))
+  (((x) >> 24 & 0x000000ff) | ((x) >> 8 & 0x0000ff00) | \
+   ((x) << 8 & 0x00ff0000) | ((x) << 24 & 0xff000000))
 #else /* ! WORDS_BIGENDIAN */
 #define htole16(x) (x)
 #define htole32(x) (x)
@@ -72,7 +72,7 @@ inline uint16_t read16(const void *buf, int off) {
 inline uint32_t read32(const void *buf, int off) {
   const u_char *lbuf = (const u_char*)buf;
   return ((lbuf[off]) | (lbuf[off+1] << 8) |
-	  (lbuf[off+2] << 16) | (lbuf[off+3] << 24));
+    (lbuf[off+2] << 16) | (lbuf[off+3] << 24));
 }
 inline void write16(void *buf, int off, uint16_t val) {
   u_char *lbuf = (u_char*)buf;
@@ -140,32 +140,32 @@ inline void write32le(void *buf, int off, uint32_t val) {
 }
 #else /* ! NEED_STRICT_ALIGNMENT */
 inline uint16_t read16(const void *buf, int off) {
-  uint16_t res = *(uint16_t*)(((u_char*)buf)+off);
+  uint16_t res = *(uint16_t*) (((u_char*) buf) + off);
   return le16toh(res);
 }
 inline uint32_t read32(const void *buf, int off) {
-  uint32_t res = *(uint32_t*)(((u_char*)buf)+off);
+  uint32_t res = *(uint32_t*) (((u_char*) buf) + off);
   return le32toh(res);
 }
 inline void write16(void *buf, int off, uint16_t res) {
-  *(uint16_t*)(((u_char*)buf)+off) = htole16(res);
+  *(uint16_t*) (((u_char*) buf) + off) = htole16(res);
 }
 inline void write32(void *buf, int off, uint32_t res) {
-  *(uint32_t*)(((u_char*)buf)+off) = htole32(res);
+  *(uint32_t*) (((u_char*) buf) + off) = htole32(res);
 }
 inline uint16_t read16le(const void *buf, int off) {
-  uint16_t res = *(uint16_t*)(((u_char*)buf)+off);
+  uint16_t res = *(uint16_t*) (((u_char*) buf) + off);
   return res;
 }
 inline uint32_t read32le(const void *buf, int off) {
-  uint32_t res = *(uint32_t*)(((u_char*)buf)+off);
+  uint32_t res = *(uint32_t*) (((u_char*) buf) + off);
   return res;
 }
 inline void write16le(void *buf, int off, uint16_t val) {
-  *(uint16_t*)(((u_char*)buf)+off) = val;
+  *(uint16_t*) (((u_char*) buf) + off) = val;
 }
 inline void write32le(void *buf, int off, uint32_t val) {
-  *(uint32_t*)(((u_char*)buf)+off) = val;
+  *(uint32_t*) (((u_char*) buf) + off) = val;
 }
 #endif /* NEED_STRICT_ALIGNMENT */
 
@@ -198,11 +198,11 @@ inline void write_double(void *buf, int off, double val) {
 }
 #else
 inline double read_double(const void *buf, int off) {
-  double res = *(double*)(((u_char*)buf)+off);
+  double res = *(double*) (((u_char*) buf) + off);
   return res;
 }
 inline void write_double(void *buf, int off, double val) {
-  *(double*)(((u_char*)buf)+off) = val;
+  *(double*) (((u_char*) buf) + off) = val;
 }
 #endif /* NEED_STRICT_ALIGNMENT */
 #ifdef WORDS_BIGENDIAN
