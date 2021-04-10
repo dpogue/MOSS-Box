@@ -1321,7 +1321,7 @@ void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
       log_warn(m_log, "Connection on %d requested gatekeeper\n", fd);
     } else {
       log_warn(m_log, "Connection on %d requested unknown "
-          "type %u\n", fd, (unsigned int32_t )type);
+          "type %u\n", fd, (int32_t )type);
     }
     close(fd);
   }

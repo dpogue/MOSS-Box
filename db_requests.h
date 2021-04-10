@@ -249,7 +249,7 @@ public:
       memcpy(hash, F.c_str(), 41);
       for (int32_t i = 19; i >= 0; i--) {
         // if we sscanf four bytes at a time, we have to byte-swap to big-endian
-        unsigned int32_t data;
+        int32_t data;
         if (sscanf(hash + (2 * i), "%x", &data) != 1) {
           m_result.result_code = ERROR_INVALID_PARAM;
           return;

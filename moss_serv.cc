@@ -807,7 +807,7 @@ void* serv_main(void *serv) {
             log_err(log, "Error in accept: %s\n", strerror(errno));
           }
         } else {
-          unsigned int32_t ipaddr = ntohl(addr.sin_addr.s_addr);
+          int32_t ipaddr = ntohl(addr.sin_addr.s_addr);
           log_debug(log, "Accepted %d from %u.%u.%u.%u:%u\n", newfd, ipaddr >> 24, (ipaddr >> 16) & 0xFF,
               (ipaddr >> 8) & 0xFF, ipaddr & 0xFF, ntohs(addr.sin_port));
 
