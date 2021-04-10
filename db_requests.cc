@@ -138,7 +138,7 @@ void AuthAcctLogin_AcctQuery(BackendObj *conn, char *name,
   }
   else {
     int32_t i;
-    unsigned int32_t data;
+    int32_t data;
     for (i = 19; i >= 0; i--) {
       /* if we sscanf four bytes at a time, we have to byte-swap
          to big-endian */
