@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <ctype.h> /* for tolower() */
 
@@ -107,8 +107,20 @@ void SDLDesc::parse_file(std::list<SDLDesc*> &sdls, std::ifstream &file) {
   }
 }
 
-int32_t SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls, std::string &dirname, bool is_common,
+// Formatter for dirent struct
+char *f_dirent(dirent *d) {
+    static char out[1024];
+    snprintf(out, sizeof(out), "{ino=%u name=%s}", d->d_ino, d->d_name);
+    return out;
+}
+
+int SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls,
+    std::string &dirname, bool is_common,
     bool not_present_is_error) {
+  log_debug(log, "dirname=\"%s\" is_common=%s not_present_is_error=%s\n", dirname.c_str(),
+      is_common ? "true" : "false",
+      not_present_is_error ? "true" : "false");
+
   DIR *dir = opendir(dirname.c_str());
   if (!dir) {
     if (not_present_is_error) {
@@ -116,35 +128,41 @@ int32_t SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls, std::st
     }
     return 1;
   }
-  struct dirent *entry;
-  int32_t ret;
-  /* 
-   * "To distinguish end of stream from an error, set errno before calling
-   * readdir() and then check the value of errno if NULL is returned."
-   */
+  struct dirent *entry = (struct dirent *) malloc(sizeof(struct dirent) + pathconf(dirname.c_str(), _PC_NAME_MAX));
+  struct dirent *result;
+
+  // this needs to be thread-safe because more than one game server could
+  // be loading SDL files at the same time
+  int ret;
   errno = 0;
-  entry = readdir(dir);
-  while (entry != NULL) {
-    ret = strlen(entry->d_name);
-    if (ret > 4 && !strcasecmp(entry->d_name + (ret - 4), ".sdl")) {
+  while ((ret = readdir_r(dir, entry, &result)) == 0) {
+    if (!result) {
+      break;
+    }
+    int ret = strlen(result->d_name);
+    log_msgs(log, "result=\"%s\" %s ret=%u\n", result->d_name, f_dirent(result), ret);
+    if (ret > 4 && !strcasecmp(&result->d_name[ret - 4], ".sdl")) {
       std::list<SDLDesc*> these;
-      std::ifstream file((dirname + PATH_SEPARATOR + entry->d_name).c_str(), std::ios_base::binary | std::ios_base::in);
+      std::string fname = dirname + std::string(PATH_SEPARATOR) + std::string(result->d_name);
+      log_msgs(log, "SDL open file=\"%s\" \n", fname.c_str());
+      std::ifstream file((char *) fname.c_str(), std::ios_base::binary | std::ios_base::in);
       if (file.fail()) {
-        log_err(log, "Cannot open file %s\n", entry->d_name);
+        log_err(log, "Cannot open SDL file=\"%s\" \n", fname.c_str());
         closedir(dir);
+        free(result);
         return -1;
       }
       try {
         SDLDesc::parse_file(these, file);
       } catch (const parse_error &e) {
-        log_err(log, "Parse error in file %s line %u: %s\n", entry->d_name, e.lineno(), e.what());
+        log_err(log, "Parse error in file %s line %u: %s\n", result->d_name, e.lineno(), e.what());
         closedir(dir);
+        free(result);
         return -1;
       }
       sdls.splice(sdls.end(), these);
     }
     errno = 0;
-    entry = readdir(dir);
   }
   if (errno) {
     log_err(log, "Error reading directory %s: %s\n", dirname.c_str(), strerror(errno));
@@ -152,6 +170,7 @@ int32_t SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls, std::st
     return -1;
   }
   closedir(dir);
+  free(entry);
   if (is_common) {
     // now, move the most common SDLs to the front of the list
     std::list<SDLDesc*>::iterator avatarPhysical, avatar, MorphSequence, clothing, physical, Layer, iter;
