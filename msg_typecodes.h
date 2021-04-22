@@ -25,246 +25,289 @@
 #ifndef _MSG_TYPECODES_H_
 #define _MSG_TYPECODES_H_
 
-#define ManifestRequestTrans 0x14
-#define DownloadRequestTrans 0x15
-#define FileRcvdFileDownloadChunkTrans 0x17
-#define PingRequestTrans 0x00
-#define FileRcvdFileManifestChunkTrans 0x16 /* name made up */
-#define BuildIdRequestTrans 0x0a
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#ifndef OLD_PROTOCOL
+/** Enumarations for base network communications protocols */
 
-#define kCli2Auth_PingRequest 0x00
-#define kCli2Auth_ClientRegisterRequest 0x01
-#define kCli2Auth_ClientSetCCRLevel 0x02
-#define kCli2Auth_AcctLoginRequest 0x03
-#define kCli2Auth_AcctSetPlayerRequest 0x06
-#define kCli2Auth_AcctCreateRequest 0x07
-#define kCli2Auth_AcctChangePasswordRequest 0x08
-#define kCli2Auth_AcctSetRolesRequest 0x09
-#define kCli2Auth_AcctSetBillingTypeRequest 0x0A
-#define kCli2Auth_AcctActivateRequest 0x0B
-#define kCli2Auth_AcctCreateFromKeyRequest 0x0C
-#define kCli2Auth_PlayerDeleteRequest 0x0D
-#define kCli2Auth_PlayerCreateRequest 0x11
-#define kCli2Auth_UpgradeVisitorRequest 0x14
-#define kCli2Auth_SetPlayerBanStatusRequest 0x15
-#define kCli2Auth_KickPlayer 0x16
-#define kCli2Auth_ChangePlayerNameRequest 0x17
-#define kCli2Auth_SendFriendInviteRequest 0x18
-#define kCli2Auth_VaultNodeCreate 0x19
-#define kCli2Auth_VaultNodeFetch 0x1A
-#define kCli2Auth_VaultNodeSave 0x1B
-#define kCli2Auth_VaultNodeAdd 0x1D
-#define kCli2Auth_VaultNodeRemove 0x1E
-#define kCli2Auth_VaultFetchNodeRefs 0x1F
-#define kCli2Auth_VaultInitAgeRequest 0x20
-#define kCli2Auth_VaultNodeFind 0x21
-#define kCli2Auth_VaultSetSeen 0x22
-#define kCli2Auth_VaultSendNode 0x23
-#define kCli2Auth_AgeRequest 0x24
-#define kCli2Auth_FileListRequest 0x25
-#define kCli2Auth_FileDownloadRequest 0x26
-#define kCli2Auth_FileDownloadChunkAck 0x27
-#define kCli2Auth_PropagateBuffer 0x28
-#define kCli2Auth_GetPublicAgeList 0x29
-#define kCli2Auth_SetAgePublic 0x2A
-#define kCli2Auth_LogPythonTraceback 0x2B
-#define kCli2Auth_LogStackDump 0x2C
-#define kCli2Auth_LogClientDebuggerConnect 0x2D
-#define kCli2Auth_ScoreCreate 0x2E
-#define kCli2Auth_ScoreDelete 0x2F
-#define kCli2Auth_ScoreGetScores 0x30
-#define kCli2Auth_ScoreAddPoints 0x31
-#define kCli2Auth_ScoreTransferPoints 0x32
-#define kCli2Auth_ScoreSetPoints 0x33
-#define kCli2Auth_ScoreGetRanks 0x34
+extern const char* Cli2File_e_c_str(int32_t t);
 
-#define kAuth2Cli_PingReply 0x00
-#define kAuth2Cli_ServerAddr 0x01
-#define kAuth2Cli_NotifyNewBuild 0x02
-#define kAuth2Cli_ClientRegisterReply 0x03
-#define kAuth2Cli_AcctLoginReply 0x04
-#define kAuth2Cli_AcctPlayerInfo 0x06
-#define kAuth2Cli_AcctSetPlayerReply 0x07
-#define kAuth2Cli_AcctCreateReply 0x08
-#define kAuth2Cli_AcctChangePasswordReply 0x09
-#define kAuth2Cli_AcctSetRolesReply 0x0A
-#define kAuth2Cli_AcctSetBillingTypeReply 0x0B
-#define kAuth2Cli_AcctActivateReply 0x0C
-#define kAuth2Cli_AcctCreateFromKeyReply 0x0D
-#define kAuth2Cli_PlayerCreateReply 0x10
-#define kAuth2Cli_PlayerDeleteReply 0x11
-#define kAuth2Cli_UpgradeVisitorReply 0x12
-#define kAuth2Cli_SetPlayerBanStatusReply 0x13
-#define kAuth2Cli_ChangePlayerNameReply 0x14
-#define kAuth2Cli_SendFriendInviteReply 0x15
-#define kAuth2Cli_VaultNodeCreated 0x17
-#define kAuth2Cli_VaultNodeFetched 0x18
-#define kAuth2Cli_VaultNodeChanged 0x19
-#define kAuth2Cli_VaultNodeDeleted 0x1A
-#define kAuth2Cli_VaultNodeAdded 0x1B
-#define kAuth2Cli_VaultNodeRemoved 0x1C
-#define kAuth2Cli_VaultNodeRefsFetched 0x1D
-#define kAuth2Cli_VaultInitAgeReply 0x1E
-#define kAuth2Cli_VaultNodeFindReply 0x1F
-#define kAuth2Cli_VaultSaveNodeReply 0x20
-#define kAuth2Cli_VaultAddNodeReply 0x21
-#define kAuth2Cli_VaultRemoveNodeReply 0x22
-#define kAuth2Cli_AgeReply 0x23
-#define kAuth2Cli_FileListReply 0x24
-#define kAuth2Cli_FileDownloadChunk 0x25
-#define kAuth2Cli_PropagateBuffer 0x26
-#define kAuth2Cli_KickedOff 0x27
-#define kAuth2Cli_PublicAgeList 0x28
-#define kAuth2Cli_ScoreCreateReply 0x29
-#define kAuth2Cli_ScoreDeleteReply 0x2A
-#define kAuth2Cli_ScoreGetScoresReply 0x2B
-#define kAuth2Cli_ScoreAddPointsReply 0x2C
-#define kAuth2Cli_ScoreTransferPointsReply 0x2D
-#define kAuth2Cli_ScoreSetPointsReply 0x2E
-#define kAuth2Cli_ScoreGetRanksReply 0x2F
+// NetProtocolCli2File messages
+enum NetProtocolCli2File_e {
+  // Global
+  Cli2File_PingRequest          = 0,
 
-#define kCli2Game_PingRequest 0x00
-#define kCli2Game_JoinAgeRequest 0x01
-#define kCli2Game_PropagateBuffer 0x02
-#define kCli2Game_GameMgrMsg 0x03
+  // File server-related
+  Cli2File_BuildIdRequest       = 10,
+  // 11 through 19 skipped
 
-#define kGame2Cli_PingReply 0x00
-#define kGame2Cli_JoinAgeReply 0x01
-#define kGame2Cli_PropagateBuffer 0x02
-#define kGame2Cli_GameMgrMsg 0x03
+  // Cache-related
+  Cli2File_ManifestRequest      = 20,
+  Cli2File_FileDownloadRequest  = 21,
+  Cli2File_ManifestEntryAck     = 22,
+  Cli2File_FileDownloadChunkAck = 23,
+  // 24 through 29 skipped
 
-#define kCli2GateKeeper_PingRequest 0x00
-#define kCli2GateKeeper_FileSrvIpAddressRequest 0x01
-#define kCli2GateKeeper_AuthSrvIpAddressRequest 0x02
+  Cli2File_UNUSED_1             = 30,
+};
 
-#define kGateKeeper2Cli_PingReply 0x00
-#define kGateKeeper2Cli_FileSrvIpAddressReply 0x01
-#define kGateKeeper2Cli_AuthSrvIpAddressReply 0x02
+enum NetProtocolFile2Cli_e {
+  // Global
+  File2Cli_PingReply            = 0,
 
-#define kCli2Csr_PingRequest 0x00
-#define kCli2Csr_RegisterRequest 0x01
-#define kCli2Csr_LoginRequest 0x02
-#define kCsr2Cli_PingReply 0x00
-#define kCsr2Cli_RegisterReply 0x01
-#define kCsr2Cli_LoginReply 0x02
+  // File server-related
+  File2Cli_BuildIdReply         = 10,
+  File2Cli_BuildIdUpdate        = 11,
+  // 12 through 19 skipped
 
-#else /* OLD_PROTOCOL */
+  // Cache-related
+  File2Cli_ManifestReply        = 20,
+  File2Cli_FileDownloadReply    = 21,
+  // 22 through 29 skipped
 
-#define kCli2Auth_PingRequest 0x00
-#define kCli2Auth_ClientRegisterRequest 0x0A
-#define kCli2Auth_ClientSetCCRLevel 0x0B
-#define kCli2Auth_AcctLoginRequest 0x14
-#define kCli2Auth_AcctSetPlayerRequest 0x17
-#define kCli2Auth_AcctCreateRequest 0x18
-#define kCli2Auth_AcctChangePasswordRequest 0x19
-#define kCli2Auth_AcctSetRolesRequest 0x1A
-#define kCli2Auth_AcctSetBillingTypeRequest 0x1B
-#define kCli2Auth_AcctActivateRequest 0x1C
-#define kCli2Auth_AcctCreateFromKeyRequest 0x1D
-#define kCli2Auth_PlayerDeleteRequest 0x28
-#define kCli2Auth_PlayerCreateRequest 0x2C
-#define kCli2Auth_UpgradeVisitorRequest 0x2F
-#define kCli2Auth_SetPlayerBanStatusRequest 0x30 /* new */
-#define kCli2Auth_KickPlayer 0x31 /* new */
-#define kCli2Auth_ChangePlayerNameRequest 0x32 /* new */
-#define kCli2Auth_VaultNodeCreate 0x50
-#define kCli2Auth_VaultNodeFetch 0x51
-#define kCli2Auth_VaultNodeSave 0x52
-#define kCli2Auth_VaultNodeAdd 0x54
-#define kCli2Auth_VaultNodeRemove 0x55
-#define kCli2Auth_VaultFetchNodeRefs 0x56
-#define kCli2Auth_VaultInitAgeRequest 0x57
-#define kCli2Auth_VaultNodeFind 0x58
-#define kCli2Auth_VaultSetSeen 0x59
-#define kCli2Auth_VaultSendNode 0x5A
-#define kCli2Auth_VaultScoreAddPoints 0x5B /* new */
-#define kCli2Auth_VaultScoreTransferPoints 0x5C /* new */
-#define kCli2Auth_AgeRequest 0x64
-#define kCli2Auth_FileListRequest 0x78
-#define kCli2Auth_FileDownloadRequest 0x79
-#define kCli2Auth_FileDownloadChunkAck 0x7A /* new */
-#define kCli2Auth_PropagateBuffer 0x8C
-#define kCli2Auth_GetPublicAgeList 0xB4
-#define kCli2Auth_SetAgePublic 0xB5
-#define kCli2Auth_LogPythonTraceback 0xC8
-#define kCli2Auth_LogStackDump 0xC9
-#define kCli2Auth_LogClientDebuggerConnect 0xCA /* new */
+  File2Cli_UNUSED_1             = 30,
+};
 
-#define kAuth2Cli_PingReply 0x00
-#define kAuth2Cli_ServerAddr 0x03
-#define kAuth2Cli_NotifyNewBuild 0x04
-#define kAuth2Cli_ClientRegisterReply 0x0A
-#define kAuth2Cli_AcctLoginReply 0x14
-#define kAuth2Cli_AcctPlayerInfo 0x16
-#define kAuth2Cli_AcctSetPlayerReply 0x17
-#define kAuth2Cli_AcctCreateReply 0x18
-#define kAuth2Cli_AcctChangePasswordReply 0x19
-#define kAuth2Cli_AcctSetRolesReply 0x1A
-#define kAuth2Cli_AcctSetBillingTypeReply 0x1B
-#define kAuth2Cli_AcctActivateReply 0x1C
-#define kAuth2Cli_AcctCreateFromKeyReply 0x1D
-#define kAuth2Cli_PlayerCreateReply 0x2A
-#define kAuth2Cli_PlayerDeleteReply 0x2B
-#define kAuth2Cli_UpgradeVisitorReply 0x2C
-#define kAuth2Cli_SetPlayerBanStatusReply 0x2D /* new */
-#define kAuth2Cli_ChangePlayerNameReply 0x2E /* new */
-#define kAuth2Cli_VaultNodeCreated 0x50
-#define kAuth2Cli_VaultNodeFetched 0x51
-#define kAuth2Cli_VaultNodeChanged 0x52
-#define kAuth2Cli_VaultNodeDeleted 0x53
-#define kAuth2Cli_VaultNodeAdded 0x54
-#define kAuth2Cli_VaultNodeRemoved 0x55
-#define kAuth2Cli_VaultNodeRefsFetched 0x56
-#define kAuth2Cli_VaultInitAgeReply 0x57
-#define kAuth2Cli_VaultNodeFindReply 0x58
-#define kAuth2Cli_VaultSaveNodeReply 0x59 /* new */
-#define kAuth2Cli_VaultAddNodeReply 0x5A /* new */
-#define kAuth2Cli_VaultRemoveNodeReply 0x5B /* new */
-#define kAuth2Cli_AgeReply 0x64
-#define kAuth2Cli_FileListReply 0x78
-#define kAuth2Cli_FileDownloadChunk 0x79
-#define kAuth2Cli_PropagateBuffer 0x8C
-#define kAuth2Cli_KickedOff 0xA0
-#define kAuth2Cli_PublicAgeList 0xB4
-#define kAuth2Cli_VaultScoreAddPointsReply 0xC8 /* new */
-#define kAuth2Cli_VaultScoreTransferPointsReply 0xC9 /* new */
+extern const char* Cli2Auth_e_c_str(int32_t t);
+extern const char* Cli2Csr_e_c_str(int32_t t);
+extern const char* Cli2Game_e_c_str(int32_t t);
+extern const char* Cli2GateKeeper_e_c_str(int32_t t);
+extern const char* Auth2Cli_e_c_str(int32_t t);
+extern const char* Csr2Cli_e_c_str(int32_t t);
+extern const char* Game2Cli_e_c_str(int32_t t);
+extern const char* GateKeeper2Cli_e_c_str(int32_t t);
 
-#define kCli2Game_PingRequest 0x00
-#define kCli2Game_JoinAgeRequest 0x14
-#define kCli2Game_PropagateBuffer 0x1E
-#define kCli2Game_GameMgrMsg 0x1F
+// NetProtocolCli2Auth messages (from CWE pnNpCli2Auth.h)
+enum NetProtocolCli2Auth_e {
+  // Global
+  Cli2Auth_PingRequest,               ///< 0x00 keep-alive to the Auth server
 
-#define kGame2Cli_PingReply 0x00
-#define kGame2Cli_JoinAgeReply 0x14
-#define kGame2Cli_PropagateBuffer 0x1E
-#define kGame2Cli_GameMgrMsg 0x1F
+  // Client
+  Cli2Auth_ClientRegisterRequest,     ///< 0x01
+  Cli2Auth_ClientSetCCRLevel,         ///< 0x02
 
-/* These are defined so that code can refer to them, but they should never
-   be used. By defining them the same, we limit the risk of using them
-   unexpectedly (e.g. case statements in make_if_enough). */
-#define kCli2Auth_ScoreCreate 0xdeadf00d
-#define kCli2Auth_ScoreDelete 0xdeadf00d
-#define kCli2Auth_ScoreGetScores 0xdeadf00d
-#define kCli2Auth_ScoreAddPoints 0xdeadf00d
-#define kCli2Auth_ScoreTransferPoints 0xdeadf00d
-#define kCli2Auth_ScoreSetPoints 0xdeadf00d
-#define kCli2Auth_ScoreGetRanks 0xdeadf00d
-#define kAuth2Cli_ScoreCreateReply 0xdeadf00d
-#define kAuth2Cli_ScoreDeleteReply 0xdeadf00d
-#define kAuth2Cli_ScoreGetScoresReply 0xdeadf00d
-#define kAuth2Cli_ScoreAddPointsReply 0xdeadf00d
-#define kAuth2Cli_ScoreTransferPointsReply 0xdeadf00d
-#define kAuth2Cli_ScoreSetPointsReply 0xdeadf00d
-#define kAuth2Cli_ScoreGetRanksReply 0xdeadf00d
-#define kCli2GateKeeper_PingRequest 0xdeadf00d
-#define kCli2GateKeeper_FileSrvIpAddressRequest 0xdeadf00d
-#define kCli2GateKeeper_AuthSrvIpAddressRequest 0xdeadf00d
-#define kGateKeeper2Cli_PingReply 0xdeadf00d
-#define kGateKeeper2Cli_FileSrvIpAddressReply 0xdeadf00d
-#define kGateKeeper2Cli_AuthSrvIpAddressReply 0xdeadf00d
+  // Account
+  Cli2Auth_AcctLoginRequest,          ///< 0x03
+  Cli2Auth_AcctSetEulaVersion,        ///< 0x04
+  Cli2Auth_AcctSetDataRequest,        ///< 0x05
+  Cli2Auth_AcctSetPlayerRequest,      ///< 0x06
+  Cli2Auth_AcctCreateRequest,         ///< 0x07
+  Cli2Auth_AcctChangePasswordRequest, ///< 0x08
+  Cli2Auth_AcctSetRolesRequest,       ///< 0x09
+  Cli2Auth_AcctSetBillingTypeRequest, ///< 0x0a
+  Cli2Auth_AcctActivateRequest,       ///< 0x0b
+  Cli2Auth_AcctCreateFromKeyRequest,  ///< 0x0c
 
-#endif /* OLD_PROTOCOL */
+  // Player
+  Cli2Auth_PlayerDeleteRequest,       ///< 0x0d
+  Cli2Auth_PlayerUndeleteRequest,     ///< 0x0e
+  Cli2Auth_PlayerSelectRequest,       ///< 0x0f
+  Cli2Auth_PlayerRenameRequest,       ///< 0x10
+  Cli2Auth_PlayerCreateRequest,       ///< 0x11
+  Cli2Auth_PlayerSetStatus,           ///< 0x12
+  Cli2Auth_PlayerChat,                ///< 0x13
+  Cli2Auth_UpgradeVisitorRequest,     ///< 0x14
+  Cli2Auth_SetPlayerBanStatusRequest, ///< 0x15
+  Cli2Auth_KickPlayer,                ///< 0x16
+  Cli2Auth_ChangePlayerNameRequest,   ///< 0x17
+  Cli2Auth_SendFriendInviteRequest,   ///< 0x18
+
+  // Vault
+  Cli2Auth_VaultNodeCreate,           ///< 0x19
+  Cli2Auth_VaultNodeFetch,            ///< 0x1a
+  Cli2Auth_VaultNodeSave,             ///< 0x1b
+  Cli2Auth_VaultNodeDelete,           ///< 0x1c
+  Cli2Auth_VaultNodeAdd,              ///< 0x1d
+  Cli2Auth_VaultNodeRemove,           ///< 0x1e
+  Cli2Auth_VaultFetchNodeRefs,        ///< 0x1f
+  Cli2Auth_VaultInitAgeRequest,       ///< 0x20
+  Cli2Auth_VaultNodeFind,             ///< 0x21
+  Cli2Auth_VaultSetSeen,              ///< 0x22
+  Cli2Auth_VaultSendNode,             ///< 0x23
+
+  // Ages
+  Cli2Auth_AgeRequest,                ///< 0x24
+
+  // File-related
+  Cli2Auth_FileListRequest,           ///< 0x25
+  Cli2Auth_FileDownloadRequest,       ///< 0x26
+  Cli2Auth_FileDownloadChunkAck,      ///< 0x27
+
+  // Game
+  Cli2Auth_PropagateBuffer,           ///< 0x28
+
+
+  // Public ages
+  Cli2Auth_GetPublicAgeList,          ///< 0x29
+  Cli2Auth_SetAgePublic,              ///< 0x2a
+
+  // Log Messages
+  Cli2Auth_LogPythonTraceback,        ///< 0x2b
+  Cli2Auth_LogStackDump,              ///< 0x2c
+  Cli2Auth_LogClientDebuggerConnect,  ///< 0x2d
+
+  // Score
+  Cli2Auth_ScoreCreate,               ///< 0x2e
+  Cli2Auth_ScoreDelete,               ///< 0x2f
+  Cli2Auth_ScoreGetScores,            ///< 0x30
+  Cli2Auth_ScoreAddPoints,            ///< 0x31
+  Cli2Auth_ScoreTransferPoints,       ///< 0x32
+  Cli2Auth_ScoreSetPoints,            ///< 0x33
+  Cli2Auth_ScoreGetRanks,             ///< 0x34
+
+  Cli2Auth_AccountExistsRequest,      ///< 0x35
+
+  NumCli2AuthMessages                 ///< 0x36
+};
+enum NetProtocolAuth2Cli_e {
+  // Global
+  Auth2Cli_PingReply,
+  Auth2Cli_ServerAddr,
+  Auth2Cli_NotifyNewBuild,
+
+  // Client
+  Auth2Cli_ClientRegisterReply,
+
+  // Account
+  Auth2Cli_AcctLoginReply,
+  Auth2Cli_AcctData,
+  Auth2Cli_AcctPlayerInfo,
+  Auth2Cli_AcctSetPlayerReply,
+  Auth2Cli_AcctCreateReply,
+  Auth2Cli_AcctChangePasswordReply,
+  Auth2Cli_AcctSetRolesReply,
+  Auth2Cli_AcctSetBillingTypeReply,
+  Auth2Cli_AcctActivateReply,
+  Auth2Cli_AcctCreateFromKeyReply,
+
+  // Player
+  Auth2Cli_PlayerList,
+  Auth2Cli_PlayerChat,
+  Auth2Cli_PlayerCreateReply,
+  Auth2Cli_PlayerDeleteReply,
+  Auth2Cli_UpgradeVisitorReply,
+  Auth2Cli_SetPlayerBanStatusReply,
+  Auth2Cli_ChangePlayerNameReply,
+  Auth2Cli_SendFriendInviteReply,
+
+  // Friends
+  Auth2Cli_FriendNotify,
+
+  // Vault
+  Auth2Cli_VaultNodeCreated,
+  Auth2Cli_VaultNodeFetched,
+  Auth2Cli_VaultNodeChanged,
+  Auth2Cli_VaultNodeDeleted,
+  Auth2Cli_VaultNodeAdded,
+  Auth2Cli_VaultNodeRemoved,
+  Auth2Cli_VaultNodeRefsFetched,
+  Auth2Cli_VaultInitAgeReply,
+  Auth2Cli_VaultNodeFindReply,
+  Auth2Cli_VaultSaveNodeReply,
+  Auth2Cli_VaultAddNodeReply,
+  Auth2Cli_VaultRemoveNodeReply,
+
+  // Ages
+  Auth2Cli_AgeReply,
+
+  // File-related
+  Auth2Cli_FileListReply,
+  Auth2Cli_FileDownloadChunk,
+
+  // Game
+  Auth2Cli_PropagateBuffer,
+
+  // Admin
+  Auth2Cli_KickedOff,
+
+  // Public ages
+  Auth2Cli_PublicAgeList,
+
+  // Score
+  Auth2Cli_ScoreCreateReply,
+  Auth2Cli_ScoreDeleteReply,
+  Auth2Cli_ScoreGetScoresReply,
+  Auth2Cli_ScoreAddPointsReply,
+  Auth2Cli_ScoreTransferPointsReply,
+  Auth2Cli_ScoreSetPointsReply,
+  Auth2Cli_ScoreGetRanksReply,
+
+  Auth2Cli_AccountExistsReply,
+
+  NumAuth2CliMessages
+};
+
+// NetProtocolCli2Game messages
+enum NetProtocolCli2Game_e {
+  // Global
+  Cli2Game_PingRequest,
+
+  // Age
+  Cli2Game_JoinAgeRequest,
+
+  // Game
+  Cli2Game_PropagateBuffer,
+  Cli2Game_GameMgrMsg,
+
+  NumCli2GameMessages
+};
+
+enum NetProtocolGame2Cli_e {
+  // Global
+  Game2Cli_PingReply,
+
+  // Age
+  Game2Cli_JoinAgeReply,
+
+  // Game
+  Game2Cli_PropagateBuffer,
+  Game2Cli_GameMgrMsg,
+
+  NumGame2CliMessages
+};
+
+// NetProtocolCli2GateKeeper messages (must be <= (word)-1)
+enum NetProtocolCli2GateKeeper_e {
+  // Global
+  Cli2GateKeeper_PingRequest,
+  Cli2GateKeeper_FileSrvIpAddressRequest,
+  Cli2GateKeeper_AuthSrvIpAddressRequest,
+
+  NumCli2GateKeeperMessages
+};
+
+enum NetProtocolGateKeeper2Cli_e {
+  // Global
+  GateKeeper2Cli_PingReply,
+  GateKeeper2Cli_FileSrvIpAddressReply,
+  GateKeeper2Cli_AuthSrvIpAddressReply,
+
+  NumGateKeeper2CliMessages
+};
+
+// Cli2Csr
+enum NetProtocolCli2Csr_e {
+  Cli2Csr_PingRequest     = 0, ///< Misc
+  Cli2Csr_RegisterRequest = 1, ///< Encrypt
+  Cli2Csr_LoginRequest    = 2, ///< Login
+  Cli2Csr_PatchRequest    = 3, ///< Patch
+
+  NumCli2CsrMessages
+};
+
+// Csr2Cli
+enum NetProtocolCsr2Cli_e {
+  Csr2Cli_PingReply       = 0, ///< Misc
+  Csr2Cli_RegisterReply   = 1, ///< Encrypt
+  Csr2Cli_LoginReply      = 2, ///< Login
+  Cli2Csr_PatchReply      = 3, ///< Patch
+
+  NumCsr2CliMessages
+};
 
 #endif /* _MSG_TYPECODES_H_ */
+
+#ifdef __cplusplus
+}
+#endif

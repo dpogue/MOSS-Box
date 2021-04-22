@@ -45,6 +45,13 @@
 #include "Logger.h"
 #include "FileTransaction.h"
 
+/*
+ * if mmap() MAP_FILE flag is not defined by system, define it here as a no-op
+ */
+#ifndef MAP_FILE
+#define MAP_FILE (0)
+#endif
+
 FileTransaction::FileTransaction(uint32_t request_id, Logger *logger, bool is_manifest, bool is_auth) :
     m_log(logger), m_id(request_id), m_manifest(is_manifest), m_auth(is_auth), m_file_ct(0), m_fd(-1), m_filesize(0), m_mapped(
         NULL), m_status(NO_ERROR), m_offset(0), m_chunk_remaining(0), m_real_offset(0), m_backup_buf(NULL), m_backup_len(
@@ -80,9 +87,10 @@ int32_t FileTransaction::init(const char *dirname, char *fname) {
   }
   log_msgs(m_log, "File server transaction %u -> file %s\n", m_id, fname);
 
-  m_mapped = (uint8_t*) mmap(NULL, m_filesize, PROT_READ, MAP_FILE | MAP_PRIVATE, m_fd, 0);
+  m_mapped = (uint8_t*) mmap(NULL, m_filesize, PROT_READ,
+  MAP_FILE | MAP_PRIVATE, m_fd, 0);
   if (m_mapped == MAP_FAILED) {
-    log_err(m_log, "mmap() of %s failed: %s", fname, strerror(errno));
+    log_err(m_log, "mmap() of %s failed: %s\n", fname, strerror(errno));
     // so mmap() failed, use backup
     if (!m_auth) {
       m_backup_len = FILE_CHUNKSIZE + (4 * (FILE_CHUNKSIZE / 152));

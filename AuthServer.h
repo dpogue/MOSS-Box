@@ -41,7 +41,7 @@
 
 class AuthServer: public Server {
 public:
-  AuthServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address);
+  AuthServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, bool allow_vaultmanager);
   void setkey(void *keydata) {
     m_keydata = keydata;
   }
@@ -100,7 +100,7 @@ protected:
   struct sockaddr_in m_vault_addr;
   Connection *m_vault;
 
-  const char* state_string() {
+  const char* state_c_str() {
     switch (m_state) {
     case START:
       return "START";
@@ -141,6 +141,7 @@ protected:
   uint8_t m_client_uuid[16];
   bool m_is_visitor;
   kinum_t m_kinum;
+  bool m_allow_vaultmanager;
 #ifdef PELLET_SCORE_CACHE
   uint32_t m_pelletreq;
   uint8_t *m_pelletbuf;

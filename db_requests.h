@@ -64,7 +64,7 @@ public:
   PGconn *C;
 #endif
 #endif
-  BackendObj(Logger *logger, const char *db_address, const int32_t db_port, const char *db_params, const char *db_user,
+  BackendObj(Logger *logger, const char *db_address, const int db_port, const char *db_params, const char *db_user,
       const char *db_password, const char *db_name) :
       connection_failed(false), C(NULL) {
 #ifdef USE_POSTGRES
@@ -109,7 +109,7 @@ public:
       }
       else {
   connection_failed = true;
-  log_err(log, "DB connection error: %s", PQerrorMessage(C));
+  log_err(log, "DB connection error: %s\n", PQerrorMessage(C));
       }
     }
 #endif
@@ -247,9 +247,9 @@ public:
         return;
       }
       memcpy(hash, F.c_str(), 41);
-      for (int32_t i = 19; i >= 0; i--) {
+      for (int i = 19; i >= 0; i--) {
         // if we sscanf four bytes at a time, we have to byte-swap to big-endian
-        int32_t data;
+        unsigned int data;
         if (sscanf(hash + (2 * i), "%x", &data) != 1) {
           m_result.result_code = ERROR_INVALID_PARAM;
           return;
@@ -314,8 +314,7 @@ public:
   }
 
   AuthAcctLogin_PlayerQuery(const AuthAcctLogin_PlayerQuery &other) :
-      pqxx::transactor<pqxx::nontransaction>("AuthAcctLogin_PlayerQuery"), m_uuid(other.m_uuid), m_results(
-          other.m_results) {
+      pqxx::transactor<pqxx::nontransaction>("AuthAcctLogin_PlayerQuery"), m_uuid(other.m_uuid), m_results(other.m_results) {
   }
 
   void operator()(argument_type &T) {
@@ -340,7 +339,7 @@ public:
       result.name = tempstr;
       row["v_gender"].to(tempstr);
       result.gender = tempstr;
-      int32_t exptype;
+      int exptype;
       row["v_type"].to(exptype);
       result.explorer_type = (customer_type_t) exptype;
       m_results.push_front(result);
@@ -355,8 +354,7 @@ protected:
 class AuthValidateKI: public pqxx::transactor<pqxx::nontransaction> {
 public:
   AuthValidateKI(const uint8_t *uuid, kinum_t kinum, status_code_t &result, UruString &name) :
-      pqxx::transactor<pqxx::nontransaction>("AuthValidateKI"), m_uuid(uuid), m_kinum(kinum), m_result(result), m_name(
-          name) {
+      pqxx::transactor<pqxx::nontransaction>("AuthValidateKI"), m_uuid(uuid), m_kinum(kinum), m_result(result), m_name(name) {
   }
 
   AuthValidateKI(const AuthValidateKI &other) :
@@ -369,8 +367,7 @@ public:
 
     uuid_bytes_to_string((uint8_t*) uuid_str, UUID_STR_LEN, m_uuid, UUID_RAW_LEN, 1, 1);
     std::stringstream qstr;
-    qstr << "SELECT v_name FROM acctplayerinfo('" << /*severe paranoia*/ESC_STR(T, uuid_str) << "') where v_ki = "
-        << m_kinum;
+    qstr << "SELECT v_name FROM acctplayerinfo('" << /*severe paranoia*/ESC_STR(T, uuid_str) << "') where v_ki = " << m_kinum;
 
     pqxx::result R(T.exec(qstr));
 
@@ -431,8 +428,7 @@ protected:
 class AuthVerifyPassword: public pqxx::transactor<pqxx::nontransaction> {
 public:
   AuthVerifyPassword(const uint8_t *uuid, const char *name, const char *hash, status_code_t &result) :
-      pqxx::transactor<pqxx::nontransaction>("AuthVerifyPassword"), m_uuid(uuid), m_name(name), m_hash(hash), m_result(
-          result) {
+      pqxx::transactor<pqxx::nontransaction>("AuthVerifyPassword"), m_uuid(uuid), m_name(name), m_hash(hash), m_result(result) {
   }
 
   AuthVerifyPassword(const AuthVerifyPassword &other) :
@@ -480,9 +476,8 @@ public:
   }
 
   VaultPlayerCreate_Request(const VaultPlayerCreate_Request &other) :
-      pqxx::transactor<>("VaultPlayerCreate_Request"), m_uuid(other.m_uuid), m_name(other.m_name), m_gender(
-          other.m_gender), m_player(other.m_player), m_neighbors(other.m_neighbors), m_player_info(
-          other.m_player_info), my_player(other.my_player) {
+      pqxx::transactor<>("VaultPlayerCreate_Request"), m_uuid(other.m_uuid), m_name(other.m_name), m_gender(other.m_gender), m_player(
+          other.m_player), m_neighbors(other.m_neighbors), m_player_info(other.m_player_info), my_player(other.my_player) {
   }
 
   void operator()(argument_type &T) {
@@ -503,9 +498,9 @@ public:
       my_player.name = tempstr;
       R[0]["v_gender"].to(tempstr);
       my_player.gender = tempstr;
-      int32_t exptype;
+      int exptype;
       R[0]["v_type"].to(exptype);
-      my_player.explorer_type = (customer_type_t)exptype;
+      my_player.explorer_type = (customer_type_t) exptype;
       pqxx::field Fn = R[0]["v_neighbors"];
       pqxx::field Fp = R[0]["v_playerinfonode"];
       if (Fn.is_null() || Fp.is_null()) {
@@ -565,7 +560,7 @@ public:
       m_result.name = tempstr;
       R[0]["v_gender"].to(tempstr);
       m_result.gender = tempstr;
-      int32_t exptype;
+      int exptype;
       R[0]["v_type"].to(exptype);
       exptype = (customer_type_t) m_result.explorer_type;
     } else {
@@ -652,31 +647,28 @@ typedef struct {
 static bool string_output(pqxx::transaction_base &T, std::ostream &ostr, const VaultNode *node, VaultNode::datatype_t type,
     vault_bitfield_t bit) {
   switch (type) {
-  case VaultNode::INT:
-  case VaultNode::UINT:
+  case VaultNode::Int:
+  case VaultNode::UInt:
     ostr << node->num_val(bit);
     break;
-  case VaultNode::UUID:
-    {
-      char uuid_str[UUID_STR_LEN];
-      uuid_bytes_to_string((uint8_t*) uuid_str, UUID_STR_LEN, node->const_uuid_ptr(bit), UUID_RAW_LEN, 1, 1);
-      ostr << "'" << /*severe paranoia*/ESC_STR(T, uuid_str) << "'";
-    }
+  case VaultNode::UUID: {
+    char uuid_str[UUID_STR_LEN];
+    uuid_bytes_to_string((uint8_t*) uuid_str, UUID_STR_LEN, node->const_uuid_ptr(bit), UUID_RAW_LEN, 1, 1);
+    ostr << "'" << /*severe paranoia*/ESC_STR(T, uuid_str) << "'";
+  }
     break;
-  case VaultNode::STRING:
-    {
-      const uint8_t *str_data = node->const_data_ptr(bit);
-      uint32_t str_len = read32(str_data, 0);
-      UruString str(str_data + 4, str_len, false, true, false);
-      ostr << "'" << ESC_STR(T, str.c_str()) << "'";
-    }
+  case VaultNode::String: {
+    const uint8_t *str_data = node->const_data_ptr(bit);
+    uint32_t str_len = read32(str_data, 0);
+    UruString str(str_data + 4, str_len, false, true, false);
+    ostr << "'" << ESC_STR(T, str.c_str()) << "'";
+  }
     break;
-  case VaultNode::BLOB:
-    {
-      const uint8_t *blob_data = node->const_data_ptr(bit);
-      uint32_t blob_len = read32(blob_data, 0);
-      ostr << "E'" << ESC_BIN(T, blob_data, blob_len + 4) << "'";
-    }
+  case VaultNode::Blob: {
+    const uint8_t *blob_data = node->const_data_ptr(bit);
+    uint32_t blob_len = read32(blob_data, 0);
+    ostr << "E'" << ESC_BIN(T, blob_data, blob_len + 4) << "'";
+  }
     break;
   default:
     // programmer error
@@ -691,8 +683,7 @@ static bool string_output(pqxx::transaction_base &T, std::ostream &ostr, const V
 class VaultFetchRefs_Request: public pqxx::transactor<pqxx::nontransaction> {
 public:
   VaultFetchRefs_Request(uint32_t root_node, status_code_t &result, std::vector<VaultFetchRefs_VaultRef> &reflist) :
-      pqxx::transactor<pqxx::nontransaction>("VaultFetchRefs_Request"), m_node(root_node), m_result(result), m_list(
-          reflist) {
+      pqxx::transactor<pqxx::nontransaction>("VaultFetchRefs_Request"), m_node(root_node), m_result(result), m_list(reflist) {
   }
 
   VaultFetchRefs_Request(const VaultFetchRefs_Request &other) :
@@ -768,14 +759,14 @@ protected:
 
 class VaultFindNode_Generic: public pqxx::transactor<pqxx::nontransaction> {
 public:
-  VaultFindNode_Generic(const VaultNode *node, status_code_t &result, std::vector<uint32_t> &found, Logger *log) :
-      pqxx::transactor<pqxx::nontransaction>("VaultFindNode_Generic"), m_node(node), m_result(result), m_found(found), m_log(
-          log) {
+  VaultFindNode_Generic(const VaultNode *node, status_code_t &result, std::vector<uint32_t> &found, Logger *log, bool allow_vm) :
+      pqxx::transactor<pqxx::nontransaction>("VaultFindNode_Generic"),
+      m_node(node), m_result(result), m_found(found), m_log(log), m_allow_vm(allow_vm) {
   }
 
   VaultFindNode_Generic(const VaultFindNode_Generic &other) :
-      pqxx::transactor<pqxx::nontransaction>("VaultFindNode_Generic"), m_node(other.m_node), m_result(other.m_result), m_found(
-          other.m_found), m_log(other.m_log) {
+        pqxx::transactor<pqxx::nontransaction>("VaultFindNode_Generic"),
+      m_node(other.m_node), m_result(other.m_result), m_found(other.m_found), m_log(other.m_log), m_allow_vm(other.m_allow_vm) {
   }
 
   void operator()(argument_type &T) {
@@ -795,7 +786,7 @@ public:
     }
 
     std::stringstream qstr;
-    qstr << "SELECT nodeid FROM " << VaultNode::tablename_for_type(ntype) << " WHERE ";
+    qstr << "SELECT nodeid FROM " << VaultNode::tablename_for_type(ntype);
     uint32_t bits = VaultNode::all_bits_for_type(ntype);
     // the DB at the moment has separate tables for each node type, so
     // we don't put the node type into the query 
@@ -804,35 +795,42 @@ public:
     // we don't let users manage CreateTime and ModifyTime
     findbits &= ~(CreateTime | ModifyTime);
     if ((findbits & ~NodeType) == 0) {
-      // we do not allow queries for all of a given node type
-      log_warn(m_log, "Denying a VaultNodeFind for only the node type!\n");
-      m_result = ERROR_FORBIDDEN;
-      return;
-    }
-    bool first = true;
-    const VaultNode::ColumnSpec *col;
-    for (uint32_t i = 0; i < 32; i++) {
-      vault_bitfield_t bit = (vault_bitfield_t) (1 << i);
-      if (findbits & bit) {
-        if (bits & bit) {
-          col = VaultNode::get_spec(ntype, bit);
-          if (first) {
-            first = false;
+      if (m_allow_vm) {
+        log_warn(m_log, "Passing a VaultNodeFind for only the node type <0x%x>%s\n",
+            ntype, VaultNode::tablename_for_type(ntype));
+      } else {
+        // we do not allow queries for all of a given node type
+        log_warn(m_log, "Denying a VaultNodeFind for only the node type <0x%x>%s!\n",
+            ntype, VaultNode::tablename_for_type(ntype));
+        m_result = ERROR_FORBIDDEN;
+        return;
+      }
+    } else {
+      qstr << " WHERE ";
+      bool first = true;
+      const VaultNode::ColumnSpec *col;
+      for (uint32_t i = 0; i < 32; i++) {
+        vault_bitfield_t bit = (vault_bitfield_t) (1 << i);
+        if (findbits & bit) {
+          if (bits & bit) {
+            col = VaultNode::get_spec(ntype, bit);
+            if (first) {
+              first = false;
+            } else {
+              qstr << " and ";
+            }
+            qstr << " " << col->col_name << "=";
+            if (!string_output(T, qstr, m_node, col->datatype, bit)) {
+              log_err(m_log, "Unhandled vault node field type!\n");
+            }
+          } else if (bit == NodeType) {
           } else {
-            qstr << " and ";
+            // we really weren't expecting that!
+            log_net(m_log, "Field 0x%08x was present in vault node find of type %d!\n",
+                (uint32_t) bit, ntype);
+            log_net(m_log, "If this field is allowed to be present, edit the "
+                "VaultNode ColumnSpec; if not, this client is misbehaving.\n");
           }
-          qstr << " " << col->col_name << "=";
-          if (!string_output(T, qstr, m_node, col->datatype, bit)) {
-            log_err(m_log, "Unhandled vault node field type!\n");
-          }
-        } else if (bit == NodeType) {
-        } else {
-          // we really weren't expecting that!
-          log_net(m_log, "Field 0x%08x was present in vault node find "
-              "of type %d!\n", (uint32_t) bit, ntype);
-          log_net(m_log, "If this field is allowed to be present, edit the "
-              "VaultNode ColumnSpec; if not, this client is "
-              "misbehaving.\n");
         }
       }
     }
@@ -858,13 +856,13 @@ protected:
   status_code_t &m_result;
   std::vector<uint32_t> &m_found;
   Logger *m_log;
+  bool m_allow_vm;
 };
 
 class VaultFetchNode_Request: public pqxx::transactor<pqxx::nontransaction> {
 public:
   VaultFetchNode_Request(uint32_t nodeid, status_code_t &result, VaultNode &node, Logger *log) :
-      pqxx::transactor<pqxx::nontransaction>("VaultFetchNode_Request"), m_id(nodeid), m_result(result), m_node(node), m_log(
-          log) {
+      pqxx::transactor<pqxx::nontransaction>("VaultFetchNode_Request"), m_id(nodeid), m_result(result), m_node(node), m_log(log) {
   }
 
   VaultFetchNode_Request(const VaultFetchNode_Request &other) :
@@ -891,7 +889,7 @@ public:
       m_result = NO_ERROR;
     }
 
-    int32_t type;
+    int type;
     R[0]["v_nodetype"].to(type);
     VaultNode::vault_nodetype_t ntype = (VaultNode::vault_nodetype_t) type;
     uint32_t bits = VaultNode::all_bits_for_type(ntype);
@@ -901,72 +899,62 @@ public:
     for (uint32_t i = 1; i < 32; i++) {
       vault_bitfield_t bit = (vault_bitfield_t) (1 << i);
       if (bits & bit) {
-	col = VaultNode::get_spec(ntype, bit);
-	pqxx::field F = R[0][col->fetch_name];
-	if (F.is_null()) {
-	  if (col->fetch_required) {
-	    log_net(m_log, "Field 0x%08x was expected from vault node %d "
-		    "fetch of type %d, yet it is not present in the DB!\n",
-		    (uint32_t)bit, m_id, type);
-	    log_net(m_log, "If this field is allowed to be null, edit the "
-		    "VaultNode ColumnSpec; if not, investigate the missing "
-		    "data.\n");
-	    // but, go on anyway
-	  }
-	}
-	else {
-	  switch (col->datatype) {
-	  case VaultNode::INT:
-	    {
-	      int32_t val;
-	      F.to(val);
-	      m_node.num_ref(bit) = htole32(val);
-	    }
-	    break;
-	  case VaultNode::UINT:
-	    {
-	      uint32_t val;
-	      F.to(val);
-	      m_node.num_ref(bit) = htole32(val);
-	    }
-	    break;
-	  case VaultNode::UUID:
-	    if (uuid_string_to_bytes(m_node.uuid_ptr(bit), UUID_RAW_LEN,
-				     F.c_str(), strlen(F.c_str()),
-				     1, 1)) {
-	      memset(m_node.uuid_ptr(bit), 0, UUID_RAW_LEN);
-	    }
-	    break;
-	  case VaultNode::STRING:
-	    {
-	      UruString str((const uint8_t*)F.c_str(), strlen(F.c_str())+1,
-			    false, false, false/* unneeded*/);
-	      size_t str_len = str.send_len(false, true, true);
-	      memcpy(m_node.data_ptr(bit, str_len),
-		     str.get_str(false, true, true), str_len);
-	    }
-	    break;
-	  case VaultNode::BLOB:
-	    {
-	      pqxx::binarystring blob(F);
-	      size_t blob_len = read32(blob.data(), 0);
-	      if (blob_len+4 != blob.length()) {
-		// the data from the vault is wrong
-		log_err(m_log, "Length mismatch in blob from DB! Data claims "
-			"%d, DB claims %d\n", blob_len+4, blob.length());
-		if (blob_len+4 > blob.length()) {
-		  blob_len = blob.length() - 4;
-		}
-	      }
-	      memcpy(m_node.data_ptr(bit, blob_len), blob.data()+4, blob_len);
-	    }
-	    break;
-	  default:
-	    // programmer error
-	    log_err(m_log, "Unhandled vault node field type!\n");
-	    break;
-	  }
-	}
+        col = VaultNode::get_spec(ntype, bit);
+        pqxx::field F = R[0][col->fetch_name];
+        if (F.is_null()) {
+          if (col->fetch_required) {
+            log_net(m_log, "Field 0x%08x was expected from vault node %d "
+                "fetch of type %d, yet it is not present in the DB!\n", (uint32_t) bit, m_id, type);
+            log_net(m_log, "If this field is allowed to be null, edit the "
+                "VaultNode ColumnSpec; if not, investigate the missing "
+                "data.\n");
+            // but, go on anyway
+          }
+        } else {
+          switch (col->datatype) {
+          case VaultNode::Int: {
+            int32_t val;
+            F.to(val);
+            m_node.num_ref(bit) = htole32(val);
+          }
+            break;
+          case VaultNode::UInt: {
+            uint32_t val;
+            F.to(val);
+            m_node.num_ref(bit) = htole32(val);
+          }
+            break;
+          case VaultNode::UUID:
+            if (uuid_string_to_bytes(m_node.uuid_ptr(bit), UUID_RAW_LEN, F.c_str(), strlen(F.c_str()), 1, 1)) {
+              memset(m_node.uuid_ptr(bit), 0, UUID_RAW_LEN);
+            }
+            break;
+          case VaultNode::String: {
+            UruString str((const uint8_t*) F.c_str(), strlen(F.c_str()) + 1, false, false, false/* unneeded*/);
+            size_t str_len = str.send_len(false, true, true);
+            memcpy(m_node.data_ptr(bit, str_len), str.get_str(false, true, true), str_len);
+          }
+            break;
+          case VaultNode::Blob: {
+            pqxx::binarystring blob(F);
+            size_t blob_len = read32(blob.data(), 0);
+            if (blob_len + 4 != blob.length()) {
+              // the data from the vault is wrong
+              log_err(m_log, "Length mismatch in blob from DB! Data claims "
+                  "%d, DB claims %d\n", blob_len + 4, blob.length());
+              if (blob_len + 4 > blob.length()) {
+                blob_len = blob.length() - 4;
+              }
+            }
+            memcpy(m_node.data_ptr(bit, blob_len), blob.data() + 4, blob_len);
+          }
+            break;
+          default:
+            // programmer error
+            log_err(m_log, "Unhandled vault node field type!\n");
+            break;
+          }
+        }
       }
     }
   }
@@ -1015,15 +1003,6 @@ public:
     // we don't let users manage CreateTime and ModifyTime
     bits &= ~(CreateTime | ModifyTime);
     uint32_t savebits = m_node->bitfield1();
-#ifdef OLD_PROTOCOL
-    if ((savebits & ~NodeType) == 0) {
-      // not sure what this is about... looks like the MOUL server ignored
-      // them, as do we in effect, but instead of throwing an SQL error,
-      // we can just stop now
-      m_result = ERROR_INVALID_PARAM;
-      return;
-    }
-#endif
     bool first = true;
     const VaultNode::ColumnSpec *col;
     for (uint32_t i = 0; i < 32; i++) {
@@ -1110,9 +1089,8 @@ public:
       if (savebits & bit) {
         if ((bits & bit)
             || ((bit == CreateAgeName || bit == CreateAgeUUID)
-                && (ntype == VaultNode::ChronicleNode || ntype == VaultNode::FolderNode
-                    || ntype == VaultNode::ImageNode || ntype == VaultNode::SDLNode
-                    || ntype == VaultNode::TextNoteNode || ntype == VaultNode::AgeLinkNode
+                && (ntype == VaultNode::ChronicleNode || ntype == VaultNode::FolderNode || ntype == VaultNode::ImageNode
+                    || ntype == VaultNode::SDLNode || ntype == VaultNode::TextNoteNode || ntype == VaultNode::AgeLinkNode
                     || ntype == VaultNode::MarkergameNode))) {
           col = VaultNode::get_spec(ntype, bit);
           cols << ", " << col->col_name;
@@ -1152,6 +1130,10 @@ protected:
   Logger *m_log;
 };
 
+/** @addtogroup Vault
+ * @{
+ *
+ */
 class VaultAddRef_Request: public pqxx::transactor<> {
 public:
   VaultAddRef_Request(uint32_t parent, uint32_t child, uint32_t owner, status_code_t &result) :
@@ -1172,7 +1154,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result == 0) {
         my_result = NO_ERROR;
@@ -1198,13 +1180,13 @@ protected:
 
 class VaultRemoveRef_Request: public pqxx::transactor<> {
 public:
-  VaultRemoveRef_Request(uint32_t parent, uint32_t child, int32_t &node_ct) :
+  VaultRemoveRef_Request(uint32_t parent, uint32_t child, int &node_ct) :
       pqxx::transactor<>("VaultRemoveRef_Request"), m_parent(parent), m_child(child), m_count(node_ct), my_count(0) {
   }
 
   VaultRemoveRef_Request(const VaultRemoveRef_Request &other) :
-      pqxx::transactor<>("VaultRemoveRef_Request"), m_parent(other.m_parent), m_child(other.m_child), m_count(
-          other.m_count), my_count(other.my_count) {
+      pqxx::transactor<>("VaultRemoveRef_Request"), m_parent(other.m_parent), m_child(other.m_child), m_count(other.m_count), my_count(
+          other.my_count) {
   }
 
   void operator()(argument_type &T) {
@@ -1226,26 +1208,24 @@ public:
 protected:
   uint32_t m_parent;
   uint32_t m_child;
-  int32_t &m_count;
-  int32_t my_count;
+  int &m_count;
+  int my_count;
 };
 
 class VaultCreateAge_Request: public pqxx::transactor<> {
 public:
   VaultCreateAge_Request(const char *filename, const char *instance, const char *user_defined, const char *display,
-      const uint8_t *createuuid, const uint8_t *parentuuid, uint32_t &age_node, uint32_t &age_info_node,
-      status_code_t &result) :
+      const uint8_t *createuuid, const uint8_t *parentuuid, uint32_t &age_node, uint32_t &age_info_node, status_code_t &result) :
       pqxx::transactor<>("VaultCreateAge_Request"), m_filename(filename), m_instance(instance), m_userdef(user_defined), m_display(
-          display), m_createuuid(createuuid), m_parentuuid(parentuuid), m_age_node(age_node), m_age_info_node(
-          age_info_node), m_result(result), my_age_node(0), my_age_info_node(0), my_result(result) {
+          display), m_createuuid(createuuid), m_parentuuid(parentuuid), m_age_node(age_node), m_age_info_node(age_info_node), m_result(
+          result), my_age_node(0), my_age_info_node(0), my_result(result) {
   }
 
   VaultCreateAge_Request(const VaultCreateAge_Request &other) :
       pqxx::transactor<>("VaultCreateAge_Request"), m_filename(other.m_filename), m_instance(other.m_instance), m_userdef(
-          other.m_userdef), m_display(other.m_display), m_createuuid(other.m_createuuid), m_parentuuid(
-          other.m_parentuuid), m_age_node(other.m_age_node), m_age_info_node(other.m_age_info_node), m_result(
-          other.m_result), my_age_node(other.my_age_node), my_age_info_node(other.my_age_info_node), my_result(
-          other.my_result) {
+          other.m_userdef), m_display(other.m_display), m_createuuid(other.m_createuuid), m_parentuuid(other.m_parentuuid), m_age_node(
+          other.m_age_node), m_age_info_node(other.m_age_info_node), m_result(other.m_result), my_age_node(other.my_age_node), my_age_info_node(
+          other.my_age_info_node), my_result(other.my_result) {
   }
 
   void operator()(argument_type &T) {
@@ -1258,8 +1238,8 @@ public:
     }
     std::stringstream qstr;
     qstr << "SELECT * FROM createage('" << ESC_STR(T, m_filename) << "', '" << ESC_STR(T, m_instance) << "', '"
-        << ESC_STR(T, m_userdef) << "', '" << ESC_STR(T, m_display) << "', '" << /*severe paranoia*/ESC_STR(T, uuid1)
-        << "', '" << /*severe paranoia*/ESC_STR(T, uuid2) << "')";
+        << ESC_STR(T, m_userdef) << "', '" << ESC_STR(T, m_display) << "', '" << /*severe paranoia*/ESC_STR(T, uuid1) << "', '"
+        << /*severe paranoia*/ESC_STR(T, uuid2) << "')";
 
     pqxx::result R(T.exec(qstr));
     if (R.size() != 1) {
@@ -1343,10 +1323,8 @@ public:
     for (pqxx::result::const_iterator row = R.begin(); row != R.end(); row++) {
       VaultAgeList_AgeInfo age;
       pqxx::field F = row["v_uuid"];
-      if (F.is_null()
-	  || uuid_string_to_bytes(age.uuid, UUID_RAW_LEN, F.c_str(),
-				  strlen(F.c_str()), 1, 1)) {
-	memset(age.uuid, 0, UUID_RAW_LEN);
+      if (F.is_null() || uuid_string_to_bytes(age.uuid, UUID_RAW_LEN, F.c_str(), strlen(F.c_str()), 1, 1)) {
+        memset(age.uuid, 0, UUID_RAW_LEN);
       }
       F = row["v_instance_name"];
       if (!F.is_null()) {
@@ -1390,9 +1368,8 @@ public:
   }
 
   VaultSendNode_Request(const VaultSendNode_Request &other) :
-      pqxx::transactor<>("VaultSendNode_Request"), m_player(other.m_player), m_node(other.m_node), m_sender(
-          other.m_sender), m_result(other.m_result), m_inbox(other.m_inbox), my_result(other.my_result), my_inbox(
-          other.my_inbox) {
+      pqxx::transactor<>("VaultSendNode_Request"), m_player(other.m_player), m_node(other.m_node), m_sender(other.m_sender), m_result(
+          other.m_result), m_inbox(other.m_inbox), my_result(other.my_result), my_inbox(other.my_inbox) {
   }
 
   void operator()(argument_type &T) {
@@ -1403,7 +1380,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0]["v_inbox"].to(my_inbox);
       R[0]["v_result"].to(query_result);
       if (query_result == 0) {
@@ -1434,13 +1411,12 @@ protected:
 class VaultSetAgePublic_Request: public pqxx::transactor<> {
 public:
   VaultSetAgePublic_Request(uint32_t nodeid, bool to_public, status_code_t &result) :
-      pqxx::transactor<>("VaultSetAgePublic_Request"), m_node(nodeid), m_public(to_public), m_result(result), my_result(
-          result) {
+      pqxx::transactor<>("VaultSetAgePublic_Request"), m_node(nodeid), m_public(to_public), m_result(result), my_result(result) {
   }
 
   VaultSetAgePublic_Request(const VaultSetAgePublic_Request &other) :
-      pqxx::transactor<>("VaultSetAgePublic_Request"), m_node(other.m_node), m_public(other.m_public), m_result(
-          other.m_result), my_result(other.my_result) {
+      pqxx::transactor<>("VaultSetAgePublic_Request"), m_node(other.m_node), m_public(other.m_public), m_result(other.m_result), my_result(
+          other.my_result) {
   }
 
   void operator()(argument_type &T) {
@@ -1465,16 +1441,16 @@ protected:
 
 class VaultGetScore_Request: public pqxx::transactor<pqxx::nontransaction> {
 public:
-  VaultGetScore_Request(const uint32_t holder, UruString *name, uint32_t &score_id, int32_t &create_time,
-      uint32_t &score_type, int32_t &score_value, status_code_t &result) :
+  VaultGetScore_Request(const uint32_t holder, UruString *name, uint32_t &score_id, int32_t &create_time, uint32_t &score_type,
+      int32_t &score_value, status_code_t &result) :
       pqxx::transactor<pqxx::nontransaction>("VaultGetScore_Request"), m_score_holder(holder), m_score_name(name), m_score_id(
           score_id), m_timestamp(create_time), m_score_type(score_type), m_score_value(score_value), m_result(result) {
   }
 
   VaultGetScore_Request(const VaultGetScore_Request &other) :
       pqxx::transactor<pqxx::nontransaction>("VaultGetScore_Request"), m_score_holder(other.m_score_holder), m_score_name(
-          other.m_score_name), m_score_id(other.m_score_id), m_timestamp(other.m_timestamp), m_score_type(
-          other.m_score_type), m_score_value(other.m_score_value), m_result(other.m_result) {
+          other.m_score_name), m_score_id(other.m_score_id), m_timestamp(other.m_timestamp), m_score_type(other.m_score_type), m_score_value(
+          other.m_score_value), m_result(other.m_result) {
   }
 
   void operator()(argument_type &T) {
@@ -1484,8 +1460,7 @@ public:
 
     if (R.size() != 1) {
       m_result = ERROR_INTERNAL;
-    }
-    else {
+    } else {
       pqxx::field F = R[0]["v_id"];
       if (F.is_null()) {
         m_result = ERROR_NO_SCORE;
@@ -1529,30 +1504,28 @@ protected:
 
 class VaultCreateScore_Request: public pqxx::transactor<> {
 public:
-  VaultCreateScore_Request(const uint32_t holder, UruString *name, uint32_t score_type, int32_t score_value,
-      uint32_t &score_id, int32_t &create_time, status_code_t &result) :
-      pqxx::transactor<>("VaultCreateScore_Request"), m_score_holder(holder), m_score_name(name), m_score_type(
-          score_type), m_score_value(score_value), m_score_id(score_id), m_timestamp(create_time), m_result(result), my_score_id(
-          0), my_timestamp(0), my_result(result) {
+  VaultCreateScore_Request(const uint32_t holder, UruString *name, uint32_t score_type, int32_t score_value, uint32_t &score_id,
+      int32_t &create_time, status_code_t &result) :
+      pqxx::transactor<>("VaultCreateScore_Request"), m_score_holder(holder), m_score_name(name), m_score_type(score_type), m_score_value(
+          score_value), m_score_id(score_id), m_timestamp(create_time), m_result(result), my_score_id(0), my_timestamp(0), my_result(
+          result) {
   }
 
   VaultCreateScore_Request(const VaultCreateScore_Request &other) :
-      pqxx::transactor<>("VaultCreateScore_Request"), m_score_holder(other.m_score_holder), m_score_name(
-          other.m_score_name), m_score_type(other.m_score_type), m_score_value(other.m_score_value), m_score_id(
-          other.m_score_id), m_timestamp(other.m_timestamp), m_result(other.m_result), my_score_id(other.my_score_id), my_timestamp(
-          other.my_timestamp), my_result(other.my_result) {
+      pqxx::transactor<>("VaultCreateScore_Request"), m_score_holder(other.m_score_holder), m_score_name(other.m_score_name), m_score_type(
+          other.m_score_type), m_score_value(other.m_score_value), m_score_id(other.m_score_id), m_timestamp(other.m_timestamp), m_result(
+          other.m_result), my_score_id(other.my_score_id), my_timestamp(other.my_timestamp), my_result(other.my_result) {
   }
 
   void operator()(argument_type &T) {
     std::stringstream qstr;
-    qstr << "SELECT * FROM newscore(" << m_score_holder << ", '" << ESC_STR(T, m_score_name->c_str()) << "', "
-        << m_score_type << ", " << m_score_value << ")";
+    qstr << "SELECT * FROM newscore(" << m_score_holder << ", '" << ESC_STR(T, m_score_name->c_str()) << "', " << m_score_type
+        << ", " << m_score_value << ")";
     pqxx::result R(T.exec(qstr));
 
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
-    }
-    else {
+    } else {
       pqxx::field F = R[0]["v_id"];
       F.to(my_score_id);
       if (my_score_id == 0) {
@@ -1589,8 +1562,7 @@ protected:
 class VaultAddToScore_Request: public pqxx::transactor<> {
 public:
   VaultAddToScore_Request(uint32_t score_id, int32_t delta, status_code_t &result) :
-      pqxx::transactor<>("VaultAddToScore_Request"), m_score_id(score_id), m_delta(delta), m_result(result), my_result(
-          result) {
+      pqxx::transactor<>("VaultAddToScore_Request"), m_score_id(score_id), m_delta(delta), m_result(result), my_result(result) {
   }
 
   VaultAddToScore_Request(const VaultAddToScore_Request &other) :
@@ -1605,7 +1577,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result == 0) {
         my_result = NO_ERROR;
@@ -1647,7 +1619,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result == 0) {
         my_result = NO_ERROR;
@@ -1672,6 +1644,7 @@ protected:
   status_code_t &m_result;
   status_code_t my_result;
 };
+/** @} */
 
 class MarkerGameCreate_Request: public pqxx::transactor<> {
 public:
@@ -1691,19 +1664,16 @@ public:
 
   void operator()(argument_type &T) {
     std::stringstream qstr;
-    qstr << "SELECT * FROM createmarkergame(" << m_owner << ", " << m_type << ", '" << ESC_STR(T, m_game_name->c_str())
-        << "')";
+    qstr << "SELECT * FROM createmarkergame(" << m_owner << ", " << m_type << ", '" << ESC_STR(T, m_game_name->c_str()) << "')";
     pqxx::result R(T.exec(qstr));
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
       my_result = NO_ERROR;
       pqxx::field F = R[0]["v_uuid"];
-      if (F.is_null()
-	  || uuid_string_to_bytes(my_uuid, UUID_RAW_LEN, F.c_str(),
-				  strlen(F.c_str()), 1, 1)) {
-	my_result = ERROR_INTERNAL;
-	memset(my_uuid, 0, UUID_RAW_LEN);
+      if (F.is_null() || uuid_string_to_bytes(my_uuid, UUID_RAW_LEN, F.c_str(), strlen(F.c_str()), 1, 1)) {
+        my_result = ERROR_INTERNAL;
+        memset(my_uuid, 0, UUID_RAW_LEN);
       }
       F = R[0]["v_gameid"];
       if (F.is_null()) {
@@ -1724,7 +1694,7 @@ public:
 protected:
   kinum_t m_owner;
   UruString *m_game_name;
-  int32_t m_type;
+  int m_type;
   uint32_t &m_game_id;
   uint8_t *m_uuid;
   status_code_t &m_result;
@@ -1742,8 +1712,8 @@ public:
   }
 
   MarkerGameFind_Request(const MarkerGameFind_Request &other) :
-      pqxx::transactor<pqxx::nontransaction>("MarkerGameFind_Request"), m_uuid(other.m_uuid), m_game_name(
-          other.m_game_name), m_game_id(other.m_game_id), m_type(other.m_type), m_result(other.m_result) {
+      pqxx::transactor<pqxx::nontransaction>("MarkerGameFind_Request"), m_uuid(other.m_uuid), m_game_name(other.m_game_name), m_game_id(
+          other.m_game_id), m_type(other.m_type), m_result(other.m_result) {
   }
 
   void operator()(argument_type &T) {
@@ -1758,8 +1728,7 @@ public:
     /*severe paranoia*/ESC_STR(T, uuid) + "')"));
     if (R.size() != 1) {
       m_result = ERROR_INTERNAL;
-    }
-    else {
+    } else {
       pqxx::field F = R[0]["v_gameid"];
       if (F.is_null()) {
         // game does not exist
@@ -1775,7 +1744,7 @@ public:
         if (F.is_null()) {
           m_type = -1;
         } else {
-          int32_t intval;
+          int intval;
           F.to(intval);
           m_type = intval & 0xFF;
         }
@@ -1810,7 +1779,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result == 0) {
         my_result = NO_ERROR;
@@ -1849,7 +1818,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t result;
+      int result;
       R[0][0].to(result);
       if (result == 0) {
         my_result = NO_ERROR;
@@ -1875,8 +1844,8 @@ class MarkerGameAddMarker_Request: public pqxx::transactor<> {
 public:
   MarkerGameAddMarker_Request(uint32_t internal_id, double x, double y, double z, UruString *marker_name, UruString *age,
       int32_t &marker_num, status_code_t &result) :
-      pqxx::transactor<>("MarkerGameAddMarker_Request"), m_game_id(internal_id), m_x(x), m_y(y), m_z(z), m_name(
-          marker_name), m_age(age), m_marker(marker_num), m_result(result), my_marker(-1), my_result(result) {
+      pqxx::transactor<>("MarkerGameAddMarker_Request"), m_game_id(internal_id), m_x(x), m_y(y), m_z(z), m_name(marker_name), m_age(
+          age), m_marker(marker_num), m_result(result), my_marker(-1), my_result(result) {
   }
 
   MarkerGameAddMarker_Request(const MarkerGameAddMarker_Request &other) :
@@ -1920,9 +1889,9 @@ protected:
 
 class MarkerGameRenameMarker_Request: public pqxx::transactor<> {
 public:
-  MarkerGameRenameMarker_Request(uint32_t internal_id, int32_t marker_num, UruString *marker_name, status_code_t &result) :
-      pqxx::transactor<>("MarkerGameRenameMarker_Request"), m_game_id(internal_id), m_marker(marker_num), m_name(
-          marker_name), m_result(result), my_result(result) {
+  MarkerGameRenameMarker_Request(uint32_t internal_id, int marker_num, UruString *marker_name, status_code_t &result) :
+      pqxx::transactor<>("MarkerGameRenameMarker_Request"), m_game_id(internal_id), m_marker(marker_num), m_name(marker_name), m_result(
+          result), my_result(result) {
   }
 
   MarkerGameRenameMarker_Request(const MarkerGameRenameMarker_Request &other) :
@@ -1937,7 +1906,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result) {
         my_result = ERROR_NODE_NOT_FOUND;
@@ -1953,7 +1922,7 @@ public:
 
 protected:
   uint32_t m_game_id;
-  int32_t m_marker;
+  int m_marker;
   UruString *m_name;
   status_code_t &m_result;
   status_code_t my_result;
@@ -1961,9 +1930,9 @@ protected:
 
 class MarkerGameDeleteMarker_Request: public pqxx::transactor<> {
 public:
-  MarkerGameDeleteMarker_Request(uint32_t internal_id, int32_t marker_num, status_code_t &result) :
-      pqxx::transactor<>("MarkerGameDeleteMarker_Request"), m_game_id(internal_id), m_marker(marker_num), m_result(
-          result), my_result(result) {
+  MarkerGameDeleteMarker_Request(uint32_t internal_id, int marker_num, status_code_t &result) :
+      pqxx::transactor<>("MarkerGameDeleteMarker_Request"), m_game_id(internal_id), m_marker(marker_num), m_result(result), my_result(
+          result) {
   }
 
   MarkerGameDeleteMarker_Request(const MarkerGameDeleteMarker_Request &other) :
@@ -1978,7 +1947,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result) {
         my_result = ERROR_NODE_NOT_FOUND;
@@ -1994,7 +1963,7 @@ public:
 
 protected:
   uint32_t m_game_id;
-  int32_t m_marker;
+  int m_marker;
   status_code_t &m_result;
   status_code_t my_result;
 };
@@ -2023,8 +1992,8 @@ public:
   }
 
   MarkerGameMarkers_Request(const MarkerGameMarkers_Request &other) :
-      pqxx::transactor<pqxx::nontransaction>("MarkerGameMarkers_Request"), m_game_id(other.m_game_id), m_list(
-          other.m_list), m_result(other.m_result) {
+      pqxx::transactor<pqxx::nontransaction>("MarkerGameMarkers_Request"), m_game_id(other.m_game_id), m_list(other.m_list), m_result(
+          other.m_result) {
   }
 
   void operator()(argument_type &T) {
@@ -2137,10 +2106,10 @@ protected:
 
 class MarkerGameCaptureMarker_Request: public pqxx::transactor<> {
 public:
-  MarkerGameCaptureMarker_Request(uint32_t internal_id, kinum_t player, int32_t marker_num, int32_t capture_value,
+  MarkerGameCaptureMarker_Request(uint32_t internal_id, kinum_t player, int marker_num, int capture_value,
       status_code_t &result) :
-      pqxx::transactor<>("MarkerGameCaptureMarker_Request"), m_game_id(internal_id), m_player(player), m_marker(
-          marker_num), m_value(capture_value), m_result(result), my_result(result) {
+      pqxx::transactor<>("MarkerGameCaptureMarker_Request"), m_game_id(internal_id), m_player(player), m_marker(marker_num), m_value(
+          capture_value), m_result(result), my_result(result) {
   }
 
   MarkerGameCaptureMarker_Request(const MarkerGameCaptureMarker_Request &other) :
@@ -2155,7 +2124,7 @@ public:
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
     } else {
-      int32_t query_result;
+      int query_result;
       R[0][0].to(query_result);
       if (query_result < 0) {
         my_result = ERROR_NODE_NOT_FOUND;
@@ -2176,8 +2145,8 @@ public:
 protected:
   uint32_t m_game_id;
   kinum_t m_player;
-  int32_t m_marker;
-  int32_t m_value;
+  int m_marker;
+  int m_value;
   status_code_t &m_result;
   status_code_t my_result;
 };
@@ -2215,8 +2184,8 @@ protected:
 class VaultGetAgeByUUID: public pqxx::transactor<pqxx::nontransaction> {
 public:
   VaultGetAgeByUUID(const uint8_t *uuid, uint32_t &age_node, uint32_t &age_info, UruString &filename, status_code_t &result) :
-      pqxx::transactor<pqxx::nontransaction>("VaultGetAgeByUUID"), m_uuid(uuid), m_age_node(age_node), m_age_info(
-          age_info), m_age_name(filename), m_result(result) {
+      pqxx::transactor<pqxx::nontransaction>("VaultGetAgeByUUID"), m_uuid(uuid), m_age_node(age_node), m_age_info(age_info), m_age_name(
+          filename), m_result(result) {
   }
 
   VaultGetAgeByUUID(const VaultGetAgeByUUID &other) :
@@ -2287,7 +2256,7 @@ public:
       if (F.is_null()) {
         my_online = false;
       } else {
-        int32_t online;
+        int online;
         F.to(online);
         my_online = (online != 0 ? true : false);
       }
@@ -2323,8 +2292,7 @@ public:
   }
 
   SetPlayerConnected(const SetPlayerConnected &other) :
-      pqxx::transactor<>("SetPlayerConnected"), m_kinum(other.m_kinum), m_result(other.m_result), my_result(
-          other.my_result) {
+      pqxx::transactor<>("SetPlayerConnected"), m_kinum(other.m_kinum), m_result(other.m_result), my_result(other.my_result) {
   }
 
   void operator()(argument_type &T) {
@@ -2430,11 +2398,9 @@ public:
     } else {
       my_result = NO_ERROR;
       pqxx::field F = R[0][0];
-      if (F.is_null()
-	  || uuid_string_to_bytes(my_uuid, UUID_RAW_LEN, F.c_str(),
-				  strlen(F.c_str()), 1, 1)) {
-	my_result = ERROR_INTERNAL;
-	memset(my_uuid, 0, UUID_RAW_LEN);
+      if (F.is_null() || uuid_string_to_bytes(my_uuid, UUID_RAW_LEN, F.c_str(), strlen(F.c_str()), 1, 1)) {
+        my_result = ERROR_INTERNAL;
+        memset(my_uuid, 0, UUID_RAW_LEN);
       }
     }
   }
@@ -2481,6 +2447,9 @@ protected:
   status_code_t my_result;
 };
 
+/** @addtogroup SDL
+ * @{
+ */
 class GetGlobalSDL: public pqxx::transactor<pqxx::nontransaction> {
 public:
   // *outbuf must be set NULL by caller
@@ -2577,6 +2546,10 @@ protected:
   status_code_t &m_result;
 };
 
+/** @}
+ *
+ */
+
 class GetAgeUUIDFor: public pqxx::transactor<pqxx::nontransaction> {
 public:
   GetAgeUUIDFor(uint32_t childnode, uint8_t *uuid, status_code_t &result) :
@@ -2613,8 +2586,8 @@ protected:
 class Egg1: public pqxx::transactor<> {
 public:
   Egg1(kinum_t kinum, uint32_t &parent, uint32_t &child, status_code_t &result) :
-      pqxx::transactor<>("Egg1"), m_kinum(kinum), m_parent(parent), m_child(child), m_result(result), my_parent(0), my_child(
-          0), my_result(ERROR_INTERNAL) {
+      pqxx::transactor<>("Egg1"), m_kinum(kinum), m_parent(parent), m_child(child), m_result(result), my_parent(0), my_child(0), my_result(
+          ERROR_INTERNAL) {
   }
 
   Egg1(const Egg1 &other) :
@@ -2629,8 +2602,7 @@ public:
 
     if (R.size() != 1) {
       my_result = ERROR_INTERNAL;
-    }
-    else {
+    } else {
       pqxx::field F = R[0]["v_parent"];
       if (!F.is_null()) {
         F.to(my_parent);

@@ -33,6 +33,9 @@
 #define BACKEND_KEEPALIVE_INTERVAL 1200
 #define GAME_STARTUP_TIMEOUT 30
 
+#define DEFAULT_PORT_SERVER 14617
+#define DEFAULT_PORT_BACKEND 14618
+
 #define FILE_CHUNKSIZE 32768
 #define AUTH_CHUNKSIZE 32768
 
@@ -49,7 +52,11 @@
 
 #define MOUL_BUFSIZE 16384
 #define BUFSIZE 65536
+#if defined(__sun) || defined(IOV_MAX)
+#define MAX_IOVEC_COUNT IOV_MAX
+#else
 #define MAX_IOVEC_COUNT ((FILE_CHUNKSIZE / 152) + 7)
+#endif
 
 // maximum amount of time a given client can hold an object lock (game server)
 #define MAX_LOCK_TIME 5 /* XXX made up */

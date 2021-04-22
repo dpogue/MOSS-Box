@@ -26,13 +26,20 @@
 //#include <sys/stat.h>
 //
 //#include "machine_arch.h"
-
 // This construct requires GCC5 or C++17
 #ifdef __has_include
 # if __has_include(<limits.h>)
 #  include <limits.h>
 # endif
+# if __has_include(<netinet/in.h>)
+#  include <netinet/in.h>
+# endif
+#else
+# include <limits.h>
+# include <netinet/in.h>
 #endif
+# include <limits.h>
+# include <netinet/in.h>
 
 #ifndef _UTIL_H_
 #define _UTIL_H_
@@ -101,8 +108,9 @@ extern "C" {
  * This formats a "little-endian" UUID (byteswaps the first 8 bytes).
  */
 inline void format_uuid(const uint8_t *buf, char *uuid) {
-  snprintf(uuid, UUID_STR_LEN, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x", read32(buf, 0), read16(buf, 4),
-      read16(buf, 6), buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]);
+  snprintf(uuid, UUID_STR_LEN, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+      read32(buf, 0), read16(buf, 4), read16(buf, 6),
+      buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]);
 }
 
 /*
@@ -144,6 +152,8 @@ void get_random_data(uint8_t *buf, uint32_t buflen);
  * NULL on success, and an error string on failure.
  */
 const char* resolve_hostname(const char *hostname, uint32_t *ipaddr);
+
+uint32_t inaddr_c_str(char *buf, size_t buflen, in_addr_t address, in_port_t port, in_port_t default_port);
 
 #ifdef __cplusplus
 }

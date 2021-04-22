@@ -1,20 +1,20 @@
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -45,31 +45,35 @@ ConfigParser::~ConfigParser() {
   }
 }
 
-int32_t ConfigParser::register_config(const char *name, int32_t *value, int32_t the_default) {
+int32_t ConfigParser::register_config(const char *name,
+          int32_t *value, int32_t the_default) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
-    if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
+    if (strlen((*iter)->m_name) == strlen(name)
+  && !strcmp((*iter)->m_name, name)) {
       // we already have that one!
       return 1;
     }
   }
 
-  Entry *new_entry = new Entry(TYPE_INT, name, (void*) value);
+  Entry *new_entry = new Entry(TYPE_INT, name, (void *)value);
   m_options.push_back(new_entry);
   *value = the_default;
   return 0;
 }
 
-int32_t ConfigParser::register_config(const char *name, char **value, const char *the_default) {
+int32_t ConfigParser::register_config(const char *name,
+          char **value, const char *the_default) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
-    if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
+    if (strlen((*iter)->m_name) == strlen(name)
+  && !strcmp((*iter)->m_name, name)) {
       // we already have that one!
       return 1;
     }
   }
 
-  Entry *new_entry = new Entry(TYPE_CHARSTAR, name, (void*) value);
+  Entry *new_entry = new Entry(TYPE_CHARSTAR, name, (void *)value);
   m_options.push_back(new_entry);
   if (*value) {
     free(*value);
@@ -81,16 +85,18 @@ int32_t ConfigParser::register_config(const char *name, char **value, const char
   return 0;
 }
 
-int32_t ConfigParser::register_config(const char *name, bool *value, bool the_default) {
+int32_t ConfigParser::register_config(const char *name,
+          bool *value, bool the_default) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
-    if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
+    if (strlen((*iter)->m_name) == strlen(name)
+  && !strcmp((*iter)->m_name, name)) {
       // we already have that one!
       return 1;
     }
   }
 
-  Entry *new_entry = new Entry(TYPE_BOOL, name, (void*) value);
+  Entry *new_entry = new Entry(TYPE_BOOL, name, (void *)value);
   m_options.push_back(new_entry);
   *value = the_default;
   return 0;
@@ -99,7 +105,8 @@ int32_t ConfigParser::register_config(const char *name, bool *value, bool the_de
 int32_t ConfigParser::unregister_config(const char *name) {
   std::list<Entry*>::iterator iter;
   for (iter = m_options.begin(); iter != m_options.end(); iter++) {
-    if (strlen((*iter)->m_name) == strlen(name) && !strcmp((*iter)->m_name, name)) {
+    if (strlen((*iter)->m_name) == strlen(name)
+  && !strcmp((*iter)->m_name, name)) {
       Entry *e = *iter;
       m_options.erase(iter);
       delete e;
@@ -122,32 +129,35 @@ int32_t ConfigParser::read_config(const char *filename, bool complain) {
   try {
     linebuf = new char[bufsize];
     while (!file.eof()) {
-      file.getline(linebuf + bufat, bufsize - bufat);
+      file.getline(linebuf+bufat, bufsize-bufat);
       if (file.fail() && !file.eof()) {
-        bufat = strlen(linebuf) - 1;
-        bufsize *= 2;
-        char *newbuf = new char[bufsize];
-        memcpy(newbuf, linebuf, bufat);
-        delete[] linebuf;
-        linebuf = newbuf;
-      } else if (strlen(linebuf) > 0 && linebuf[strlen(linebuf) - 1] == '\\') {
-        // continuation on next line
-        bufat = strlen(linebuf) - 1;
-      } else {
-        // here we have the whole line
-        checked = check_line(linebuf, complain);
-        if (checked) {
-          file_error(lineno, checked);
-        }
-        bufat = 0;
-        lineno++;
+  bufat = strlen(linebuf)-1;
+  bufsize *= 2;
+  char *newbuf = new char[bufsize];
+  memcpy(newbuf, linebuf, bufat);
+  delete[] linebuf;
+  linebuf = newbuf;
+      }
+      else if (strlen(linebuf) > 0 && linebuf[strlen(linebuf)-1] == '\\') {
+  // continuation on next line
+  bufat = strlen(linebuf)-1;
+      }
+      else {
+  // here we have the whole line
+  checked = check_line(linebuf, complain);
+  if (checked) {
+    file_error(lineno, checked);
+  }
+  bufat = 0;
+  lineno++;
       }
     }
     checked = check_line(linebuf, complain);
     if (checked) {
       file_error(lineno, checked);
     }
-  } catch (const std::bad_alloc &e) {
+  }
+  catch (const std::bad_alloc& e) {
   }
 
   if (linebuf) {
@@ -179,7 +189,7 @@ int32_t ConfigParser::check_line(char *linebuf, bool complain) {
   while (*value != '=' && *value != '\0') {
     value++;
   }
-  char *rtrim = value - 1;
+  char *rtrim = value-1;
   while (rtrim > name && is_whitespace(*rtrim)) {
     *rtrim-- = '\0';
   }
@@ -189,7 +199,7 @@ int32_t ConfigParser::check_line(char *linebuf, bool complain) {
     while (is_whitespace(*value)) {
       value++;
     }
-    rtrim = value + strlen(value) - 1;
+    rtrim = value+strlen(value)-1;
     while (rtrim > value && is_whitespace(*rtrim)) {
       *rtrim-- = '\0';
     }
@@ -200,56 +210,64 @@ int32_t ConfigParser::check_line(char *linebuf, bool complain) {
     Entry *e = *iter;
     if (strlen(e->m_name) == strlen(name) && !strcmp(e->m_name, name)) {
       if (end) {
-        // no '=' found
-        return ERROR_NOT_PAIR;
-      } else if (e->m_type == TYPE_INT) {
-        int32_t num = sscanf(value, "%i", (int32_t*) e->m_addr);
-        if (num != 1) {
-          return ERROR_BAD_FORMAT;
+  // no '=' found
+  return ERROR_NOT_PAIR;
+      }
+      else if (e->m_type == TYPE_INT) {
+  int32_t num = sscanf(value, "%i", (int32_t *)e->m_addr);
+  if (num != 1) {
+    return ERROR_BAD_FORMAT;
+  }
+  return ERROR_NONE;
+      }
+      else if (e->m_type == TYPE_BOOL) {
+  if (value[0] == 't' || value[0] == 'T') {
+    *(bool *)e->m_addr = true;
+  }
+  else if (value[0] == 'f' || value[0] == 'F') {
+    *(bool *)e->m_addr = false;
+  }
+  else {
+    int32_t val;
+    if (sscanf(value, "%i", &val) != 1) {
+      return ERROR_BAD_FORMAT;
+    }
+    *(bool *)e->m_addr = (val != 0);
+  }
+  return ERROR_NONE;
+      }
+      else if (e->m_type == TYPE_CHARSTAR) {
+  char **loc = (char **)e->m_addr;
+  if (*loc) {
+    free(*loc);
+  }
+  if (end) {
+    // empty string
+    *loc = strdup("");
+  }
+  else {
+    *loc = strdup(value);
+    // handle escaped characters
+    value = *loc;
+    while (*value) {
+      if (value[0] == '\\') {
+        if (value[1] == 'r') {
+    value[0] = '\r';
+    strcpy(value+1, value+2);
         }
-        return ERROR_NONE;
-      } else if (e->m_type == TYPE_BOOL) {
-        if (value[0] == 't' || value[0] == 'T') {
-          *(bool*) e->m_addr = true;
-        } else if (value[0] == 'f' || value[0] == 'F') {
-          *(bool*) e->m_addr = false;
-        } else {
-          int32_t val;
-          if (sscanf(value, "%i", &val) != 1) {
-            return ERROR_BAD_FORMAT;
-          }
-          *(bool*) e->m_addr = (val != 0);
+        else if (value[1] == 'n') {
+    value[0] = '\n';
+    strcpy(value+1, value+2);
         }
-        return ERROR_NONE;
-      } else if (e->m_type == TYPE_CHARSTAR) {
-        char **loc = (char**) e->m_addr;
-        if (*loc) {
-          free(*loc);
-        }
-        if (end) {
-          // empty string
-          *loc = strdup("");
-        } else {
-          *loc = strdup(value);
-          // handle escaped characters
-          value = *loc;
-          while (*value) {
-            if (value[0] == '\\') {
-              if (value[1] == 'r') {
-                value[0] = '\r';
-                strcpy(value + 1, value + 2);
-              } else if (value[1] == 'n') {
-                value[0] = '\n';
-                strcpy(value + 1, value + 2);
-              }
-            }
-            value++;
-          }
-        }
-        return ERROR_NONE;
-      } else {
-        // bad type
-        return ERROR_UNKNOWN_TYPE;
+      }
+      value++;
+    }
+  }
+  return ERROR_NONE;
+      }
+      else {
+  // bad type
+  return ERROR_UNKNOWN_TYPE;
       }
     }
   }
@@ -263,7 +281,7 @@ int32_t ConfigParser::check_line(char *linebuf, bool complain) {
 void ConfigParser::file_error(uint32_t lineno, int32_t error) {
   const char *text;
 
-  switch (error) {
+  switch(error) {
   case ERROR_NOT_PAIR:
     text = "parse error (no = found)";
     break;
@@ -290,16 +308,17 @@ char** ConfigParser::split_string(const char *str, uint32_t *count) {
   uint32_t num = 1;
   *count = 0;
   while (*at != '\0') {
-    if (*at == '\\' && *(at + 1) == ',') {
+    if (*at == '\\' && *(at+1) == ',') {
       // ignore that one
       *at++;
-    } else if (*at == ',') {
+    }
+    else if (*at == ',') {
       num++;
     }
     *at++;
   }
 
-  char **result = (char**) malloc(num * sizeof(char*));
+  char **result = (char **)malloc(num*sizeof(char *));
   if (!result) {
     return NULL;
   }
@@ -307,22 +326,23 @@ char** ConfigParser::split_string(const char *str, uint32_t *count) {
   *count = num;
   num = 0;
   while (num < *count) {
-    if (*at == '\\' && *(at + 1) == ',') {
+    if (*at == '\\' && *(at+1) == ',') {
       // ignore that one
       *at++;
-    } else if (*at == ',' || *at == '\0') {
-      result[num] = (char*) malloc((at - str) + 1);
+    }
+    else if (*at == ',' || *at == '\0') {
+      result[num] = (char *)malloc((at-str)+1);
       if (!result[num]) {
-        while (--num) {
-          free(result[num]);
-        }
-        free(result);
-        return NULL;
+  while (--num) {
+    free(result[num]);
+  }
+  free(result);
+  return NULL;
       }
-      strncpy(result[num], str, (at - str));
-      result[num][at - str] = '\0';
+      strncpy(result[num], str, (at-str));
+      result[num][at-str] = '\0';
       num++;
-      str = at + 1;
+      str = at+1;
     }
     if (*at == '\0') {
       break;

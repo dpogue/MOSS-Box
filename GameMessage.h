@@ -62,7 +62,7 @@ public:
    * This class copies the buffer passed in.
    */
   GamePingMessage(const uint8_t *msg_buf, size_t len) :
-      GameMessage(kGame2Cli_PingReply) {
+      GameMessage(Game2Cli_PingReply) {
     m_buf = new uint8_t[len];
     m_buflen = len;
     memcpy(m_buf, msg_buf, len);
@@ -121,7 +121,7 @@ protected:
   kinum_t m_ki;
 
   GameJoinRequest(uint32_t reqid, uint32_t serverid, const uint8_t *uuid, kinum_t ki) :
-      GameMessage(kCli2Game_JoinAgeRequest), m_reqid(reqid), m_serverid(serverid), m_ki(ki) {
+      GameMessage(Cli2Game_JoinAgeRequest), m_reqid(reqid), m_serverid(serverid), m_ki(ki) {
     memcpy(m_uuid, uuid, UUID_RAW_LEN);
   }
 
@@ -134,7 +134,7 @@ public:
 class GameJoinReply: public GameMessage {
 public:
   GameJoinReply(uint32_t reqid, status_code_t result) :
-      GameMessage(kGame2Cli_JoinAgeReply), m_reqid(reqid), m_result(result) {
+      GameMessage(Game2Cli_JoinAgeReply), m_reqid(reqid), m_result(result) {
   }
   virtual ~GameJoinReply() {
     if (m_buf)
@@ -262,14 +262,14 @@ protected:
   uint16_t m_subtype;
 
   PropagateBufferMessage(uint16_t subtype, const uint8_t *buf, size_t len, bool become_owner) :
-      SharedGameMessage(kCli2Game_PropagateBuffer, buf, len, become_owner), m_subtype(subtype) {
+      SharedGameMessage(Cli2Game_PropagateBuffer, buf, len, become_owner), m_subtype(subtype) {
   }
   /*
    * Functions for making new messages server-side
    */
   // constructor
   PropagateBufferMessage() :
-      SharedGameMessage(kGame2Cli_PropagateBuffer) {
+      SharedGameMessage(Game2Cli_PropagateBuffer), m_subtype(0) {
   }
   // this returns the offset given a set of flags
   static uint32_t body_offset(uint32_t flags);
@@ -343,7 +343,7 @@ protected:
    */
   // for subclasses
   GameMgrMessage(uint32_t msgtype, uint32_t reqid, uint32_t gameid) :
-      SharedGameMessage(kGame2Cli_GameMgrMsg), m_msgtype(msgtype), m_reqid(reqid), m_gameid(gameid) {
+      SharedGameMessage(Game2Cli_GameMgrMsg), m_msgtype(msgtype), m_reqid(reqid), m_gameid(gameid) {
   }
   static const uint32_t header_len = 22;
   // this fills in the common header in the message's buffer
@@ -370,6 +370,19 @@ public:
 };
 
 class PlNetMsgMembersMsg: public PropagateBufferMessage {
+  enum ClientGuidFlags_e { // c.f. CWE plClientGuid.h
+    AccountUUID    = 1 << 0,
+    PlayerID       = 1 << 1,
+    TempPlayerID   = 1 << 2,
+    CCRLevel       = 1 << 3,
+    ProtectedLogin = 1 << 4,
+    BuildType      = 1 << 5,
+    PlayerName     = 1 << 6,
+    SrcAddr        = 1 << 7,
+    SrcPort        = 1 << 8,
+    Reserved       = 1 << 9,
+    ClientKey      = 1 << 10
+  };
 public:
   PlNetMsgMembersMsg(kinum_t requester_ki);
 #ifndef STANDALONE
@@ -381,17 +394,6 @@ public:
   // finalize() also sets the NetMsg header timestamp
   void finalize(bool list_or_update);
 protected:
-  //static const int32_t kAccountUUID = 0x0001;
-  static const int32_t kPlayerID = 0x0002;
-  //static const int32_t kTempPlayerID = 0x0004;
-  static const int32_t kCCRLevel = 0x0008;
-  //static const int32_t kProtectedLogin = 0x0010;
-  //static const int32_t kBuildType = 0x0020;
-  static const int32_t kPlayerName = 0x0040;
-  //static const int32_t kSrcAddr = 0x0080;
-  //static const int32_t kSrcPort = 0x0100;
-  //static const int32_t kReserved = 0x0200;
-  //static const int32_t kClientKey = 0x0400;
   struct info {
     kinum_t ki;
     UruString *name;
@@ -562,7 +564,9 @@ public:
 class GameMgr_Heek_Lights_Message: public GameMgrMessage {
 public:
   typedef enum {
-    On = 0, Off = 1, Flash = 2
+    On = 0,
+    Off = 1,
+    Flash = 2
   } type_t;
   GameMgr_Heek_Lights_Message(uint32_t gameid, uint32_t light, type_t type);
 };

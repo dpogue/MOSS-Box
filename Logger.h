@@ -34,6 +34,7 @@
 //#include <stdio.h>
 //
 //#include <stdarg.h> /* or varargs.h if no stdarg.h */
+//#include <string>
 //#include <pthread.h>
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
@@ -68,7 +69,7 @@ public:
     return (level >= m_log_level);
   }
   static level_t str_to_level(const char *name);
-  static const char* level_to_str(level_t level);
+  static const char* level_c_str(level_t level);
 
   /*
    * If the filename specified in the constructor cannot be opened for
@@ -119,29 +120,62 @@ private:
  * logging. The fmt argument should end in a newline unless you are planning
  * to use log_raw to append one later.
  */
-inline void log_err(Logger *logger, const char *fmt, ...) {
-  va_list ap;
-
-  va_start(ap, fmt);
-  if (logger) {
-    FILE *f = logger->get_lock(Logger::LOG_ERR);
-    if (f) {
-      fprintf(f, "%s", logger->get_prefix(Logger::LOG_ERR));
-      vfprintf(f, fmt, ap);
-      fflush(f);
-      logger->release_lock();
-    } else {
-      vfprintf(stderr, fmt, ap);
-      fflush (stderr);
-    }
-  } else {
-    vfprintf(stderr, fmt, ap);
-    fflush (stderr);
-  }
-  va_end(ap);
-}
 
 #ifdef __GNUC__
+
+/*
+ * definitions for enhanced log messages which include method name and line number
+ */
+
+#define __METHOD_NAME__ (methodName(__PRETTY_FUNCTION__))
+#define LOGGER_WHERE __METHOD_NAME__, __LINE__
+
+#define log_info(logger, ...) log_at(Logger::LOG_INFO, logger, __VA_ARGS__)
+#define log_warn(logger, ...) log_at_where(Logger::LOG_WARN, logger, LOGGER_WHERE, __VA_ARGS__)
+#define log_net(logger, ...) log_at_where(Logger::LOG_NET, logger, LOGGER_WHERE, __VA_ARGS__)
+#define log_msgs(logger, ...) log_at_where(Logger::LOG_MSGS, logger, LOGGER_WHERE, __VA_ARGS__)
+/**
+ * log_debug() is special cased here because many times setting up parameters to the debug
+ *   logger are computationally expensive.
+ *
+ * Wrap the entire invocation to log_at() inside a conditional block to only incur those
+ *   costs when we actually would log.
+ */
+#define log_debug(logger, ...) { \
+              if (logger && logger->would_log_at(Logger::LOG_DEBUG)) \
+                  log_at_where(Logger::LOG_DEBUG, logger, LOGGER_WHERE, __VA_ARGS__); \
+           }
+
+#else /* Non GCC */
+
+#define log_info(logger, ...) log_at(Logger::LOG_INFO, logger, __VA_ARGS__)
+#define log_warn(logger, ...) log_at(Logger::LOG_WARN, logger, __VA_ARGS__)
+#define log_net(logger, ...) log_at(Logger::LOG_NET, logger, __VA_ARGS__)
+#define log_msgs(logger, ...) log_at(Logger::LOG_MSGS, logger, __VA_ARGS__)
+
+#define log_debug(logger, ...) { \
+    if (logger && logger->would_log_at(Logger::LOG_DEBUG)) \
+        log_at(Logger::LOG_DEBUG, logger, __VA_ARGS__) \
+ }
+
+#endif
+
+#ifdef LOGGER_DEBUG
+/*
+ * If LOGGER_DEBUG is defined, move log_*() functions into public functions
+ * in Logger.cc rather than inline functions here.
+ */
+
+extern void log_err(Logger *logger, const char *fmt, ...);
+extern std::string methodName(const char *prettyFuncNameChars);
+extern void log_at(Logger::level_t level, Logger *logger, const char *fmt, ...);
+extern void log_at_where(Logger::level_t level, Logger *logger, std::string method, int32_t lineno, const char *fmt, ...);
+extern void log_raw(Logger::level_t level, Logger *logger, const char *fmt, ...);
+
+#else
+
+#ifdef __GNUC__
+
 /**
  * This adds the ability to display a method name and source file line number
  * as a prefix to log messages.
@@ -163,7 +197,7 @@ inline void log_err(Logger *logger, const char *fmt, ...) {
  *  Example:
  *
  *    global scope function:
- *      __PRETTY_FUNCTION__ = "int main()"
+ *      __PRETTY_FUNCTION__ = "int32_t main()"
  *      methodName(__PRETTY_FUNCTION__) = "main()"
  *
  *    class method:
@@ -174,47 +208,53 @@ inline void log_err(Logger *logger, const char *fmt, ...) {
 
 inline std::string methodName(const char *prettyFuncNameChars)
 {
-	std::string prettyFuncName(prettyFuncNameChars);
+  std::string prettyFuncName(prettyFuncNameChars);
 
-	size_t end = prettyFuncName.length() - 1;
+  size_t end = prettyFuncName.length() - 1;
 
-	if (prettyFuncName[end] == ')') {
-		uint_t lvl = 1;
-		while (lvl > 0 && end >= 0) {
-			end -= 1;
-			if (prettyFuncName[end] == ')')
-				lvl += 1;
-			else if (prettyFuncName[end] == '(')
-				lvl -= 1;
-		}
-	}
-	size_t begin = prettyFuncName.substr(0, end).rfind(" ") + 1;
+  if (prettyFuncName[end] == ')') {
+    uint32_t lvl = 1;
+    while (lvl > 0 && end >= 0) {
+      end -= 1;
+      if (prettyFuncName[end] == ')')
+        lvl += 1;
+      else if (prettyFuncName[end] == '(')
+        lvl -= 1;
+    }
+  }
+  size_t begin = prettyFuncName.substr(0, end).rfind(" ") + 1;
 
-	return prettyFuncName.substr(begin, end-begin) + "()";
+  return prettyFuncName.substr(begin, end-begin) + "()";
 }
-
-#define __METHOD_NAME__ methodName(__PRETTY_FUNCTION__)
-#define LOGGER_WHERE __METHOD_NAME__, __LINE__
-
-#define log_info(logger, ...) log_at(Logger::LOG_INFO, logger, __VA_ARGS__)
-#define log_warn(logger, ...) log_at_where(Logger::LOG_WARN, logger, LOGGER_WHERE, __VA_ARGS__)
-#define log_net(logger, ...) log_at_where(Logger::LOG_NET, logger, LOGGER_WHERE, __VA_ARGS__)
-#define log_debug(logger, ...) log_at_where(Logger::LOG_DEBUG, logger, LOGGER_WHERE, __VA_ARGS__)
-#define log_msgs(logger, ...) log_at_where(Logger::LOG_MSGS, logger, LOGGER_WHERE, __VA_ARGS__)
-
-#else /* Non GCC */
-
-#define log_info(logger, ...) log_at(Logger::LOG_INFO, logger, __VA_ARGS__)
-#define log_warn(logger, ...) log_at(Logger::LOG_WARN, logger, __VA_ARGS__)
-#define log_net(logger, ...) log_at(Logger::LOG_NET, logger, __VA_ARGS__)
-#define log_debug(logger, ...) log_at(Logger::LOG_DEBUG, logger, __VA_ARGS__)
-#define log_msgs(logger, ...) log_at(Logger::LOG_MSGS, logger, __VA_ARGS__)
-
 #endif
+
+inline void log_err(Logger *logger, const char *fmt, ...) {
+  va_list ap;
+
+  va_start(ap, fmt);
+  if (logger) {
+    FILE *f = logger->get_lock(Logger::LOG_ERR);
+    if (f) {
+      fprintf(f, "%s", logger->get_prefix(Logger::LOG_ERR));
+      vfprintf(f, fmt, ap);
+      fflush(f);
+      logger->release_lock();
+    }
+    else {
+      vfprintf(stderr, fmt, ap);
+      fflush(stderr);
+    }
+  }
+  else {
+    vfprintf(stderr, fmt, ap);
+    fflush(stderr);
+  }
+  va_end(ap);
+}
 
 
 inline void log_at(Logger::level_t level, Logger *logger,
-		   const char *fmt, ...) {
+       const char *fmt, ...) {
   va_list ap;
 
   if (logger) {
@@ -231,14 +271,14 @@ inline void log_at(Logger::level_t level, Logger *logger,
 }
 
 inline void log_at_where(Logger::level_t level, Logger *logger,
-		   std::string methodName, int lineno, const char *fmt, ...) {
+       std::string method, int32_t lineno, const char *fmt, ...) {
   va_list ap;
 
   if (logger) {
     va_start(ap, fmt);
     FILE *f = logger->get_lock(level);
     if (f) {
-      fprintf(f, "%s%s#%d ", logger->get_prefix(level), methodName.c_str(), lineno);
+      fprintf(f, "%s%s#%d ", logger->get_prefix(level), method.c_str(), lineno);
       vfprintf(f, fmt, ap);
       fflush(f);
       logger->release_lock();
@@ -248,7 +288,7 @@ inline void log_at_where(Logger::level_t level, Logger *logger,
 }
 
 inline void log_raw(Logger::level_t level, Logger *logger,
-		    const char *fmt, ...) {
+        const char *fmt, ...) {
   va_list ap;
 
   if (logger) {
@@ -262,5 +302,6 @@ inline void log_raw(Logger::level_t level, Logger *logger,
     va_end(ap);
   }
 }
+#endif /* not defined(LOGGER_DEBUG) */
 
 #endif /* _LOGGER_H_ */

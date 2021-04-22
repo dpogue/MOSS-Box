@@ -134,22 +134,15 @@ Logger::level_t Logger::str_to_level(const char *name) {
   return NONE;
 }
 
-const char* Logger::level_to_str(Logger::level_t level) {
+const char* Logger::level_c_str(Logger::level_t level) {
   switch (level) {
-  case LOG_MSGS:
-    return "MSGS";
-  case LOG_DEBUG:
-    return "DEBUG";
-  case LOG_NET:
-    return "NET";
-  case LOG_WARN:
-    return "WARN";
-  case LOG_INFO:
-    return "INFO";
-  case LOG_ERR:
-    return "ERR";
-  default:
-    return "NONE";
+  case LOG_MSGS:    return "MSGS";
+  case LOG_DEBUG:   return "DEBUG";
+  case LOG_NET:     return "NET";
+  case LOG_WARN:    return "WARN";
+  case LOG_INFO:    return "INFO";
+  case LOG_ERR:     return "ERR";
+  default:          return "NONE";
   }
 }
 
@@ -164,26 +157,13 @@ FILE* Logger::get_lock(Logger::level_t level) {
 const char* Logger::get_prefix(Logger::level_t level) {
   const char *lstr = "  UNK";
   switch (level) {
-  case LOG_MSGS:
-    lstr = " MSGS";
-    break;
-  case LOG_DEBUG:
-    lstr = "DEBUG";
-    break;
-  case LOG_NET:
-    lstr = "  NET";
-    break;
-  case LOG_WARN:
-    lstr = " WARN";
-    break;
-  case LOG_INFO:
-    lstr = " INFO";
-    break;
-  case LOG_ERR:
-    lstr = "  ERR";
-    break;
-  default:
-    lstr = "  UNK";
+  case LOG_MSGS:    lstr = " MSGS";   break;
+  case LOG_DEBUG:   lstr = "DEBUG";   break;
+  case LOG_NET:     lstr = "  NET";   break;
+  case LOG_WARN:    lstr = " WARN";   break;
+  case LOG_INFO:    lstr = " INFO";   break;
+  case LOG_ERR:     lstr = "  ERR";   break;
+  default:          lstr = "  UNK";
   }
   if (!m_log_prefix) {
     // return a static string
@@ -261,3 +241,143 @@ void Logger::dump_contents(level_t level, const uint8_t *buf, size_t len) {
     release_lock();
   }
 }
+
+#ifdef LOGGER_DEBUG
+/*
+ * If LOGGER_DEBUG is defined, move the definition of log_*() functions
+ * from "inline" functions in Logger.h to standard functions here.
+ */
+
+/*
+ * Note that these functions use a mutex to protect against concurrent
+ * logging. The fmt argument should end in a newline unless you are planning
+ * to use log_raw to append one later.
+ */
+void log_err(Logger *logger, const char *fmt, ...) {
+  va_list ap;
+
+  va_start(ap, fmt);
+  if (logger) {
+    FILE *f = logger->get_lock(Logger::LOG_ERR);
+    if (f) {
+      fprintf(f, "%s", logger->get_prefix(Logger::LOG_ERR));
+      vfprintf(f, fmt, ap);
+      fflush(f);
+      logger->release_lock();
+    }
+    else {
+      vfprintf(stderr, fmt, ap);
+      fflush(stderr);
+    }
+  }
+  else {
+    vfprintf(stderr, fmt, ap);
+    fflush(stderr);
+  }
+  va_end(ap);
+}
+
+#ifdef __GNUC__
+/**
+ * This adds the ability to display a method name and source file line number
+ * as a prefix to log messages.
+ *
+ *  GCC __PRETTY_FUNCTION__ is a synthetic variable (not macro definition!)
+ *  that is created whenever it is referenced inside a function or method.
+ *  
+ *  It takes the format (type)[Class::]methodname(type, type...)
+ *  
+ *  Since types are not simple names, but may themselves be templates, classes,
+ *  structs, etc, they can be quite lengthy. On the logger output I only wanted
+ *  the name/line number as a prefix to help locate the source of a log message.
+ *  So I need to remove all the type descriptions without pruning away any of the
+ *  class and/or method names.
+ *  
+ *  The search for '(' and ')' locate the anchor points in the string.
+ *  The final result of methodName() is a string like "Class::methodname()"
+ *
+ *  Example:
+ *
+ *    global scope function:
+ *      __PRETTY_FUNCTION__ = "int32_t main()"
+ *      methodName(__PRETTY_FUNCTION__) = "main()"
+ *
+ *    class method:
+ *      __PRETTY_FUNCTION__ = "void Foo::show(std::__cxx11::string)"
+ *      methodName(__PRETTY_FUNCTION__) = "Foo::show()"
+ *  
+ */
+
+std::string methodName(const char *prettyFuncNameChars)
+{
+  std::string prettyFuncName(prettyFuncNameChars);
+
+  size_t end = prettyFuncName.length() - 1;
+
+  if (prettyFuncName[end] == ')') {
+    uint32_t lvl = 1;
+    while (lvl > 0 && end >= 0) {
+      end -= 1;
+      if (prettyFuncName[end] == ')')
+        lvl += 1;
+      else if (prettyFuncName[end] == '(')
+        lvl -= 1;
+    }
+  }
+  size_t begin = prettyFuncName.substr(0, end).rfind(" ") + 1;
+
+  return prettyFuncName.substr(begin, end-begin) + "()";
+}
+#endif /* __GNUC__ */
+
+void log_at(Logger::level_t level, Logger *logger,
+       const char *fmt, ...) {
+  va_list ap;
+
+  if (logger) {
+    va_start(ap, fmt);
+    FILE *f = logger->get_lock(level);
+    if (f) {
+      fprintf(f, "%s", logger->get_prefix(level));
+      vfprintf(f, fmt, ap);
+      fflush(f);
+      logger->release_lock();
+    }
+    va_end(ap);
+  }
+}
+
+void log_at_where(Logger::level_t level, Logger *logger,
+      std::string method, int32_t lineno, const char *fmt, ...) {
+  va_list ap;
+
+  if (logger) {
+    va_start(ap, fmt);
+    FILE *f = logger->get_lock(level);
+    if (f) {
+      fprintf(f, "%s%s#%d ", logger->get_prefix(level), method.c_str(), lineno);
+      vfprintf(f, fmt, ap);
+      fflush(f);
+      logger->release_lock();
+    }
+    va_end(ap);
+  }
+}
+
+void log_raw(Logger::level_t level, Logger *logger,
+        const char *fmt, ...) {
+  va_list ap;
+
+  if (logger) {
+    va_start(ap, fmt);
+    FILE *f = logger->get_lock(level);
+    if (f) {
+      vfprintf(f, fmt, ap);
+      fflush(f);
+      logger->release_lock();
+    }
+    va_end(ap);
+  }
+}
+
+#endif /* LOGGER_DEBUG */

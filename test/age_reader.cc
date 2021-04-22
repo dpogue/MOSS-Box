@@ -74,9 +74,9 @@ int main(int argc, char *argv[]) {
 class AgeDescWrapper : public AgeDesc {
 public:
   std::vector<Page*> & pages() { return m_pages; }
-  u_int start_date_time() { return m_start_date_time; }
+  uint32_t start_date_time() { return m_start_date_time; }
   float daylen() { return m_daylen; }
-  u_int capacity() { return m_capacity; }
+  uint32_t capacity() { return m_capacity; }
   int seq_prefix() { return m_seq_prefix; }
   int release() { return m_release; }
 };

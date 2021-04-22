@@ -1,22 +1,22 @@
 /* -*- c++ -*- */
 
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 /*
  * This class is used by FileServerMessage and AuthServerFileMessage to
@@ -46,24 +46,22 @@
 //#include "protocol.h"
 //
 //#include "Logger.h"
+
 #ifndef _FILE_TRANSACTION_H_
 #define _FILE_TRANSACTION_H_
 
 class FileTransaction {
 public:
-  FileTransaction(uint32_t request_id, Logger *logger, bool is_manifest, bool is_auth);
+  FileTransaction(uint32_t request_id, Logger *logger,
+      bool is_manifest, bool is_auth);
   virtual ~FileTransaction();
 
   // returns non-zero if the file does not exist or is unreadable
   int32_t init(const char *dirname, char *fname);
 
-  uint32_t request_id() const {
-    return m_id;
-  }
+  uint32_t request_id() const { return m_id; }
   size_t file_len() const;
-  status_code_t status() const {
-    return m_status;
-  }
+  status_code_t status() const { return m_status; }
 
   // tells the FileTransaction that the current chunk was acked; returns
   // nonzero for a read error
@@ -82,7 +80,8 @@ public:
   // returns how many bytes from byte_ct were left over, -1 for an error
   uint32_t iovecs_written_bytes(uint32_t byte_ct, uint32_t start_at, bool *chunk_done);
   // returns how many bytes were filled into the buffer, -1 for an error
-  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t *start_at, bool *chunk_done);
+  uint32_t fill_buffer(uint8_t *buffer, size_t len, uint32_t *start_at,
+        bool *chunk_done);
 
 protected:
   Logger *m_log;

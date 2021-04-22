@@ -18,13 +18,8 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * NetworkMessage is essentially an abstract class (even though it could be
- * instantiated). All network messages that could be put on MessageQueues
- * must inherit from NetworkMessage. A small set of common methods are
- * required for the queue to be able to treat all message types the same.
- * As a very basic example (and as messages that belong to all four front-end
- * server types), the "negotiation" and "nonce" messages are implemented here.
+/** \file
+ * <b>Generic Message Object for Network Messages</b>.
  */
 
 //#include <stdlib.h>
@@ -35,26 +30,39 @@
 #ifndef _NETWORK_MESSAGE_H_
 #define _NETWORK_MESSAGE_H_
 
+/**
+ * NetworkMessage is essentially an abstract class for network messages (even though it could be
+ * instantiated). All network messages that could be put on a MessageQueue
+ * must inherit from NetworkMessage. A small set of common methods are
+ * required for the queue to be able to treat all message types the same.
+ * As a very basic example (and as messages that belong to all four front-end
+ * server types), the "negotiation" and "nonce" messages are implemented here.
+ * This class should be subclassed by message category. It represents the
+ * basic API.
+ */
 class NetworkMessage {
 public:
-  /*
-   * This class should be subclassed by message category. It represents the
-   * basic API.
-   */
-
-  /*
+  /**
    * Messages read from the network implement this to create them. Resulting
    * instances do not typically "own" the buffer so they don't free it.
+   *
+   * @param buf Currently received message bytes
+   * @param len Length of \c buf
+   * @return Pointer to constructed message if buffer contained enough data
+   *         to construct a message. \c NULL if message in buffer is still incomplete.
+   * @exception overlong_message
    */
-  // throws overlong_message
   static NetworkMessage* make_if_enough(const uint8_t *buf, size_t len) {
     return NULL;
   }
 
-  /*
-   * Messages read from the network should be checked for useability (e.g.
-   * if the message is too short, we don't want to read off the end).
+  /**
+   * Messages read from the network should be checked for usability
+   *  (e.g.if the message is too short, we don't want to read off the end).
+   *
    * XXX correctness check as well later?
+   *
+   * @return True if sanity check of message passes.
    */
   virtual bool check_useable() const {
     return false;
@@ -84,7 +92,7 @@ public:
   /*
    * Some messages are refcounted. By default a message is not refcounted; the
    * functions below make the default behavior as if there is no refcounting
-   * at all. If a mesage *is* refcounted, this add_ref() and del_ref() need
+   * at all. If a message *is* refcounted, this add_ref() and del_ref() need
    * to be overridden. When a message is sent from a MessageQueue, the queue
    * calls del_ref() and deletes the message if the value returned is < 1.
    */

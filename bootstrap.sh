@@ -1,3 +1,6 @@
 #!/bin/sh
 
-aclocal -I aclocal && autoconf && autoheader && libtoolize --force && automake -a --foreign
+# glibtoolize if present, else, libtoolize
+glibtoolize --version 2> /dev/null | grep GNU > /dev/null && mylibtoolize=glibtoolize || mylibtoolize=libtoolize
+
+${ACLOCAL-aclocal} -I aclocal && ${AUTOCONF-autoconf} && ${AUTOHEADER-autoheader} && ${LIBTOOLIZE-$mylibtoolize} --force && ${AUTOMAKE-automake} -a --foreign

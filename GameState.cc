@@ -1,20 +1,20 @@
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -75,23 +75,29 @@
  * GameMgr game types
  */
 // Heek: 9d83c2e2-7835-4477-9aaa-22254c59a753
-static const uint8_t Heek_UUID[] = { 0xe2, 0xc2, 0x83, 0x9d, 0x35, 0x78, 0x77, 0x44, 0x9a, 0xaa, 0x22, 0x25, 0x4c, 0x59, 0xa7,
-    0x53 };
+static const uint8_t Heek_UUID[] = { 0xe2, 0xc2, 0x83, 0x9d, 0x35, 0x78,
+            0x77, 0x44, 0x9a, 0xaa,
+            0x22, 0x25, 0x4c, 0x59, 0xa7, 0x53 };
 // BlueSpiral: 5ff98165-913e-4fd1-a2c2-9c7f31be2cc8
-static const uint8_t BlueSpiral_UUID[] = { 0x65, 0x81, 0xf9, 0x5f, 0x3e, 0x91, 0xd1, 0x4f, 0xa2, 0xc2, 0x9c, 0x7f, 0x31, 0xbe,
-    0x2c, 0xc8 };
+static const uint8_t BlueSpiral_UUID[] = { 0x65, 0x81, 0xf9, 0x5f, 0x3e, 0x91,
+            0xd1, 0x4f, 0xa2, 0xc2,
+            0x9c, 0x7f, 0x31, 0xbe, 0x2c, 0xc8 };
 // VarSync (quab): 475c2e9b-a245-4106-a047-9b25d41ff333
-static const uint8_t VarSync_UUID[] = { 0x9b, 0x2e, 0x5c, 0x47, 0x45, 0xa2, 0x06, 0x41, 0xa0, 0x47, 0x9b, 0x25, 0xd4, 0x1f, 0xf3,
-    0x33 };
+static const uint8_t VarSync_UUID[] = { 0x9b, 0x2e, 0x5c, 0x47, 0x45, 0xa2,
+               0x06, 0x41, 0xa0, 0x47,
+               0x9b, 0x25, 0xd4, 0x1f, 0xf3, 0x33 };
 // Marker: 000b2c39-0319-4be1-b06c-7a105b160fcf
-static const uint8_t Marker_UUID[] = { 0x39, 0x2c, 0x0b, 0x00, 0x19, 0x03, 0xe1, 0x4b, 0xb0, 0x6c, 0x7a, 0x10, 0x5b, 0x16, 0x0f,
-    0xcf };
+static const uint8_t Marker_UUID[] = { 0x39, 0x2c, 0x0b, 0x00, 0x19, 0x03,
+              0xe1, 0x4b, 0xb0, 0x6c,
+              0x7a, 0x10, 0x5b, 0x16, 0x0f, 0xcf };
 // ClimbingWall: 6224cdf4-3556-4740-b7cd-d637562d07be
-static const uint8_t ClimbingWall_UUID[] = { 0xf4, 0xcd, 0x24, 0x62, 0x56, 0x35, 0x40, 0x47, 0xb7, 0xcd, 0xd6, 0x37, 0x56, 0x2d,
-    0x07, 0xbe };
+static const uint8_t ClimbingWall_UUID[] = { 0xf4, 0xcd, 0x24, 0x62, 0x56,
+              0x35, 0x40, 0x47, 0xb7, 0xcd, 0xd6,
+              0x37, 0x56, 0x2d, 0x07, 0xbe };
 // TicTacToe: a7236529-11d8-4758-9368-59cb43445a83
-static const uint8_t TicTacToe_UUID[] = { 0x29, 0x65, 0x23, 0xa7, 0xd8, 0x11, 0x58, 0x47, 0x93, 0x68, 0x59, 0xcb, 0x43, 0x44,
-    0x5a, 0x83 };
+static const uint8_t TicTacToe_UUID[] = { 0x29, 0x65, 0x23, 0xa7, 0xd8, 0x11,
+           0x58, 0x47, 0x93, 0x68,
+           0x59, 0xcb, 0x43, 0x44, 0x5a, 0x83 };
 
 GameState::~GameState() {
   // Note, be careful with the locks: if there are any pending ClearLockTimers
@@ -116,7 +122,8 @@ GameState::~GameState() {
   for (g_iter = m_age_games.begin(); g_iter != m_age_games.end(); g_iter++) {
     delete *g_iter;
   }
-  for (g_iter = m_marker_games.begin(); g_iter != m_marker_games.end(); g_iter++) {
+  for (g_iter = m_marker_games.begin(); g_iter != m_marker_games.end();
+       g_iter++) {
     delete *g_iter;
   }
 }
@@ -310,11 +317,10 @@ static bool passthrough_handler(PropagateBufferMessage *msg, GameState *state, G
  */
 static propagate_handler ph_no_handler = { msg_not_handled, msg_not_handled, bad_handler };
 static propagate_handler ph_ignore_it = { msg_is_handled, check_useable_none, ignore_handler };
-static propagate_handler ph_passthrough = {
 // XXX check_useable_none works okay for messages the server simply copies
 // to other clients and doesn't look at, but the server *should* validate
 // them to protect clients against a misbehaving one
-    msg_is_handled, check_useable_none, passthrough_handler };
+static propagate_handler ph_passthrough = { msg_is_handled, check_useable_none, passthrough_handler };
 
 /*
  * Message-specific handlers
@@ -359,7 +365,7 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
 #ifdef STANDALONE
       // just send everything that hasn't got a client ID in the key (gets
       // around clone ordering, Yeesha avatar, firefly clones, etc. issues)
-      if (key.m_flags & 0x01) {
+      if (key.m_contents & PlKey::HasCloneIDs) {
   continue;
       }
 #else
@@ -373,7 +379,7 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
         } else {
           uint32_t clone_len = read32(sdl_buf, 0);
           uint8_t is_player = sdl_buf[4];
-          if (is_player && key.m_clientid == conn->kinum()) {
+          if (is_player && key.m_cloneplayerid == conn->kinum()) {
             // the client loads the clone before asking for the age state,
             // so don't send the player's own clone back
             continue;
@@ -385,7 +391,7 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
             if (*(key.m_name) == "Quab") {
               is_player = 1;
             }
-            PlNetMsgLoadClone *load_msg = new PlNetMsgLoadClone(sdl_buf + 5, clone_len, key, key.m_clientid, true,
+            PlNetMsgLoadClone *load_msg = new PlNetMsgLoadClone(sdl_buf + 5, clone_len, key, key.m_cloneplayerid, true,
                 is_player);
             conn->enqueue(load_msg);
             state_count++;
@@ -436,7 +442,7 @@ static bool state_request_handler(PropagateBufferMessage *msg, GameState *state,
     for (iter = state->sdl_begin(); iter != state->sdl_end(); iter++) {
       SDLState *sdl = *iter;
       for (uint32_t i = 0; i < top; i++) {
-        if (sdl->key().m_pageid == pageids[i]) {
+        if (sdl->key().m_locsequencenumber == pageids[i]) {
           conn->enqueue(new PlNetMsgSDLState(sdl, true));
           state_count++;
         }
@@ -615,8 +621,8 @@ static bool sdl_handler(PropagateBufferMessage *msg, GameState *state, GameServe
     if (log && log->would_log_at(Logger::LOG_MSGS)) {
       char tmpstr[25];
       tmpstr[0] = '\0';
-      if (sdl->key().m_flags & 0x01) {
-        snprintf(tmpstr, 25, "(%u:%u)", sdl->key().m_clientid, sdl->key().m_index);
+      if (sdl->key().m_contents & PlKey::HasCloneIDs) {
+        snprintf(tmpstr, 25, "(%u:%u)", sdl->key().m_cloneplayerid, sdl->key().m_cloneid);
       }
       log_msgs(log, "plNetMsgSDLState%s %s %s%s (kinum=%u)\n", bcast ? "BCast" : "", sdl->get_desc()->name(),
           sdl->key().m_name ? sdl->key().m_name->c_str() : "(noname)", tmpstr, ki);
@@ -806,7 +812,7 @@ static bool load_clone_handler(PropagateBufferMessage *msg, GameState *state, Ga
     conn->set_state(GameServer::HAVE_CLONE);
   }
 
-  // now write the clone contents to the SDL's CREATABLE
+  // now write the clone contents to the SDL's Creatable
   log_msgs(log, "plNetMsgLoadClone (kinum=%u)\n", msg->kinum());
   sdl->expand();
   sdl->vars()[0]->m_value = new SDLDesc::Variable::data_t[1];
@@ -1170,14 +1176,14 @@ bool VarSyncGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, 
   }
   // send all the vars
   for (uint32_t idx = 0; idx < m_vars.size(); idx++) {
-    GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(m_gameid, idx + 1, m_vars[idx].name,
-        m_vars[idx].val);
+    GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(
+        m_gameid, idx + 1, m_vars[idx].name, m_vars[idx].val);
     server->send_to_ki(player, vmsg);
     if (vmsg->del_ref() < 1) {
       delete vmsg; // wasn't queued
     }
   }
-  GameMgr_Simple_Message *smsg = new GameMgr_Simple_Message(m_gameid, kVarSyncAllVarsSent);
+  GameMgr_Simple_Message *smsg = new GameMgr_Simple_Message(m_gameid, Srv2Cli_VarSync_AllVarsSent);
   server->send_to_ki(player, smsg);
   if (smsg->del_ref() < 1) {
     delete smsg; // wasn't queued
@@ -1199,7 +1205,8 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
   const uint8_t *buf = msg->buffer();
   uint32_t off = msg->body_data();
   switch (msg->msgtype()) {
-  case kVarSyncNumericVarCreate:
+
+  case Cli2Srv_VarSync_CreateNumericVar:
     if (msg->message_len() < off + 520) {
       throw truncated_message("VarSync NumericVarCreate too short");
     } else {
@@ -1212,8 +1219,8 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
           // hmm...
           log_warn(log, "VarSync NumericVarCreate request for existing "
               "name %s (kinum=%u)\n", varname.c_str(), player);
-          GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(m_gameid, idx + 1,
-              m_vars[idx].name, m_vars[idx].val);
+          GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(
+              m_gameid, idx + 1, m_vars[idx].name, m_vars[idx].val);
           if (!server->send_to_ki(player, vmsg)) {
             // wow, if we get here we don't even know about the owner!
             log_err(log, "Whoa! Got a message from a VarSync game owner who "
@@ -1232,8 +1239,8 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
       m_vars.push_back(newvar);
       log_msgs(log, "VarSync NumericVarCreate -> var %s (kinum=%u)\n", newvar.name.c_str(), player);
       // and tell everyone about it
-      GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(m_gameid, m_vars.size(),
-          newvar.name, newvar.val);
+      GameMgr_VarSync_VarCreated_Message *vmsg = new GameMgr_VarSync_VarCreated_Message(
+          m_gameid, m_vars.size(), newvar.name, newvar.val);
       send_to_all(vmsg, server);
       if (vmsg->del_ref() < 1) {
         // shouldn't happen (zero players)
@@ -1241,7 +1248,8 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
       }
     }
     return true;
-  case kVarSyncNumericVarChange:
+
+  case Cli2Srv_VarSync_SetNumericVar:
     if (msg->message_len() < off + 12) {
       throw truncated_message("VarSync NumericVarChange too short");
     } else {
@@ -1251,17 +1259,17 @@ bool VarSyncGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer
         m_vars[idx - 1].val = read_double(buf, off);
         log_msgs(log, "VarSync NumericVarChange var %u (kinum=%u)\n", idx, player);
       } else {
-        log_warn(log, "Received VarSync change message for unknown "
-            "index %u (kinum=%u)\n", idx, player);
+        log_warn(log, "Received VarSync change message for unknown index %u (kinum=%u)\n", idx, player);
       }
     }
     // since, of course, Cyan didn't make
     // NumericVarChanged == NumericVarChange, we have to twiddle the
     // buffer, but after that we can redistribute this one, at least
     msg->make_own_copy();
-    msg->clobber_msgtype(kVarSyncNumericVarChanged);
+    msg->clobber_msgtype(Srv2Cli_VarSync_NumericVarChanged);
     send_to_all(msg, server);
     return true;
+
   default:
     return false;
   }
@@ -1311,9 +1319,8 @@ bool MarkerGameMgr::initialize_game(const GameMgrMessage *msg, kinum_t player, G
 
   // now, if the template was blank, this is a new game being created
   if (m_template->strlen() == 0) {
-    MarkerGetGame_BackendMessage *get_game = new MarkerGetGame_BackendMessage(m_sid1, m_sid2, false, m_gameid, false,
-        (uint32_t) player, m_game_type,
-        NULL, m_game_name);
+    MarkerGetGame_BackendMessage *get_game = new MarkerGetGame_BackendMessage(
+        m_sid1, m_sid2, false, m_gameid, false, (uint32_t) player, m_game_type, NULL, m_game_name);
     server->send_to_vault(get_game);
     if (get_game->del_ref() < 1) {
       // shouldn't happen
@@ -1359,9 +1366,10 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
   // players? Blargh!
 
   switch (msg->msgtype()) {
-  case kMarkerMarkerAdd:
+
+  case Cli2Srv_Marker_AddMarker:
     if (msg->message_len() < off + 24 + 512 + 160) {
-      throw truncated_message("kMarkerMarkerAdd message too short");
+      throw truncated_message("Cli2Srv_Marker_AddMarker message too short");
     } else if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) added a marker before being told "
           "about the whole game!\n", player);
@@ -1377,8 +1385,8 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       UruString marker_name(buf + off, 512, false, true, false);
       off += 512;
       UruString age_name(buf + off, 160, false, true, false);
-      MarkerAdd_BackendMessage *add = new MarkerAdd_BackendMessage(m_sid1, m_sid2, false, m_gameid, m_private_id, x, y, z,
-          marker_name, age_name);
+      MarkerAdd_BackendMessage *add = new MarkerAdd_BackendMessage(
+          m_sid1, m_sid2, false, m_gameid, m_private_id, x, y, z, marker_name, age_name);
       server->send_to_vault(add);
       if (add->del_ref() < 1) {
         // shouldn't happen
@@ -1386,7 +1394,8 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerGameStart:
+
+  case Cli2Srv_Marker_StartGame:
     if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) started a game before being told "
           "about the whole game!\n", player);
@@ -1402,7 +1411,7 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       // the server replied with its start after replying to the adds.
       // MOSS does not hit the DB with a start, so it will reply to the
       // start immediately, likely before any adds.
-      GameMgr_Simple_Message *reply = new GameMgr_Simple_Message(m_gameid, kMarkerGameStarted);
+      GameMgr_Simple_Message *reply = new GameMgr_Simple_Message(m_gameid, Srv2Cli_Marker_GameStarted);
       server->send_to_ki(player, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1410,9 +1419,10 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerGamePause:
+
+  case Cli2Srv_Marker_PauseGame:
     // pause is sent when you click "Stop Game" AND when you click
-    // "Reset Game", before the kMarkerGameReset is sent
+    // "Reset Game", before the Srv2Cli_Marker_GameReset is sent
     if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) paused the game in unexpected "
           "state %d\n", player, m_state);
@@ -1428,7 +1438,7 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       m_elapsed_time += now.tv_usec / 1000;
 
       m_state = READY; // game is actually *stopped*
-      GameMgr_FourByte_Message *reply = new GameMgr_FourByte_Message(m_gameid, kMarkerGamePaused, m_elapsed_time);
+      GameMgr_FourByte_Message *reply = new GameMgr_FourByte_Message(m_gameid, Srv2Cli_Marker_GamePaused, m_elapsed_time);
       server->send_to_ki(player, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1436,7 +1446,8 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerGameResetReq:
+
+  case Cli2Srv_Marker_ResetGame:
     // reset means: clear the captured markers (and presumably reset the
     // elapsed time), but keep playing
     if (m_state < READY) {
@@ -1446,14 +1457,13 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       log_msgs(log, "MarkerGameResetReq (kinum=%u)\n", player);
       m_elapsed_time = 0;
       m_state = READY;
-      MarkerGameStop_BackendMessage *stop = new MarkerGameStop_BackendMessage(m_sid1, m_sid2, false, m_gameid,
-          m_private_id, player);
+      MarkerGameStop_BackendMessage *stop = new MarkerGameStop_BackendMessage(m_sid1, m_sid2, false, m_gameid, m_private_id, player);
       server->send_to_vault(stop);
       if (stop->del_ref() < 1) {
         // shouldn't happen
         delete stop;
       }
-      GameMgr_Simple_Message *reply = new GameMgr_Simple_Message(m_gameid, kMarkerGameReset);
+      GameMgr_Simple_Message *reply = new GameMgr_Simple_Message(m_gameid, Srv2Cli_Marker_GameReset);
       server->send_to_ki(player, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1461,9 +1471,10 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerGameNameChange:
+
+  case Cli2Srv_Marker_ChangeGameName:
     if (msg->message_len() < off + 512) {
-      throw truncated_message("kMarkerGameNameChange message too short");
+      throw truncated_message("Cli2Srv_Marker_ChangeGameName message too short");
     }
     if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) changed the game name in unexpected "
@@ -1472,8 +1483,8 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
     if (m_state > START) {
       log_msgs(log, "MarkerGameNameChange request (kinum=%u) -> backend\n", player);
       UruString new_name(buf + off, 512, false, true, false);
-      MarkerGameRename_BackendMessage *rename = new MarkerGameRename_BackendMessage(m_sid1, m_sid2, false, m_gameid,
-          m_private_id, new_name);
+      MarkerGameRename_BackendMessage *rename = new MarkerGameRename_BackendMessage(
+          m_sid1, m_sid2, false, m_gameid, m_private_id, new_name);
       server->send_to_vault(rename);
       if (rename->del_ref() < 1) {
         // shouldn't happen
@@ -1481,18 +1492,19 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerGameDelete:
+
+  case Cli2Srv_Marker_DeleteGame:
     if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) deleted the game in unexpected "
           "state %d\n", player, m_state);
     }
     if (m_state > START) {
       // marker games other than CGZ are deleted by the vault
-      bool isCGZ = (m_game_type == kMarkerGameCGZ);
+      bool isCGZ = (m_game_type == MarkerGameCGZ);
       log_msgs(log, "MarkerGameDelete request (kinum=%u) %s\n", player, isCGZ ? "-> backend" : "(not CGZ)");
       if (isCGZ) {
-        MarkerGameDelete_BackendMessage *del = new MarkerGameDelete_BackendMessage(m_sid1, m_sid2, false, m_gameid,
-            m_private_id);
+        MarkerGameDelete_BackendMessage *del = new MarkerGameDelete_BackendMessage(
+            m_sid1, m_sid2, false, m_gameid, m_private_id);
         server->send_to_vault(del);
         if (del->del_ref() < 1) {
           // shouldn't happen
@@ -1500,7 +1512,7 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
         }
       } else {
         // send success to the client
-        GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, kMarkerGameDeleted, true);
+        GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_GameDeleted, true);
         server->send_to_ki(m_owner, reply);
         if (reply->del_ref() < 1) {
           // shouldn't happen
@@ -1509,17 +1521,18 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerMarkerDelete:
+
+  case Cli2Srv_Marker_DeleteMarker:
     if (msg->message_len() < off + 4) {
-      throw truncated_message("kMarkerMarkerDelete message too short");
+      throw truncated_message("Cli2Srv_Marker_DeleteMarker message too short");
     }
     if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) deleting marker before being told "
           "about the whole game!\n", player);
     } else {
       log_msgs(log, "MarkerMarkerDelete (kinum=%u) -> backend\n", player);
-      MarkerGameDeleteMarker_BackendMessage *del = new MarkerGameDeleteMarker_BackendMessage(m_sid1, m_sid2, false,
-          m_gameid, m_private_id, read32(buf, off));
+      MarkerGameDeleteMarker_BackendMessage *del = new MarkerGameDeleteMarker_BackendMessage(
+          m_sid1, m_sid2, false, m_gameid, m_private_id, read32(buf, off));
       server->send_to_vault(del);
       if (del->del_ref() < 1) {
         // shouldn't happen
@@ -1527,9 +1540,10 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerMarkerNameChange:
+
+  case Cli2Srv_Marker_ChangeMarkerName:
     if (msg->message_len() < off + 4 + 512) {
-      throw truncated_message("kMarkerMarkerNameChange message too short");
+      throw truncated_message("Cli2Srv_Marker_ChangeMarkerName message too short");
     }
     if (m_state < READY) {
       log_warn(log, "Client (kinum=%u) changing marker before being told "
@@ -1537,8 +1551,8 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
     } else {
       log_msgs(log, "MarkerMarkerNameChange (kinum=%u) -> backend\n", player);
       UruString new_name(buf + off + 4, 512, false, true, false);
-      MarkerGameRenameMarker_BackendMessage *rename = new MarkerGameRenameMarker_BackendMessage(m_sid1, m_sid2, false,
-          m_gameid, m_private_id, read32(buf, off), new_name);
+      MarkerGameRenameMarker_BackendMessage *rename = new MarkerGameRenameMarker_BackendMessage(
+          m_sid1, m_sid2, false, m_gameid, m_private_id, read32(buf, off), new_name);
       server->send_to_vault(rename);
       if (rename->del_ref() < 1) {
         // shouldn't happen
@@ -1546,20 +1560,21 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
-  case kMarkerMarkerCapture:
+
+  case Cli2Srv_Marker_CaptureMarker:
     // XXX ideally we would track captured markers locally so repeated
     // captures (which do happen) don't all have to hit the backend and DB
     // (also track them when receiving MARKER_STATE from backend)
     if (msg->message_len() < off + 4) {
-      throw truncated_message("kMarkerMarkerCapture message too short");
+      throw truncated_message("Cli2Srv_Marker_CaptureMarker message too short");
     }
     if (m_state < READY) {
       log_warn(log, "Client kinum=%u captured marker before being told about "
           "the whole game!\n", player);
     } else {
       log_msgs(log, "MarkerMarkerCapture (kinum=%u) -> backend\n", player);
-      MarkerGameCaptureMarker_BackendMessage *capture = new MarkerGameCaptureMarker_BackendMessage(m_sid1, m_sid2, false,
-          m_gameid, m_private_id, player, read32(buf, off), 1);
+      MarkerGameCaptureMarker_BackendMessage *capture = new MarkerGameCaptureMarker_BackendMessage(
+          m_sid1, m_sid2, false, m_gameid, m_private_id, player, read32(buf, off), 1);
       server->send_to_vault(capture);
       if (capture->del_ref() < 1) {
         // shouldn't happen
@@ -1567,6 +1582,7 @@ bool MarkerGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer 
       }
     }
     break;
+
   default:
     return false;
   }
@@ -1579,6 +1595,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
 
   Logger *log = server->log();
   switch (in->type()) {
+
   case MARKER_NEWGAME | FROM_SERVER:
     if (m_state != START) {
       // whoa!
@@ -1593,15 +1610,14 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
           log_err(log, "MarkerMgr %u: Backend failed to create a new game!\n", m_gameid);
         } else {
           // client requested a non-existent game
-          log_warn(log, "MarkerMgr %u: Client (kinum=%u) requested a "
-              "non-existent game %s\n", m_gameid, m_owner, m_template->c_str());
+          log_warn(log, "MarkerMgr %u: Client (kinum=%u) requested a non-existent game %s\n",
+              m_gameid, m_owner, m_template->c_str());
         }
         m_state = DEAD;
       } else {
         // we're good, proceed!
         bool isnew = (m_template->strlen() == 0);
-        log_msgs(log, "MarkerMgr %u: MARKER_NEWGAME (%s) -> client kinum=%u\n", m_gameid, isnew ? "new" : "existing",
-            m_owner);
+        log_msgs(log, "MarkerMgr %u: MARKER_NEWGAME (%s) -> client kinum=%u\n", m_gameid, isnew ? "new" : "existing", m_owner);
         m_private_id = msg->localid();
         if ((m_game_name->strlen() != msg->name()->strlen()) || strcmp(m_game_name->c_str(), msg->name()->c_str())) {
           // keep our version of the name correct
@@ -1614,78 +1630,72 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
           // created a new game, tell the client all about it
           m_state = READY;
 
-          GameMgr_Marker_GameCreated_Message *created = new GameMgr_Marker_GameCreated_Message(m_gameid,
-              msg->template_uuid());
+          GameMgr_Marker_GameCreated_Message *created = new GameMgr_Marker_GameCreated_Message(m_gameid, msg->template_uuid());
           server->send_to_ki(m_owner, created);
           if (created->del_ref() < 1) {
             // shouldn't happen
             delete created;
           }
 #if 1
-          GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, kMarkerGameType, m_game_type);
+          GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_GameType, m_game_type);
           server->send_to_ki(m_owner, reply);
           if (reply->del_ref() < 1) {
             // shouldn't happen
             delete reply;
           }
 #endif
-          GameMgr_Marker_GameNameChanged_Message *name = new GameMgr_Marker_GameNameChanged_Message(m_gameid,
-              msg->name());
+          GameMgr_Marker_GameNameChanged_Message *name = new GameMgr_Marker_GameNameChanged_Message(m_gameid, msg->name());
           server->send_to_ki(m_owner, name);
           if (name->del_ref() < 1) {
             // shouldn't happen
             delete name;
           }
-#if 1
-          reply = new GameMgr_OneByte_Message(m_gameid, kMarkerTeamAssigned, 1);
+          reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_TeamAssigned, 1);
           server->send_to_ki(m_owner, reply);
           if (reply->del_ref() < 1) {
             // shouldn't happen
             delete reply;
           }
           send_join(m_owner, server);
-#endif
 
-          // send kMarkerTemplateCreated
-          // send kMarkerGameType
-          // send kMarkerGameNameChanged
-          // send kMarkerTeamAsssigned, kGameCliPlayerJoinedMsg,
-          //      kGameCliOwnerChangeMsg
+          // send Srv2Cli_Marker_TemplateCreated
+          // send Srv2Cli_Marker_GameType
+          // send Srv2Cli_Marker_GameNameChanged
+          // send MarkerTeamAsssigned, GameCliPlayerJoinedMsg,
+          //      Srv2Cli_Game_OwnerChange
         } else {
           // starting an existing game
           m_state = LIST_WAIT;
-#if 1
-          GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, kMarkerTeamAssigned, 1);
+          GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_TeamAssigned, 1);
           server->send_to_ki(m_owner, reply);
           if (reply->del_ref() < 1) {
             // shouldn't happen
             delete reply;
           }
           send_join(m_owner, server);
-          reply = new GameMgr_OneByte_Message(m_gameid, kMarkerGameType, m_game_type);
+          reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_GameType, m_game_type);
           server->send_to_ki(m_owner, reply);
           if (reply->del_ref() < 1) {
             // shouldn't happen
             delete reply;
           }
-#endif
 
-          // send kMarkerTeamAsssigned, kGameCliPlayerJoinedMsg,
-          //      kGameCliOwnerChangeMsg
-          // send kMarkerGameType
+          // send MarkerTeamAsssigned, GameCliPlayerJoinedMsg,
+          //      Srv2Cli_Game_OwnerChange
+          // send Srv2Cli_Marker_GameType
         }
 #if 0
   // I am trying sending the messages in a slightly different order,
   // hopefully it will work fine XXX
   GameMgr_OneByte_Message *reply
-    = new GameMgr_OneByte_Message(m_gameid, kMarkerGameType,
+    = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_GameType,
           m_game_type);
   server->send_to_ki(m_owner, reply);
   if (reply->del_ref() < 1) {
     // shouldn't happen
     delete reply;
   }
-  reply = new GameMgr_OneByte_Message(m_gameid, kMarkerTeamAssigned, 1);
+  reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_TeamAssigned, 1);
   server->send_to_ki(m_owner, reply);
   if (reply->del_ref() < 1) {
     // shouldn't happen
@@ -1696,6 +1706,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_DUMP | FROM_SERVER:
     if (m_state != LIST_WAIT) {
       log_err(log, "MarkerMgr %u: Backend sent a MARKER_DUMP while "
@@ -1726,6 +1737,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       m_state = READY;
     }
     break;
+
   case MARKER_STATE | FROM_SERVER:
     if (m_state < READY) {
       log_err(log, "MarkerMgr %u: Backend sent a MARKER_STATE while "
@@ -1749,6 +1761,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_ADD | FROM_SERVER:
     if (m_state == INIT || m_state == START || m_state == DEAD) {
       log_err(log, "MarkerMgr %u: Backend sent a MARKER_ADD while this "
@@ -1756,8 +1769,8 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
     } else {
       log_msgs(log, "MarkerMgr %u: MARKER_ADD -> client kinum=%u\n", m_gameid, m_owner);
       MarkerAdd_BackendMessage *msg = (MarkerAdd_BackendMessage*) in;
-      GameMgr_Marker_MarkerAdded_Message *reply = new GameMgr_Marker_MarkerAdded_Message(m_gameid, msg->data(),
-          msg->name(), msg->agename(), msg);
+      GameMgr_Marker_MarkerAdded_Message *reply = new GameMgr_Marker_MarkerAdded_Message(m_gameid, msg->data(), msg->name(),
+          msg->agename(), msg);
       server->send_to_ki(m_owner, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1765,6 +1778,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_GAME_RENAME | FROM_SERVER:
     if (m_state == INIT || m_state == START || m_state == DEAD) {
       log_err(log, "MarkerMgr %u: Backend sent a MARKER_GAME_RENAME while "
@@ -1780,6 +1794,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_GAME_DELETE | FROM_SERVER:
     if (m_state == INIT || m_state == START || m_state == DEAD) {
       log_err(log, "MarkerMgr %u: Backend sent a MARKER_GAME_DELETE while "
@@ -1788,7 +1803,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       log_msgs(log, "MarkerMgr %u: MARKER_GAME_DELETE -> client kinum=%u\n", m_gameid, m_owner);
       MarkerGameDelete_BackendMessage *msg = (MarkerGameDelete_BackendMessage*) in;
       bool success = (msg->localid() != 0);
-      GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, kMarkerGameDeleted, success);
+      GameMgr_OneByte_Message *reply = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Marker_GameDeleted, success);
       server->send_to_ki(m_owner, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1801,15 +1816,16 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_RENAME | FROM_SERVER:
     if (m_state == INIT || m_state == START || m_state == DEAD) {
-      log_err(log, "MarkerMgr %u: Backend sent a MARKER_RENAME while "
-          "this game (internal ID %u) was in state %d!\n", m_gameid, m_private_id, m_state);
+      log_err(log, "MarkerMgr %u: Backend sent a MARKER_RENAME while this game (internal ID %u) was in state %d!\n",
+          m_gameid, m_private_id, m_state);
     } else {
       log_msgs(log, "MarkerMgr %u: MARKER_RENAME -> client kinum=%u\n", m_gameid, m_owner);
       MarkerGameRenameMarker_BackendMessage *msg = (MarkerGameRenameMarker_BackendMessage*) in;
-      GameMgr_Marker_MarkerNameChanged_Message *reply = new GameMgr_Marker_MarkerNameChanged_Message(m_gameid,
-          msg->number(), msg->name());
+      GameMgr_Marker_MarkerNameChanged_Message *reply = new GameMgr_Marker_MarkerNameChanged_Message(
+          m_gameid, msg->number(), msg->name());
       server->send_to_ki(m_owner, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1817,15 +1833,16 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_DELETE | FROM_SERVER:
     if (m_state == INIT || m_state == START || m_state == DEAD) {
-      log_err(log, "MarkerMgr %u: Backend sent a MARKER_DELETE while "
-          "this game (internal ID %u) was in state %d!\n", m_gameid, m_private_id, m_state);
+      log_err(log, "MarkerMgr %u: Backend sent a MARKER_DELETE while this game (internal ID %u) was in state %d!\n",
+          m_gameid, m_private_id, m_state);
     } else {
       log_msgs(log, "MarkerMgr %u: MARKER_DELETE -> client kinum=%u\n", m_gameid, m_owner);
       MarkerGameDeleteMarker_BackendMessage *msg = (MarkerGameDeleteMarker_BackendMessage*) in;
-      GameMgr_FourByte_Message *reply = new GameMgr_FourByte_Message(m_gameid, kMarkerMarkerDeleted,
-          (uint32_t) msg->number());
+      GameMgr_FourByte_Message *reply = new GameMgr_FourByte_Message(
+          m_gameid, Srv2Cli_Marker_MarkerDeleted, (uint32_t) msg->number());
       server->send_to_ki(m_owner, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1833,6 +1850,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   case MARKER_CAPTURE | FROM_SERVER:
     if (m_state < READY) {
       log_err(log, "MarkerMgr %u: Backend sent a MARKER_CAPTURE while "
@@ -1840,8 +1858,8 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
     } else {
       log_msgs(log, "MarkerMgr %u: MARKER_CAPTURE -> client kinum=%u\n", m_gameid, m_owner);
       MarkerGameCaptureMarker_BackendMessage *msg = (MarkerGameCaptureMarker_BackendMessage*) in;
-      GameMgr_Marker_MarkerCaptured_Message *reply = new GameMgr_Marker_MarkerCaptured_Message(m_gameid, msg->number(),
-          msg->value());
+      GameMgr_Marker_MarkerCaptured_Message *reply = new GameMgr_Marker_MarkerCaptured_Message(
+          m_gameid, msg->number(), msg->value());
       server->send_to_ki(m_owner, reply);
       if (reply->del_ref() < 1) {
         // shouldn't happen
@@ -1849,6 +1867,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
       }
     }
     break;
+
   default:
     return false; // message not handled!
   }
@@ -1881,7 +1900,8 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
   const uint8_t *buf = msg->buffer();
   uint32_t off = msg->body_data();
   switch (msg->msgtype()) {
-  case kBlueSpiralGameStart:
+
+  case Cli2Srv_BlueSpiral_StartGame:
     if (player != m_owner) {
       log_warn(log, "Player %u sent a BlueSpiralGameStart but owner is %u\n", player, m_owner);
     } else {
@@ -1892,7 +1912,7 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
         if (m_timer) {
           m_timer->cancel();
         }
-        GameMgr_Simple_Message *stop = new GameMgr_Simple_Message(m_gameid, kBlueSpiralGameOver);
+        GameMgr_Simple_Message *stop = new GameMgr_Simple_Message(m_gameid, Srv2Cli_BlueSpiral_GameOver);
         send_to_all(stop, server);
         if (stop->del_ref() < 1) {
           delete stop; // shouldn't happen
@@ -1914,7 +1934,8 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
       start_game(server);
     }
     break;
-  case kBlueSpiralClothHit:
+
+  case Cli2Srv_BlueSpiral_HitCloth:
     if (msg->message_len() < off + 1) {
       throw truncated_message("BlueSpiral ClothHit too short");
     } else {
@@ -1925,8 +1946,7 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
         if (m_order[m_next] == buf[off]) {
           m_next++;
           // send succesful to owner
-          reply = new GameMgr_Simple_Message(m_gameid,
-          kBlueSpiralSuccessfulHit);
+          reply = new GameMgr_Simple_Message(m_gameid, Srv2Cli_BlueSpiral_SuccessfulHit);
           if (!server->send_to_ki(m_owner, reply)) {
             log_warn(log, "BlueSpiral tried to send message to owner "
                 "(kinum=%u) who isn't connected\n", m_owner);
@@ -1937,7 +1957,7 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
           if (m_next > 6) {
             // game is done!
             m_started = false;
-            reply = new GameMgr_Simple_Message(m_gameid, kBlueSpiralGameWon);
+            reply = new GameMgr_Simple_Message(m_gameid, Srv2Cli_BlueSpiral_GameWon);
             // looks like sent only to owner
             server->send_to_ki(m_owner, reply);
             if (reply->del_ref() < 1) {
@@ -1961,7 +1981,7 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
             m_timer = NULL;
           }
           // send game over to all
-          reply = new GameMgr_Simple_Message(m_gameid, kBlueSpiralGameOver);
+          reply = new GameMgr_Simple_Message(m_gameid, Srv2Cli_BlueSpiral_GameOver);
           send_to_all(reply, server);
           if (reply->del_ref() < 1) {
             delete reply; // shouldn't happen
@@ -1973,6 +1993,7 @@ bool BlueSpiralGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameSer
       }
     }
     break;
+
   default:
     return false; // message not handled!
   }
@@ -2008,7 +2029,8 @@ void BlueSpiralGameMgr::start_game(GameServer *server) {
     }
     m_order[i] = val;
   }
-  log_debug(server->log(), "BlueSpiral cloth order: %u %u %u %u %u %u %u\n", m_order[0], m_order[1], m_order[2], m_order[3],
+  log_debug(server->log(), "BlueSpiral cloth order: %u %u %u %u %u %u %u\n",
+      m_order[0], m_order[1], m_order[2], m_order[3],
       m_order[4], m_order[5], m_order[6]);
 
   // set a timer to rotate the door
@@ -2025,7 +2047,7 @@ void BlueSpiralGameMgr::start_game(GameServer *server) {
     // shouldn't happen!
     delete order;
   }
-  GameMgr_OneByte_Message *start = new GameMgr_OneByte_Message(m_gameid, kBlueSpiralGameStarted, 0);
+  GameMgr_OneByte_Message *start = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_BlueSpiral_GameStarted, 0);
   send_to_all(start, server);
   if (start->del_ref() < 1) {
     // shouldn't happen!
@@ -2039,7 +2061,7 @@ void BlueSpiralGameMgr::DoorTimer::callback() {
 
 void BlueSpiralGameMgr::handle_timeout(BlueSpiralGameMgr::DoorTimer::action_t why, GameServer *server) {
   if (why == DoorTimer::TurnDoor) {
-    GameMgr_OneByte_Message *start = new GameMgr_OneByte_Message(m_gameid, kBlueSpiralGameStarted, 1);
+    GameMgr_OneByte_Message *start = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_BlueSpiral_GameStarted, 1);
     server->send_to_ki(m_owner, start);
     if (start->del_ref() < 1) {
       delete start;
@@ -2059,7 +2081,7 @@ void BlueSpiralGameMgr::handle_timeout(BlueSpiralGameMgr::DoorTimer::action_t wh
     log_debug(server->log(), "BlueSpiral time over\n");
     m_started = false;
     m_timer = NULL;
-    GameMgr_Simple_Message *done = new GameMgr_Simple_Message(m_gameid, kBlueSpiralGameOver);
+    GameMgr_Simple_Message *done = new GameMgr_Simple_Message(m_gameid, Srv2Cli_BlueSpiral_GameOver);
     send_to_all(done, server);
     if (done->del_ref() < 1) {
       delete done;
@@ -2068,8 +2090,8 @@ void BlueSpiralGameMgr::handle_timeout(BlueSpiralGameMgr::DoorTimer::action_t wh
 }
 
 HeekGameMgr::HeekGameMgr(uint32_t id) :
-    GameMgr(id, Heek), m_state(IDLE), m_current_game(0), m_point_pool(0), m_sitting_ct(0), m_choice_ct(0), m_pending_winner_ct(
-        0), m_cleanup(-1), m_timer(NULL) {
+    GameMgr(id, Heek), m_state(IDLE), m_current_game(0), m_point_pool(0), m_sitting_ct(0), m_choice_ct(0),
+    m_pending_winner_ct(0), m_cleanup(-1), m_timer(NULL) {
   for (uint32_t i = 0; i < 5; i++) {
     m_sitting[i] = NULL;
   }
@@ -2104,19 +2126,18 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
   const uint8_t *buf = msg->buffer();
   uint32_t off = msg->body_data();
   switch (msg->msgtype()) {
-  case kHeekPlayGameReq:
+  case Cli2Srv_Heek_PlayGame:
     if (msg->message_len() < off + 5 + 512) {
       throw truncated_message("HeekPlayGameReq too short");
     } else if (m_sitting_ct >= 5) {
-      log_err(log, "Player kinum=%u is sitting at Heek but there are "
-          "already %u at the table!\n", player, m_sitting_ct);
+      log_err(log, "Player kinum=%u is sitting at Heek but there are already %u at the table!\n", player, m_sitting_ct);
       // I can't do much but ignore it
     } else {
       // position is 0-based
       uint8_t position = buf[off++];
       if (m_sitting[position]) {
-        log_err(log, "Player kinum=%u is sitting at Heek position %u but "
-            "%u is already there!\n", player, position, m_sitting[position]->m_ki);
+        log_err(log, "Player kinum=%u is sitting at Heek position %u but %u is already there!\n",
+            player, position, m_sitting[position]->m_ki);
       } else {
         log_msgs(log, "Player kinum=%u sat at Heek position %u, %u now sitting\n", player, position, m_sitting_ct + 1);
         int32_t score = read32(buf, off);
@@ -2132,8 +2153,8 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
           player, this_guy->m_current_game, m_current_game);
 #endif
             if (this_guy->m_current_game == m_current_game && this_guy->m_score != score) {
-              log_warn(log, "Player kinum=%u is playing this game but has "
-                  "claimed his score is now %d instead of %d!\n", player, score, this_guy->m_score);
+              log_warn(log, "Player kinum=%u is playing this game but has claimed his score is now %d instead of %d!\n",
+                  player, score, this_guy->m_score);
             } else {
               this_guy->m_score = score;
             }
@@ -2167,7 +2188,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
         // now, is this enabling the game?
         if (m_sitting_ct == 2 && m_state < COUNTDOWN) {
           // previously there was one player
-          GameMgr_OneByte_Message *enable = new GameMgr_OneByte_Message(m_gameid, kHeekInterfaceState, 1);
+          GameMgr_OneByte_Message *enable = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_InterfaceState, 1);
           for (uint32_t i = 0; i < 5; i++) {
             if (m_sitting[i] && m_sitting[i] != this_guy) {
               server->send_to_ki(m_sitting[i]->m_ki, enable);
@@ -2181,8 +2202,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
         // I hope I don't have to keep around the avatar name long term
         UruString avatar_name(buf + off, 512, false, true, false);
         // announce the new player
-        GameMgr_Heek_Welcome_Message *welcome = new GameMgr_Heek_Welcome_Message(m_gameid, this_guy->m_score, 1,
-            avatar_name);
+        GameMgr_Heek_Welcome_Message *welcome = new GameMgr_Heek_Welcome_Message(m_gameid, this_guy->m_score, 1, avatar_name);
         tell_all_sitters(welcome, server);
         if (welcome->del_ref() < 1) {
           delete welcome; // wasn't queued
@@ -2190,7 +2210,8 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
       }
     }
     return true;
-  case kHeekChoice:
+
+  case Cli2Srv_Heek_Choose:
     if (msg->message_len() < off + 1) {
       throw truncated_message("HeekChoice too short");
     } else if (m_sitting_ct < 2) {
@@ -2215,8 +2236,8 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
 #endif
         reset_choices();
         // tell owner about the countdown
-        GameMgr_OneByte_Message *countdown = new GameMgr_OneByte_Message(m_gameid, kHeekCountdownState,
-        kHeekCountdownStart);
+        GameMgr_OneByte_Message *countdown = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_CountdownState,
+            HeekCountdownStart);
         server->send_to_ki(m_owner, countdown);
         if (countdown->del_ref() < 1) {
           delete countdown; // wasn't queued
@@ -2231,7 +2252,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
 
       if (m_state == COUNTDOWN) {
         // finally we get to register the choice
-        if (buf[off] > kHeekGameChoiceScissors) {
+        if (buf[off] > HeekScissors) {
           log_warn(log, "Player (kinum=%u) sent invalid Heek choice %u\n", player, buf[off]);
         } else {
           int32_t idx = get_player_index(player);
@@ -2249,8 +2270,8 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
               m_sitting[idx]->m_score--;
               m_point_pool++;
               // and send the message
-              GameMgr_Heek_PointUpdate_Message *points = new GameMgr_Heek_PointUpdate_Message(m_gameid, false,
-                  m_sitting[idx]->m_score, 1);
+              GameMgr_Heek_PointUpdate_Message *points = new GameMgr_Heek_PointUpdate_Message(
+                  m_gameid, false, m_sitting[idx]->m_score, 1);
               server->send_to_ki(m_sitting[idx]->m_ki, points);
               if (points->del_ref() < 1) {
                 delete points; // wasn't queued
@@ -2293,15 +2314,15 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
       }
     }
     return true;
-  case kHeekAnimationFinished:
+
+  case Cli2Srv_Heek_SeqFinished:
     if (msg->message_len() < off + 1) {
       throw truncated_message("HeekAnimationFinished too short");
     } else if (player != m_owner) {
-      log_warn(log, "Player %u sent a HeekAnimationFinished message but "
-          "owner is %u\n", player, m_owner);
+      log_warn(log, "Player %u sent a HeekAnimationFinished message but owner is %u\n", player, m_owner);
     } else {
       log_msgs(log, "HeekAnimationFinished (kinum=%u)\n", player);
-      if (buf[off] == kHeekGameSeqCountdown) {
+      if (buf[off] == HeekCountdownSeq) {
         // the client sends this more than once so take care
         if (m_state == STOP_WAIT) {
 #ifdef DEBUG_HEEK_STATE
@@ -2318,7 +2339,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
     log_debug(log, "Heek: late Countdown animation finished message\n");
   }
 #endif
-      } else if (buf[off] == kHeekGameSeqChoiceAnim) {
+      } else if (buf[off] == HeekChoiceAnimSeq) {
 #ifdef DEBUG_HEEK_STATE
   log_debug(log, "Heek: Choice animation finished\n");
 #endif
@@ -2333,7 +2354,7 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
             handle_winner(server);
           }
         }
-      } else if (buf[off] == kHeekGameSeqGameWinAnim) {
+      } else if (buf[off] == HeekGameWinAnimSeq) {
 #ifdef DEBUG_HEEK_STATE
   log_debug(log, "Heek: Win animation finished\n");
 #endif
@@ -2351,44 +2372,45 @@ bool HeekGameMgr::got_message(GameMgrMessage *msg, kinum_t player, GameServer *s
       }
     }
     return true;
-  case kHeekGoodbyeReq:
-    {
-      int32_t idx = get_player_index(player);
-      if (idx < 0) {
-        log_warn(log, "Got Heek goodbye from non-sitting player kinum=%u\n", player);
-      } else {
-        log_msgs(log, "HeekGoodbye from kinum=%u\n", player);
-        // the score has already been decremented, if it's going to be
-        bool fake_win = false;
 
-        if (m_sitting_ct == 1) {
-          // this is the last person getting up; they "win"
+  case Cli2Srv_Heek_LeaveGame: {
+    int32_t idx = get_player_index(player);
+    if (idx < 0) {
+      log_warn(log, "Got Heek goodbye from non-sitting player kinum=%u\n", player);
+    } else {
+      log_msgs(log, "HeekGoodbye from kinum=%u\n", player);
+      // the score has already been decremented, if it's going to be
+      bool fake_win = false;
+
+      if (m_sitting_ct == 1) {
+        // this is the last person getting up; they "win"
 #ifdef DEBUG_HEEK_STATE
     log_debug(log, "Heek: last person leaving gets the %u point%s\n",
         m_point_pool, m_point_pool == 1 ? "" : "s");
 #endif
-          m_sitting[idx]->m_score += m_point_pool;
-          if (m_point_pool > 1) {
-            fake_win = true;
-          }
+        m_sitting[idx]->m_score += m_point_pool;
+        if (m_point_pool > 1) {
+          fake_win = true;
         }
-
-        GameMgr_Heek_PointUpdate_Message *points = new GameMgr_Heek_PointUpdate_Message(m_gameid, fake_win,
-            m_sitting[idx]->m_score, 1);
-        server->send_to_ki(player, points);
-        if (points->del_ref() < 1) {
-          delete points; // wasn't queued
-        }
-        GameMgr_Simple_Message *bye = new GameMgr_Simple_Message(m_gameid, kHeekGoodbye);
-        server->send_to_ki(player, bye);
-        if (bye->del_ref() < 1) {
-          delete bye; // wasn't queued
-        }
-
-        handle_departure(idx, server);
       }
+
+      GameMgr_Heek_PointUpdate_Message *points = new GameMgr_Heek_PointUpdate_Message(m_gameid, fake_win,
+          m_sitting[idx]->m_score, 1);
+      server->send_to_ki(player, points);
+      if (points->del_ref() < 1) {
+        delete points; // wasn't queued
+      }
+      GameMgr_Simple_Message *bye = new GameMgr_Simple_Message(m_gameid, Srv2Cli_Heek_Goodbye);
+      server->send_to_ki(player, bye);
+      if (bye->del_ref() < 1) {
+        delete bye; // wasn't queued
+      }
+
+      handle_departure(idx, server);
     }
+  }
     return true;
+
   default:
     return false;
   }
@@ -2401,7 +2423,7 @@ void HeekGameMgr::player_left(kinum_t player, GameServer *server) {
     // they're already gone
 
     // if the departing player was sitting at the table, the server has to
-    // send a kHeekDrop message to the owner for position idx, so that the
+    // send a Srv2Cli_Heek_Drop message to the owner for position idx, so that the
     // table state will be cleaned up
     if (player == m_owner) {
       // but this player *is* the owner, so keep track for the new owner
@@ -2431,7 +2453,7 @@ void HeekGameMgr::player_left(kinum_t player, GameServer *server) {
   }
 }
 
-// This strategy for handling kHeekDrop will fail if more than one player
+// This strategy for handling Srv2Cli_Heek_Drop will fail if more than one player
 // departs at once unless the owner is never one of them. If the owner is
 // already gone at the time the another player's departure is processed (and
 // the owner's departure is processed later), m_cleanup will be set to -1 and
@@ -2441,7 +2463,7 @@ void HeekGameMgr::player_left(kinum_t player, GameServer *server) {
 // proving aliveness. Not worth the trouble, really.
 void HeekGameMgr::send_drop(GameServer *server) {
   if (m_cleanup >= 0 && m_owner != 0) {
-    GameMgr_OneByte_Message *msg = new GameMgr_OneByte_Message(m_gameid, kHeekDrop, m_cleanup);
+    GameMgr_OneByte_Message *msg = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_Drop, m_cleanup);
     server->send_to_ki(m_owner, msg);
     if (msg->del_ref() < 1) {
       delete msg; // wasn't queued
@@ -2462,8 +2484,7 @@ void HeekGameMgr::countdown_done(GameServer *server, bool early) {
 #ifdef DEBUG_HEEK_STATE
   log_debug(server->log(), "Heek: sending countdown stop\n");
 #endif
-  GameMgr_OneByte_Message *stop = new GameMgr_OneByte_Message(m_gameid, kHeekCountdownState,
-  kHeekCountdownStop);
+  GameMgr_OneByte_Message *stop = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_CountdownState, HeekCountdownStop);
   server->send_to_ki(m_owner, stop);
   if (stop->del_ref() < 1) {
     delete stop; // wasn't queued
@@ -2481,7 +2502,7 @@ void HeekGameMgr::countdown_done(GameServer *server, bool early) {
 }
 
 void HeekGameMgr::handle_round(GameServer *server) {
-  GameMgr_OneByte_Message *state = new GameMgr_OneByte_Message(m_gameid, kHeekInterfaceState, 0);
+  GameMgr_OneByte_Message *state = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_InterfaceState, 0);
   // XXX we may have to only tell sitters who currently have
   // the interface enabled - if someone sat during this round
   // their interface is already disabled; find out whether the
@@ -2500,15 +2521,19 @@ void HeekGameMgr::handle_round(GameServer *server) {
   for (i = 0; i < 5; i++) {
     if (m_sitting[i]) {
       switch (m_sitting[i]->m_choice) {
-      case kHeekGameChoiceRock: /* 0 */
+
+      case HeekRock: /* 0 */
         rocks++;
         break;
-      case kHeekGameChoicePaper: /* 1 */
+
+      case HeekPaper: /* 1 */
         papers++;
         break;
-      case kHeekGameChoiceScissors: /* 2 */
+
+      case HeekScissors: /* 2 */
         scissors++;
         break;
+
       default:
         break;
       }
@@ -2533,18 +2558,22 @@ void HeekGameMgr::handle_round(GameServer *server) {
     for (i = 0; i < 5; i++) {
       if (m_sitting[i]) {
         switch (m_sitting[i]->m_choice) {
-        case kHeekGameChoiceRock:
+
+        case HeekRock:
           totals[i] = scissors - papers;
           max = MAX(max, totals[i]);
           break;
-        case kHeekGameChoicePaper:
+
+        case HeekPaper:
           totals[i] = rocks - scissors;
           max = MAX(max, totals[i]);
           break;
-        case kHeekGameChoiceScissors:
+
+        case HeekScissors:
           totals[i] = papers - rocks;
           max = MAX(max, totals[i]);
           break;
+
         default:
           totals[i] = -5;
         }
@@ -2554,8 +2583,7 @@ void HeekGameMgr::handle_round(GameServer *server) {
     GameMgr_Heek_WinLose_Message *winlose;
     for (i = 0; i < 5; i++) {
       if (m_sitting[i] && m_sitting[i]->m_choice >= 0) {
-        winlose = new GameMgr_Heek_WinLose_Message(m_gameid, (totals[i] > 0 && totals[i] == max),
-            m_sitting[i]->m_choice);
+        winlose = new GameMgr_Heek_WinLose_Message(m_gameid, (totals[i] > 0 && totals[i] == max), m_sitting[i]->m_choice);
         server->send_to_ki(m_sitting[i]->m_ki, winlose);
         if (winlose->del_ref() < 1) {
           delete winlose; // wasn't queued
@@ -2641,8 +2669,8 @@ void HeekGameMgr::handle_round(GameServer *server) {
         if (m_sitting[i] && m_sitting[i]->m_pending_winner) {
           // send a LightState message to flash both lights
           uint32_t light = 2 * (int32_t) m_sitting[i]->m_choice;
-          GameMgr_Heek_Lights_Message *lightmsg = new GameMgr_Heek_Lights_Message(m_gameid, light,
-              GameMgr_Heek_Lights_Message::Flash);
+          GameMgr_Heek_Lights_Message *lightmsg = new GameMgr_Heek_Lights_Message(
+              m_gameid, light, GameMgr_Heek_Lights_Message::Flash);
           server->send_to_ki(m_sitting[i]->m_ki, lightmsg);
           if (lightmsg->del_ref() < 1) {
             delete lightmsg; // wasn't queued
@@ -2691,15 +2719,14 @@ void HeekGameMgr::handle_winner(GameServer *server) {
     if (m_sitting[i]) {
       if (m_sitting[i]->m_pending_winner) {
         m_sitting[i]->m_pending_winner = false;
-        GameMgr_OneByte_Message *winmsg = new GameMgr_OneByte_Message(m_gameid, kHeekGameWin, m_sitting[i]->m_choice);
+        GameMgr_OneByte_Message *winmsg = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_GameWin, m_sitting[i]->m_choice);
         server->send_to_ki(m_owner, winmsg);
         if (winmsg->del_ref() < 1) {
           delete winmsg; // wasn't queued
         }
       }
       if (m_sitting[i]->m_current_game == m_current_game) {
-        GameMgr_Heek_PointUpdate_Message *update = new GameMgr_Heek_PointUpdate_Message(m_gameid, true,
-            m_sitting[i]->m_score, 1);
+        GameMgr_Heek_PointUpdate_Message *update = new GameMgr_Heek_PointUpdate_Message(m_gameid, true, m_sitting[i]->m_score, 1);
         server->send_to_ki(m_sitting[i]->m_ki, update);
         if (update->del_ref() < 1) {
           delete update; // wasn't queued
@@ -2726,14 +2753,13 @@ void HeekGameMgr::countdown_idle(GameServer *server) {
 #endif
   m_state = IN_GAME;
   // tell the owner about the idle state
-  GameMgr_OneByte_Message *msg = new GameMgr_OneByte_Message(m_gameid, kHeekCountdownState,
-  kHeekCountdownIdle);
+  GameMgr_OneByte_Message *msg = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_CountdownState, HeekCountdownIdle);
   server->send_to_ki(m_owner, msg);
   if (msg->del_ref() < 1) {
     delete msg; // wasn't queued
   }
   if (m_sitting_ct > 1) {
-    msg = new GameMgr_OneByte_Message(m_gameid, kHeekInterfaceState, 1);
+    msg = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_InterfaceState, 1);
     tell_all_sitters(msg, server);
     if (msg->del_ref() < 1) {
       delete msg; // wasn't queued
@@ -2771,7 +2797,7 @@ void HeekGameMgr::handle_departure(int32_t position, GameServer *server) {
   // disable the interface if necessary
   // (it's not enabled if state >= ANIM_WAIT)
   if (m_state < ANIM_WAIT) {
-    GameMgr_OneByte_Message *state = new GameMgr_OneByte_Message(m_gameid, kHeekInterfaceState, 0);
+    GameMgr_OneByte_Message *state = new GameMgr_OneByte_Message(m_gameid, Srv2Cli_Heek_InterfaceState, 0);
     // if there is only one at the table, the interface is already disabled
     if (m_sitting_ct < 2) {
     }
@@ -2958,18 +2984,13 @@ void GameState::player_left(kinum_t player) {
   }
 }
 
-const char* GameMgr::type_str(const game_type_t type) {
+const char* GameMgr::type_c_str(const game_type_t type) {
   switch (type) {
-  case VarSync:
-    return "VarSync";
-  case Marker:
-    return "Marker";
-  case BlueSpiral:
-    return "BlueSpiral";
-  case Heek:
-    return "Heek";
-  case Invalid:
-    return "Invalid";
+  case VarSync:     return "VarSync";
+  case Marker:      return "Marker";
+  case BlueSpiral:  return "BlueSpiral";
+  case Heek:        return "Heek";
+  case Invalid:     return "Invalid";
   default:
     return "Unknown";
   }
@@ -3011,12 +3032,12 @@ void GameMgr::send_setup_reply(const GameMgrMessage *msg, kinum_t player, GameSe
 }
 
 void GameMgr::send_join(kinum_t player, GameServer *server) {
-  GameMgr_FourByte_Message *msg = new GameMgr_FourByte_Message(m_gameid, kGameCliPlayerJoinedMsg, player);
+  GameMgr_FourByte_Message *msg = new GameMgr_FourByte_Message(m_gameid, Srv2Cli_Game_PlayerJoined, player);
   send_to_all(msg, server);
   if (msg->del_ref() < 1) {
     delete msg; // wasn't queued
   }
-  msg = new GameMgr_FourByte_Message(m_gameid, kGameCliOwnerChangeMsg, m_owner);
+  msg = new GameMgr_FourByte_Message(m_gameid, Srv2Cli_Game_OwnerChange, m_owner);
   server->send_to_ki(player, msg);
   if (msg->del_ref() < 1) {
     delete msg; // wasn't queued
@@ -3050,7 +3071,7 @@ void GameMgr::find_new_owner(GameServer *server) {
     m_owner = m_players.front();
     log_msgs(server->log(), "Announcing new owner kinum=%u for GameMgr %u\n", m_owner, m_gameid);
     // now announce the new owner
-    GameMgr_FourByte_Message *msg = new GameMgr_FourByte_Message(m_gameid, kGameCliOwnerChangeMsg, m_owner);
+    GameMgr_FourByte_Message *msg = new GameMgr_FourByte_Message(m_gameid, Srv2Cli_Game_OwnerChange, m_owner);
     send_to_all(msg, server);
     if (msg->del_ref() < 1) {
       delete msg;
