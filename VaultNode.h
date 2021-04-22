@@ -34,28 +34,31 @@
 #ifndef _VAULT_NODE_H_
 #define _VAULT_NODE_H_
 
+/** @defgroup Vault
+ * @{
+ */
 class VaultNode {
 public:
-  typedef enum {
-    InvalidNode = 0,
-    CCRNode = 0x1,
-    PlayerNode = 0x2,
-    AgeNode = 0x3,
-    FolderNode = 0x16,
-    PlayerInfoNode = 0x17,
-    SystemNode = 0x18,
-    ImageNode = 0x19,
-    TextNoteNode = 0x1a,
-    SDLNode = 0x1b,
-    AgeLinkNode = 0x1c,
-    ChronicleNode = 0x1d,
-    PlayerInfoListNode = 0x1e,
-    AgeInfoNode = 0x21,
-    AgeInfoListNode = 0x22,
-    MarkergameNode = 0x23
+  typedef enum vault_nodetype_e {
+    InvalidNode =         0,
+    CCRNode =             0x1,
+    PlayerNode =          0x2,
+    AgeNode =             0x3,
+    FolderNode =          0x16,
+    PlayerInfoNode =      0x17,
+    SystemNode =          0x18,
+    ImageNode =           0x19,
+    TextNoteNode =        0x1a,
+    SDLNode =             0x1b,
+    AgeLinkNode =         0x1c,
+    ChronicleNode =       0x1d,
+    PlayerInfoListNode =  0x1e,
+    AgeInfoNode =         0x21,
+    AgeInfoListNode =     0x22,
+    MarkergameNode =      0x23
   } vault_nodetype_t;
-  typedef enum {
-    INT, UINT, UUID, STRING, BLOB
+  typedef enum datatype_e {
+    Int, UInt, UUID, String, Blob
   } datatype_t;
   typedef struct {
     vault_bitfield_t bit;
@@ -149,4 +152,5 @@ protected:
   uint8_t m_header[12];
 };
 
+/** @} */
 #endif /* _VAULT_NODE_H_ */

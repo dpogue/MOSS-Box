@@ -1,5 +1,6 @@
 # before 9.1 you just built a module
 MODULES = moss_uuidgen
+PGXS = 1
 
 # 9.1 and later you build an extension
 EXTENSION = moss_uuidgen

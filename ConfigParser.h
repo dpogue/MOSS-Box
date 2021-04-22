@@ -1,22 +1,22 @@
 /* -*- c++ -*- */
 
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 /*
  * ConfigParser is a simple parser for simple name=value configuration files;
@@ -59,7 +59,7 @@ public:
    * is set to true. A return value < 0 means the file open failed.
    * Throws the parse_error exception.
    */
-  int32_t read_config(const char *filename, bool complain = false);
+  int32_t read_config(const char *filename, bool complain=false);
 
   /*
    * Constructor/destructor.
@@ -76,18 +76,19 @@ public:
 
 protected:
   typedef enum {
-    TYPE_INT, TYPE_BOOL, TYPE_CHARSTAR
+    TYPE_INT,
+    TYPE_BOOL,
+    TYPE_CHARSTAR
   } entry_type_t;
 
   class Entry {
   public:
-    Entry(entry_type_t the_type, const char *the_name, void *the_addr) :
-        m_type(the_type), m_addr(the_addr) {
+    Entry(entry_type_t the_type, const char *the_name, void *the_addr)
+      : m_type(the_type), m_addr(the_addr) {
       m_name = strdup(the_name);
     }
     ~Entry() {
-      if (m_name)
-        free(m_name);
+      if (m_name) free(m_name);
     }
 
     entry_type_t m_type;

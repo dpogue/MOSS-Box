@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 
 #ifdef HAVE_OPENSSL
@@ -60,8 +61,9 @@ void gen_uuid(uint8_t *buf, int32_t as_text) {
   }
 }
 
-int32_t uuid_string_to_bytes(uint8_t *buf, uint32_t buflen, const char *uuid_string, uint32_t uuid_string_len, int32_t have_dashes,
-    int32_t byteswap) {
+int32_t uuid_string_to_bytes(uint8_t *buf, uint32_t buflen,
+    const char *uuid_string, uint32_t uuid_string_len,
+    int32_t have_dashes, int32_t byteswap) {
   uint32_t i;
   uint8_t *bufp, upper, lower;
 
@@ -109,8 +111,9 @@ int32_t uuid_string_to_bytes(uint8_t *buf, uint32_t buflen, const char *uuid_str
   return 0;
 }
 
-int32_t uuid_bytes_to_string(uint8_t *buf, uint32_t buflen, const uint8_t *uuid_bytes, uint32_t uuid_bytes_len, int32_t want_dashes,
-    int32_t byteswap) {
+int32_t uuid_bytes_to_string(uint8_t *buf, uint32_t buflen,
+    const uint8_t *uuid_bytes, uint32_t uuid_bytes_len,
+    int32_t want_dashes, int32_t byteswap) {
   uint32_t i;
   uint8_t *bufp, upper, lower;
 
@@ -158,7 +161,7 @@ int32_t recursive_mkdir(const char *pathname, mode_t mode) {
   char *d;
   size_t len;
   struct stat b_stat;
-  
+
   if ((stat(pathname, &b_stat) == 0) && ((b_stat.st_mode & S_IFMT) == S_IFDIR)) {
     return 0;
   }
@@ -168,9 +171,9 @@ int32_t recursive_mkdir(const char *pathname, mode_t mode) {
     path[len - 1] = 0;
   }
 
-  for (p=path+1, d=p; *p; p++, d++) {
+  for (p = path + 1, d = p; *p; p++, d++) {
     if (*p == PATH_SEPARATOR[0]) {
-      while (*p && (*(p+1) == PATH_SEPARATOR[0]))
+      while (*p && (*(p + 1) == PATH_SEPARATOR[0]))
         p++;
       *d = '\0';
       if (mkdir(path, mode) == -1)
@@ -200,30 +203,30 @@ void do_random_seed() {
 void get_random_data(uint8_t *buf, uint32_t buflen) {
 #ifdef HAVE_OPENSSL
   /* XXX NOTE: see OpenSSL RAND_add and RAND_event man page when considering
-     Windows: we may need to manually seed the PRNG and use only
-     RAND_pseudo_bytes() instead of RAND_bytes(), in which case perhaps
-     using the non-SSL fallback here is good enough */
+   Windows: we may need to manually seed the PRNG and use only
+   RAND_pseudo_bytes() instead of RAND_bytes(), in which case perhaps
+   using the non-SSL fallback here is good enough */
   RAND_bytes(buf, buflen);
 #else
   /* XXX in the future decide if better random numbers must be used
-   XXX also, are random() and srandom() thread-safe?
-   XXX consider /dev/urandom instead (but not for Windows; look into
-   Windows API) */
+     XXX also, are random() and srandom() thread-safe?
+     XXX consider /dev/urandom instead (but not for Windows; look into
+         Windows API) */
   uint32_t bitsleft = 0;
   /* it is rather unclear whether or not, on a 64-bit machine, random()
-   returns 64-bit numbers; the man pages all say "long" implying yes, but
-   they also seem to say that the value returned is a 31-bit nonnegative
-   number implying it should be treated as a 32-bit number regardless */
+     returns 64-bit numbers; the man pages all say "long" implying yes, but
+     they also seem to say that the value returned is a 31-bit nonnegative
+     number implying it should be treated as a 32-bit number regardless */
   uint64_t bucket = 0;
   uint32_t i = 0;
   while (i < buflen) {
     uint64_t r = (random() & 0x7fffffff);
     bucket |= r << bitsleft;
     bitsleft += 31;
-    if (buflen - i < 4) {
+    if (buflen-i < 4) {
       uint32_t j;
-      for (j = 0; j < buflen - i; j++) {
-        buf[i + j] = (bucket >> (j * 8)) & 0xff;
+      for (j = 0; j < buflen-i; j++) {
+  buf[i+j] = (bucket >> (j*8)) & 0xff;
       }
       return;
     }
@@ -251,8 +254,8 @@ const char* resolve_hostname(const char *hostname, uint32_t *ipaddr) {
   if (err) {
     return gai_strerror(err);
   }
-  struct sockaddr_in *ai = (struct sockaddr_in *)addrs[0].ai_addr;
-  *ipaddr = (uint32_t)ai->sin_addr.s_addr;
+  struct sockaddr_in *ai = (struct sockaddr_in*) addrs[0].ai_addr;
+  *ipaddr = (uint32_t) ai->sin_addr.s_addr;
   freeaddrinfo(addrs);
   return NULL;
 #else
@@ -264,7 +267,36 @@ const char* resolve_hostname(const char *hostname, uint32_t *ipaddr) {
   if (!h_ent) {
     return hstrerror(h_errno);
   }
-  *ipaddr = *((uint32_t*) h_ent->h_addr);
+  *ipaddr = *((uint32_t *)h_ent->h_addr);
   return NULL;
 #endif /* HAVE_GETADDRINFO */
+}
+
+/**
+ * Marshall internet address (and port) to ascii
+ */
+uint32_t inaddr_c_str(char *buf, size_t buflen,
+    in_addr_t address, in_port_t port, in_port_t default_port) {
+  in_addr_t l_address = address;
+
+  if (!buf) {
+    return 1;
+  }
+
+  /*
+   * Only append port if non-zero and not default
+   */
+  if (!inet_ntop(AF_INET, &l_address, buf, buflen)) {
+    if (port && default_port && (port != default_port)) {
+      snprintf(buf, buflen, "0x%08x:%d", l_address, port);
+    } else {
+      snprintf(buf, buflen, "0x%08x", l_address);
+    }
+  } else if (port && (port != default_port)) {
+    char *c = buf;
+    while (c < buf + buflen && *c)
+      c++;
+    snprintf(c, buflen - (c - buf), ":%d", port);
+  }
+  return 0;
 }

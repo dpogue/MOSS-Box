@@ -77,10 +77,12 @@
 #include "GameHandler.h"
 
 GameServer::GameServer(const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, const uint8_t *uuid,
-    const char *filename, uint32_t connect_ipaddr, AgeDesc *age, std::list<SDLDesc*> &sdl) :
-    Server(server_dir, is_a_thread), m_vault_addr(vault_address), m_vault(NULL), m_timed_shutdown(false), m_shutdown_timer(
-        NULL), m_joiners(0), m_client_queue(NULL), m_fake_signal(0), m_filename(NULL), m_age(age), m_group_owner(0) {
+    const char *filename, in_addr_t connect_ipaddr, uint16_t connect_ipport, AgeDesc *age, std::list<SDLDesc*> &sdl) :
+      Server(server_dir, is_a_thread), m_vault_addr(vault_address), m_vault(NULL), m_timed_shutdown(false),
+      m_shutdown_timer(NULL), m_joiners(0), m_client_queue(NULL), m_fake_signal(0), m_filename(NULL),
+      m_age(age), m_group_owner(0) {
   m_ipaddr = connect_ipaddr;
+  m_ipport = connect_ipport;
   if (pthread_mutex_init(&m_client_queue_mutex, NULL)) {
     throw std::bad_alloc();
   }
@@ -143,26 +145,27 @@ int32_t GameServer::init() {
 
   // read in SDL, if present
   std::string sdldir = std::string(m_serv_dir) + PATH_SEPARATOR + "SDL" + PATH_SEPARATOR + m_filename;
+  log_msgs(m_log, "Looking for filesystem SDLDesc named \"%s\" in \"%s\"\n", m_filename, sdldir.c_str());
   int32_t ret = SDLDesc::parse_directory(m_log, m_agesdl, sdldir, false, false);
   if (ret > 0) {
     // try a single file
     std::string sdlfile = sdldir + ".sdl";
     std::ifstream file(sdlfile.c_str(), std::ios_base::in);
     if (file.fail()) {
-      log_debug(m_log, "No SDL found for age %s\n", m_filename);
+      log_msgs(m_log, "No SDLDesc found for age \"%s\"\n", m_filename);
       // this is not an error, some ages don't have SDL files
     } else {
       try {
         SDLDesc::parse_file(m_agesdl, file);
       } catch (const parse_error &e) {
-        log_err(m_log, "Parse error, line %u: %s\n", e.lineno(), e.what());
+        log_err(m_log, "SDLDesc Parse error, line %u: \"%s\"\n", e.lineno(), e.what());
         ret = -1;
       }
     }
   }
   if (ret < 0) {
     // forge on, but game mechanics will be broken
-    log_warn(m_log, "Error reading SDL for age %s\n", m_filename);
+    log_warn(m_log, "Error reading SDLDesc for age \"%s\"\n", m_filename);
   }
   if (m_agesdl.size() > 0) {
     // merge into allsdl list
@@ -172,9 +175,8 @@ int32_t GameServer::init() {
     for (iter = m_game_state.m_allsdl.begin(); iter != m_game_state.m_allsdl.end(); iter++) {
       const char *sdlname = (*iter)->name();
       if (!strcasecmp(sdlname, "physical") || !strcasecmp(sdlname, "avatar")
-          // "avatar" covers "avatarPhysical"
-          || !strcasecmp(sdlname, "Layer") || !strcasecmp(sdlname, "MorphSequence")
-          || !strcasecmp(sdlname, "clothing")) {
+      // "avatar" covers "avatarPhysical"
+          || !strcasecmp(sdlname, "Layer") || !strcasecmp(sdlname, "MorphSequence") || !strcasecmp(sdlname, "clothing")) {
         // go on
       } else {
         break;
@@ -183,37 +185,55 @@ int32_t GameServer::init() {
     std::list<SDLDesc*>::iterator here = iter;
     for (iter = m_agesdl.begin(); iter != m_agesdl.end(); iter++) {
       m_game_state.m_allsdl.insert(here, *iter);
+      SDLDesc *d = *iter;
+      log_debug(m_log, "Inserting saved SDLDesc %s-v%d into m_allsdl:\n\t%s\n",
+          d->name(),
+          d->version(),
+          d->str(",\n\t\t\t").c_str());
     }
   }
 
-  // read in stored SDL if present
+  // read in stored SDLstate if present
   std::string statefile = std::string(m_serv_dir) + PATH_SEPARATOR + "state" + PATH_SEPARATOR + m_filename + PATH_SEPARATOR
       + my_uuid + PATH_SEPARATOR + "agestate.moss";
   std::ifstream savefile(statefile.c_str(), std::ios_base::in);
   if (!savefile.fail()) {
-    log_debug(m_log, "Trying to read saved age state\n");
+    log_debug(m_log, "Trying to read saved \"%s\" age state from \"%s\"\n",
+        m_filename, statefile.c_str());
     if (!SDLState::load_file(savefile, m_game_state.m_sdl, m_game_state.m_allsdl, m_log)) {
-      log_warn(m_log, "Error while reading saved age state\n");
+      log_warn(m_log, "Error while reading saved \"%s\" age state\n", m_filename);
     }
   }
   // now, if there is an AgeSDLHook SDLDesc but no SDLState, make a default one
   std::list<SDLState*>::iterator iter;
   for (iter = m_game_state.m_sdl.begin(); iter != m_game_state.m_sdl.end(); iter++) {
     SDLState *s = *iter;
-    if (s->name_equals(m_filename) && s->key().m_name && *(s->key().m_name) == "AgeSDLHook") {
+    if (s->name_equals(m_filename)
+        && s->key().m_name
+        && *(s->key().m_name) == "AgeSDLHook") {
       break;
     }
   }
   if (iter == m_game_state.m_sdl.end()) {
     SDLDesc *d = SDLDesc::find_by_name(m_filename, m_game_state.m_allsdl);
     if (d) {
-      log_debug(m_log, "Setting up new (default) AgeSDLHook\n");
+      log_debug(m_log, "Setting up new (default) AgeSDLHook SDLDesc\n");
       SDLState *s = new SDLState(d);
       uint32_t pageid = ((m_age->seq_prefix() + 1) << 16) | 0x1F;
       s->invent_age_key(pageid);
       s->expand();
+      log_debug(m_log, "New AgeSDLHook State %s-v%d:\n\t%s\n",
+          s->get_desc()->name(),
+          s->get_desc()->version(),
+          s->str(",\n\t").c_str());
       m_game_state.m_sdl.push_front(s);
     }
+  } else {
+    SDLState *s = *iter;
+    log_debug(m_log, "Referencing existing AgeSDLHook state %s-v%d:\n\t%s\n",
+        s->get_desc()->name(),
+        s->get_desc()->version(),
+        s->str(",\n\t").c_str());
   }
   m_game_state.setup_filter();
 
@@ -233,21 +253,25 @@ int32_t GameServer::init() {
 }
 
 bool GameServer::shutdown(reason_t reason) {
-  log_info(m_log, "Shutdown started\n");
+  log_info(m_log, "Shutdown started, reason %s\n", reason_c_str(reason));
 
   char my_uuid[UUID_STR_LEN];
   format_uuid(m_age_uuid, my_uuid);
   std::string statefile = std::string(m_serv_dir) + PATH_SEPARATOR + "state" + PATH_SEPARATOR + m_filename + PATH_SEPARATOR
-      + my_uuid + PATH_SEPARATOR;
-  recursive_mkdir(statefile.c_str(), S_IRWXU | S_IRWXG);
-  statefile = statefile + "agestate.moss";
+      + my_uuid;
+  int32_t ret = recursive_mkdir(statefile.c_str(), S_IRWXU | S_IRWXG);
+  if (ret) {
+    log_warn(m_log, "Cannot make directory %s for age state file, err=%d %s\n", statefile.c_str(), ret, strerror(ret));
+  }
+  statefile = statefile + PATH_SEPARATOR + "agestate.moss";
+  log_msgs(m_log, "Trying to save SDLState to file %s\n", statefile.c_str());
   std::ofstream savefile(statefile.c_str(), std::ios_base::out | std::ios_base::trunc);
   if (savefile.fail()) {
-    log_warn(m_log, "Cannot open file %s to save age state\n", statefile.c_str());
+    log_warn(m_log, "Cannot open file %s to save SDLState, err=%d %s\n", statefile.c_str(), errno, strerror(errno));
   } else {
-    log_debug(m_log, "Trying to save age state\n");
+    log_debug(m_log, "Trying to save age state %s\n", statefile.c_str());
     if (!SDLState::save_file(savefile, m_game_state.m_sdl)) {
-      log_warn(m_log, "Error while saving age state\n");
+      log_warn(m_log, "Error while saving age state %s\n", statefile.c_str());
     }
   }
 
@@ -343,6 +367,8 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
     return backend_message(conn, (BackendMessage*) in);
   }
 
+  log_debug(m_log, "received GameMessage <0x%x>\"%s\"\n", in->type(), Cli2Game_e_c_str(in->type()));
+
   kinum_t player = ((GameConnection*) conn)->kinum();
   if (in->type() == -1) {
     // unrecognized message
@@ -355,7 +381,7 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
     if (m_log) {
       m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
     }
-  } else if (in->type() == kCli2Game_PropagateBuffer) {
+  } else if (in->type() == Cli2Game_PropagateBuffer) {
     PropagateBufferMessage *prop = (PropagateBufferMessage*) in;
     propagate_handler *handler = get_propagate_handler(prop->subtype());
     if (!handler->msg_handled(prop)) {
@@ -372,6 +398,9 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
       delete in;
       return PROTOCOL_ERROR;
     } else {
+      log_debug(m_log, "PropogateBufferMessage distributing <0x%x>\"%s\"\n", prop->subtype(),
+          plCreatableIndex_c_str(prop->subtype()));
+
       std::list<Connection*>::iterator c_iter;
       // normal message handling
       if (handler->handle_message(prop, &m_game_state, (GameConnection*) conn, m_log)) {
@@ -404,7 +433,7 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
             }
             prop->add_ref();
 #ifdef DO_PRIORITIES
-      // XXX we need to get the priority from handle_message, I guess
+            // XXX we need to get the priority from handle_message, I guess
 #endif
             c->enqueue(prop);
           }
@@ -414,117 +443,115 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
         // either message is distributed to a subset of people, or it's
         // special some other way
         switch (prop->subtype()) {
-        case plNetMsgMembersListReq:
-          {
-            ((GameConnection*) conn)->set_state(MEMBERS_REQUESTED);
-            PlNetMsgMembersMsg *list = new PlNetMsgMembersMsg(prop->kinum());
+        case plNetMsgMembersListReq: {
+          ((GameConnection*) conn)->set_state(MEMBERS_REQUESTED);
+          PlNetMsgMembersMsg *list = new PlNetMsgMembersMsg(prop->kinum());
 #ifndef STANDALONE
-            // walk list of connections and add them to the list
-            for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
-              Connection *c = *c_iter;
-              if (c != conn && c != m_vault && c != m_timers) {
-                GameConnection *gc = (GameConnection*) c;
-                if (gc->state() >= JOINED) {
-                  // note that if the state is JOINED and not HAVE_CLONE,
-                  // a "null" key will be sent (I think this must be right,
-                  // because during link-in a "null" key is sent in
-                  // NetMsgMemberUpdate and the real key shows up later in
-                  // LoadClone, and that LoadClone will be redistributed to
-                  // the incoming player when it arrives)
-                  // we have the separate HAVE_CLONE state just in case
-                  // that's wrong
-                  list->addMember(gc->kinum(), &(gc->player_name()), &(gc->plKey()), true);
-                }
+          // walk list of connections and add them to the list
+          for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
+            Connection *c = *c_iter;
+            if (c != conn && c != m_vault && c != m_timers) {
+              GameConnection *gc = (GameConnection*) c;
+              if (gc->state() >= JOINED) {
+                // note that if the state is JOINED and not HAVE_CLONE,
+                // a "null" key will be sent (I think this must be right,
+                // because during link-in a "null" key is sent in
+                // NetMsgMemberUpdate and the real key shows up later in
+                // LoadClone, and that LoadClone will be redistributed to
+                // the incoming player when it arrives)
+                // we have the separate HAVE_CLONE state just in case
+                // that's wrong
+                list->addMember(gc->kinum(), &(gc->player_name()), &(gc->plKey()), true);
               }
             }
-            list->finalize(true);
-#endif
-            conn->enqueue(list);
           }
+          list->finalize(true);
+#endif
+          conn->enqueue(list);
+        }
           break;
 #ifndef STANDALONE
         case plNetMsgGameMessageDirected:
         case plNetMsgVoice:
           // subset
-          {
-            MessageQueue::priority_t pri = MessageQueue::NORMAL;
-            if (prop->subtype() == plNetMsgVoice) {
-              pri = MessageQueue::VOICE;
-            }
-            bool someone_missing = false;
-            // note, this depends on check_usable to prevent running off
-            // the end of the buffer
-            uint32_t recip_offset = prop->body_offset();
-            const uint8_t *msg_buf = prop->buffer();
-            if (pri == MessageQueue::VOICE) {
-              recip_offset += read16(msg_buf, recip_offset + 2);
-              recip_offset += 4;
-            } else {
-              recip_offset += read32(msg_buf, recip_offset + 5);
-              recip_offset += 10;
-            }
-            uint32_t start_recips = recip_offset;
-            uint32_t recip_ct = msg_buf[recip_offset++];
-            // now we are at the recipients
+        {
+          MessageQueue::priority_t pri = MessageQueue::NORMAL;
+          if (prop->subtype() == plNetMsgVoice) {
+            pri = MessageQueue::VOICE;
+          }
+          bool someone_missing = false;
+          // note, this depends on check_usable to prevent running off
+          // the end of the buffer
+          uint32_t recip_offset = prop->body_offset();
+          const uint8_t *msg_buf = prop->buffer();
+          if (pri == MessageQueue::VOICE) {
+            recip_offset += read16(msg_buf, recip_offset + 2);
+            recip_offset += 4;
+          } else {
+            recip_offset += read32(msg_buf, recip_offset + 5);
+            recip_offset += 10;
+          }
+          uint32_t start_recips = recip_offset;
+          uint32_t recip_ct = msg_buf[recip_offset++];
+          // now we are at the recipients
 
-            bool did_timestamp = false;
-            for (uint32_t recip = 0; recip < recip_ct; recip++) {
-              kinum_t recip_ki = read32(msg_buf, recip_offset);
-              recip_offset += 4;
+          bool did_timestamp = false;
+          for (uint32_t recip = 0; recip < recip_ct; recip++) {
+            kinum_t recip_ki = read32(msg_buf, recip_offset);
+            recip_offset += 4;
 
-              // look for that recipient
-              for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
-                Connection *c = *c_iter;
-                if (c != conn && c != m_vault && c != m_timers) {
-                  GameConnection *gc = (GameConnection*) c;
-                  if (gc->kinum() == recip_ki) {
-                    // send to this one
-                    if (pri == MessageQueue::VOICE && (gc->state() < IN_GAME)) {
-                      // except let's reduce link-in bandwidth a bit here
-                      break;
-                    }
-                    // note we only exclude voice, let chat go through so
-                    // it will be seen later
-
-                    if (!did_timestamp) {
-                      prop->make_own_copy();
-                      prop->set_timestamp();
-                      did_timestamp = true;
-                    }
-                    prop->add_ref();
-                    c->enqueue(prop, pri);
+            // look for that recipient
+            for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
+              Connection *c = *c_iter;
+              if (c != conn && c != m_vault && c != m_timers) {
+                GameConnection *gc = (GameConnection*) c;
+                if (gc->kinum() == recip_ki) {
+                  // send to this one
+                  if (pri == MessageQueue::VOICE && (gc->state() < IN_GAME)) {
+                    // except let's reduce link-in bandwidth a bit here
                     break;
                   }
-                }
-              } // for
-              if (!someone_missing && c_iter == m_conns.end()) {
-                // recipient not present in the current age
-                someone_missing = true;
-              }
-            }
+                  // note we only exclude voice, let chat go through so
+                  // it will be seen later
 
-            if (someone_missing && pri != MessageQueue::VOICE) {
-              // Technically I believe that the message should only be
-              // forwarded if the interage flag is set, yet I know the
-              // UU servers forwarded all chat traffic regardless,
-              // and I suspect MOUL did as well.
-              // Probably it would be bad to forward a book-share message,
-              // but if I'm going to parse the message enough to check for
-              // that I can just parse the message to check for the interage
-              // flag. But a misbehaving client could set the interage flag
-              // anyway. So XXX to be proper, check for interage flag and
-              // that it's a pfKIMsg before forwarding to tracking.
-              if (1/*interage*/) {
-                // forward to tracking
-                if (!did_timestamp) {
-                  prop->make_own_copy();
+                  if (!did_timestamp) {
+                    prop->make_own_copy();
+                    prop->set_timestamp();
+                    did_timestamp = true;
+                  }
+                  prop->add_ref();
+                  c->enqueue(prop, pri);
+                  break;
                 }
-                TrackMsgForward_BackendMessage *fwd = new TrackMsgForward_BackendMessage(m_ipaddr, m_id, prop,
-                    start_recips);
-                m_vault->enqueue(fwd);
               }
+            } // for
+            if (!someone_missing && c_iter == m_conns.end()) {
+              // recipient not present in the current age
+              someone_missing = true;
             }
           }
+
+          if (someone_missing && pri != MessageQueue::VOICE) {
+            // Technically I believe that the message should only be
+            // forwarded if the interage flag is set, yet I know the
+            // UU servers forwarded all chat traffic regardless,
+            // and I suspect MOUL did as well.
+            // Probably it would be bad to forward a book-share message,
+            // but if I'm going to parse the message enough to check for
+            // that I can just parse the message to check for the interage
+            // flag. But a misbehaving client could set the interage flag
+            // anyway. So XXX to be proper, check for interage flag and
+            // that it's a pfKIMsg before forwarding to tracking.
+            if (1/*interage*/) {
+              // forward to tracking
+              if (!did_timestamp) {
+                prop->make_own_copy();
+              }
+              TrackMsgForward_BackendMessage *fwd = new TrackMsgForward_BackendMessage(m_ipaddr, m_id, prop, start_recips);
+              m_vault->enqueue(fwd);
+            }
+          }
+        }
           break;
 #endif /* !STANDALONE */
         }
@@ -537,7 +564,7 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
       }
       return NO_SHUTDOWN;
     }
-  } else if (in->type() == kCli2Game_GameMgrMsg) {
+  } else if (in->type() == Cli2Game_GameMgrMsg) {
     GameMgrMessage *mgr = (GameMgrMessage*) in;
     if (!mgr->check_useable()) {
       // protocol error
@@ -562,7 +589,7 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
         }
         // just drop it
       } else {
-        log_msgs(m_log, "GameMgr setup request for %s (kinum=%u)\n", GameMgr::type_str(obj->type()), player);
+        log_msgs(m_log, "GameMgr setup request for %s (kinum=%u)\n", GameMgr::type_c_str(obj->type()), player);
         if (need_new_id) {
           log_msgs(m_log, "Sending new GameID request to backend\n");
           TrackNextGameID_BackendMessage *id_req = new TrackNextGameID_BackendMessage(m_ipaddr, m_id, false, 1);
@@ -594,7 +621,7 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
         try {
           if (!obj->got_message(mgr, player, this)) {
             log_net(m_log, "Dropping unhandled GameMgr message type %u for %s "
-                "(kinum=%u)\n", mgr->msgtype(), GameMgr::type_str(obj->type()), player);
+                "(kinum=%u)\n", mgr->msgtype(), GameMgr::type_c_str(obj->type()), player);
             if (m_log) {
               m_log->dump_contents(Logger::LOG_NET, mgr->buffer(), mgr->message_len());
             }
@@ -617,11 +644,11 @@ Server::reason_t GameServer::message_read(Connection *conn, NetworkMessage *in) 
       delete in;
     }
     return NO_SHUTDOWN;
-  } else if (in->type() == kCli2Game_JoinAgeRequest) {
+  } else if (in->type() == Cli2Game_JoinAgeRequest) {
     log_net(m_log, "Unexpected late JoinAgeRequest on fd %d\n", conn->fd());
     // this deletes the message
     return handle_join_request(conn, in);
-  } else if (in->type() == kCli2Game_PingRequest) {
+  } else if (in->type() == Cli2Game_PingRequest) {
     conn->enqueue(in);
     // we do not want to delete the message, so skip the end
     return NO_SHUTDOWN;
@@ -637,8 +664,7 @@ Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *
 
   if (msg_type == -1) {
     // unrecognized message
-    log_err(m_log, "Unrecognized backend message received on "
-        "connection %d!\n", vault->fd());
+    log_err(m_log, "Unrecognized backend message received on connection %d!\n", vault->fd());
     if (m_log) {
       m_log->dump_contents(Logger::LOG_ERR, in->buffer(), in->message_len());
     }
@@ -663,140 +689,147 @@ Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *
 
   msg_type &= ~FROM_SERVER;
   switch (msg_type) {
-  case ADMIN_HELLO:
-    {
-      Hello_BackendMessage *msg = (Hello_BackendMessage*) in;
-      log_msgs(m_log, "Backend connection protocol version %u\n", msg->peer_info());
-      // no more required at this time (all speak version 0)
-    }
-    break;
-  case ADMIN_KILL_CLIENT:
-    {
-      KillClient_BackendMessage *msg = (KillClient_BackendMessage*) in;
-      if (msg->why() != KillClient_BackendMessage::AUTH_DISCONNECT) {
-        log_debug(m_log, "Backend sent ADMIN_KILL_CLIENT with reason %d\n", (int32_t )msg->why());
-        break;
-      }
-      kinum_t kill_this_un = msg->kinum();
-      std::list<Connection*>::iterator c_iter;
-      for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
-        Connection *c = *c_iter;
-        if (c != m_vault && c != m_timers) {
-          GameConnection *gc = (GameConnection*) c;
-          if (gc->kinum() == kill_this_un) {
-            log_debug(m_log, "Force-dropping player kinum=%u on %d at "
-                "direction of tracking\n", kill_this_un, c->fd());
-            gc->set_in_shutdown(true);
-            gc->set_state(KILL_AFTER_QUEUE_EMPTY);
-            break;
-          }
-        }
-      }
-      if (c_iter == m_conns.end() && m_log && m_log->would_log_at(Logger::LOG_DEBUG)) {
-        log_debug(m_log, "Tracking told us to drop player kinum=%u but no "
-            "such player is connected\n", kill_this_un);
-      }
-    }
-    break;
-  case TRACK_SDL_UPDATE:
-    {
-      TrackSDLUpdate_BackendMessage *msg = (TrackSDLUpdate_BackendMessage*) in;
-      TrackSDLUpdate_BackendMessage::sdl_type_t utype = msg->update_type();
-      const char *ustring = "???";
-      switch (utype) {
-      case TrackSDLUpdate_BackendMessage::INVALID:
-        ustring = "INVALID";
-        break;
-      case TrackSDLUpdate_BackendMessage::GLOBAL_INIT:
-        ustring = "global init";
-        break;
-      case TrackSDLUpdate_BackendMessage::GLOBAL_UPDATE:
-        ustring = "global";
-        break;
-      case TrackSDLUpdate_BackendMessage::VAULT_SDL_UPDATE:
-        ustring = "age update";
-        break;
-      case TrackSDLUpdate_BackendMessage::VAULT_SDL_LOAD:
-        ustring = "age load";
-        break;
-      default:
-        break;
-      }
-      if (utype == TrackSDLUpdate_BackendMessage::INVALID) {
-        log_warn(m_log, "Dropping INVALID vault SDL update!\n");
-        if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
-          m_log->dump_contents(Logger::LOG_WARN, msg->sdl_buf(), msg->sdl_len());
-        }
-        break;
-      }
 
-      // see if the message is actually meant for this age
-      UruString agename(msg->sdl_buf() + 2, msg->sdl_len() - 2, true, false, false);
-      if (strcasecmp(agename.c_str(), m_filename)) {
-        // the backend should not forward SDL updates except to the correct
-        // game server, but the shortcut of forwarding them to the player's
-        // current game server is still okay for STANDALONE
-#ifdef STANDALONE
-  if (utype != TrackSDLUpdate_BackendMessage::VAULT_SDL_UPDATE) {
-#endif
-        log_warn(m_log, "Got %s vault SDL update for other age %s\n", ustring, agename.c_str());
-#ifdef STANDALONE
+  case ADMIN_HELLO: {
+    Hello_BackendMessage *msg = (Hello_BackendMessage*) in;
+    log_msgs(m_log, "Backend connection protocol version %u\n", msg->peer_info());
+    // no more required at this time (all speak version 0)
   }
-  else {
-    // for VAULT_SDL_UPDATE it could be e.g. turning on a Relto
-    // page while in another age, or a clothing/morph change,
-    // so just ignore it
-  }
-#endif
-        break;
-      }
+    break;
 
-      // this message only makes sense for AgeSDLHook SDL
-      SDLState *current = NULL;
-      std::list<SDLState*>::iterator iter;
-      for (iter = m_game_state.m_sdl.begin(); iter != m_game_state.m_sdl.end(); iter++) {
-        SDLState *s = *iter;
-        if (s->name_equals(m_filename) && s->key().m_name && *(s->key().m_name) == "AgeSDLHook") {
-          current = s;
+  case ADMIN_KILL_CLIENT: {
+    KillClient_BackendMessage *msg = (KillClient_BackendMessage*) in;
+    if (msg->why() != KillClient_BackendMessage::AUTH_DISCONNECT) {
+      log_debug(m_log, "Backend sent ADMIN_KILL_CLIENT with reason %d\n", (int32_t )msg->why());
+      break;
+    }
+    kinum_t kill_this_un = msg->kinum();
+    std::list<Connection*>::iterator c_iter;
+    for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
+      Connection *c = *c_iter;
+      if (c != m_vault && c != m_timers) {
+        GameConnection *gc = (GameConnection*) c;
+        if (gc->kinum() == kill_this_un) {
+          log_debug(m_log, "Force-dropping player kinum=%u on %d at direction of tracking\n",
+              kill_this_un, c->fd());
+          gc->set_in_shutdown(true);
+          gc->set_state(KILL_AFTER_QUEUE_EMPTY);
           break;
         }
       }
-      if (!current) {
-        // there is no AgeSDLHook for this age, why are we
-        // getting this message?
-        log_err(m_log, "Got a %s vault SDL update for this age %s but "
-            "there is no AgeSDLHook!\n", ustring, m_filename);
-        break;
-      }
-      if (msg->sdl_len() <= 2) {
-        log_net(m_log, "Empty %s vault SDL update message from backend\n", ustring);
-        break;
-      }
+    }
+    if (c_iter == m_conns.end() && m_log && m_log->would_log_at(Logger::LOG_DEBUG)) {
+      log_debug(m_log, "Tracking told us to drop player kinum=%u but no such player is connected\n",
+          kill_this_un);
+    }
+  }
+    break;
 
-      // now parse the message
-      SDLState *new_sdl = new SDLState();
-      bool error = false;
-      try {
-        if (new_sdl->read_in(msg->sdl_buf() + 2, msg->sdl_len() - 2, m_game_state.m_allsdl) < 0) {
-          // unrecognized, but we should never get here (bad version?)
-          log_warn(m_log, "Unrecognized %s vault SDL received\n", ustring);
-          error = true;
-        }
-      } catch (const truncated_message &e) {
-        log_warn(m_log, "Truncated %s vault SDL received\n", ustring);
+  case TRACK_SDL_UPDATE: {
+    TrackSDLUpdate_BackendMessage *msg = (TrackSDLUpdate_BackendMessage*) in;
+    TrackSDLUpdate_BackendMessage::sdlupdate_type_t utype = msg->update_type();
+    const char *ustring = "???";
+    switch (utype) {
+    case TrackSDLUpdate_BackendMessage::INVALID:          ustring = "INVALID";     break;
+    case TrackSDLUpdate_BackendMessage::GLOBAL_INIT:      ustring = "global init"; break;
+    case TrackSDLUpdate_BackendMessage::GLOBAL_UPDATE:    ustring = "global";      break;
+    case TrackSDLUpdate_BackendMessage::VAULT_SDL_UPDATE: ustring = "age update";  break;
+    case TrackSDLUpdate_BackendMessage::VAULT_SDL_LOAD:   ustring = "age load";    break;
+    default:
+      break;
+    }
+    log_debug(m_log, "Vault %s (%s) SDLState update\n",
+          ustring, TrackSDLUpdate_BackendMessage::sdl_type_c_str(utype)
+        );
+
+    if (utype == TrackSDLUpdate_BackendMessage::INVALID) {
+      log_warn(m_log, "Dropping INVALID vault SDLState update!\n");
+      if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
+        m_log->dump_contents(Logger::LOG_WARN, msg->sdl_buf(), msg->sdl_len());
+      }
+      break;
+    }
+
+    // see if the message is actually meant for this age
+    UruString agename(msg->sdl_buf() + 2, msg->sdl_len() - 2, true, false, false);
+    if (strcasecmp(agename.c_str(), m_filename)) {
+      // the backend should not forward SDL updates except to the correct
+      // game server, but the shortcut of forwarding them to the player's
+      // current game server is still okay for STANDALONE
+#ifdef STANDALONE
+      if (utype != TrackSDLUpdate_BackendMessage::VAULT_SDL_UPDATE) {
+#endif
+      log_warn(m_log, "Got %s vault SDL update for other age %s\n", ustring, agename.c_str());
+#ifdef STANDALONE
+      }
+      else {
+        // for VAULT_SDL_UPDATE it could be e.g. turning on a Relto
+        // page while in another age, or a clothing/morph change,
+        // so just ignore it
+      }
+#endif
+      break;
+    }
+
+    // this message only makes sense for AgeSDLHook SDL
+    SDLState *current = NULL;
+    std::list<SDLState*>::iterator iter;
+    for (iter = m_game_state.m_sdl.begin(); iter != m_game_state.m_sdl.end(); iter++) {
+      SDLState *s = *iter;
+      if (s->name_equals(m_filename)
+          && s->key().m_name
+          && *(s->key().m_name) == "AgeSDLHook") {
+        current = s;
+        break;
+      }
+    }
+    if (!current) {
+      // there is no AgeSDLHook for this age, why are we
+      // getting this message?
+      log_err(m_log, "Got a %s vault SDLState update for age %s but there is no AgeSDLHook!\n",
+          ustring, m_filename);
+      break;
+    }
+
+    log_debug(m_log, "Current GameServer AgeSDLHook SDLState: %s-v%d:\n\t%s\n",
+        current->get_desc()->name(),
+        current->get_desc()->version(),
+        current->str(",\n\t").c_str());
+
+    if (msg->sdl_len() <= 2) {
+      log_net(m_log, "Empty %s vault SDLState update message from backend\n", ustring);
+      break;
+    }
+
+    // now parse the message
+    SDLState *new_sdl = new SDLState();
+    bool error = false;
+    try {
+      if (new_sdl->read_in(msg->sdl_buf() + 2, msg->sdl_len() - 2, m_game_state.m_allsdl) < 0) {
+        // unrecognized, but we should never get here (bad version?)
+        log_warn(m_log, "Unrecognized %s vault SDLState received\n", ustring);
         error = true;
       }
-      if (error) {
-        if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
-          m_log->dump_contents(Logger::LOG_WARN, msg->sdl_buf(), msg->sdl_len());
-        }
-      } else if (utype == TrackSDLUpdate_BackendMessage::VAULT_SDL_LOAD) {
+    } catch (const truncated_message &e) {
+      log_warn(m_log, "Truncated %s vault SDLState received\n", ustring);
+      error = true;
+    }
+    if (error) {
+      if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
+        m_log->dump_contents(Logger::LOG_WARN, msg->sdl_buf(), msg->sdl_len());
+      }
+    } else {
+      new_sdl->expand();
+      log_debug(m_log, "Vault SDLState %s update message: %s-v%d:\n\t%s\n",
+          TrackSDLUpdate_BackendMessage::sdl_type_c_str(utype),
+          new_sdl->get_desc()->name(), new_sdl->get_desc()->version(),
+          new_sdl->str(",\n\t").c_str());
+      if (utype == TrackSDLUpdate_BackendMessage::VAULT_SDL_LOAD) {
         // when loading an age, the vault SDL *must* be first (it has no
         // timestamps), then the saved age SDL and global SDL
         // so, since we have already loaded the saved age SDL, swap the order
         // of doing things and then swap pointers to clean up
-        log_msgs(m_log, "Incorporating vault SDL\n");
-        new_sdl->expand();
+        log_msgs(m_log, "Incorporating %s vault SDLState\n", ustring);
         new_sdl->update_from(current, false/*swipe structure*/, true/*use timestamps*/, true/*age load*/);
         std::list<SDLState*>::iterator iter;
         for (iter = m_game_state.m_sdl.begin(); iter != m_game_state.m_sdl.end(); iter++) {
@@ -804,17 +837,30 @@ Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *
             // put the new_sdl object in the list instead
             m_game_state.m_sdl.insert(iter, new_sdl);
             m_game_state.m_sdl.erase(iter);
+
+            log_debug(m_log, "Updated(replaced) GameServer SDLState: %s-v%d:\n\t%s\n",
+                new_sdl->get_desc()->name(),
+                new_sdl->get_desc()->version(),
+                new_sdl->str(",\n\t").c_str());
+
             new_sdl = current; // so the right object is deleted
+            SDLState *s = *iter;
             break;
           }
         }
-      } else {
+      } else { // SDL_UPDATE, GLOBAL_UPDATE or GLOBAL_INIT
         // when any vault SDL is updated (global or player), only records
         // that are both newer and different ought to be forwarded to clients;
         // to do that update_from has to modify new_sdl and we have to build
         // a new SDL message from it
-        log_msgs(m_log, "Handling updated vault SDL\n");
+        log_msgs(m_log, "Handling updated %s vault SDL\n", ustring);
+
         current->update_from(new_sdl, true, (utype != TrackSDLUpdate_BackendMessage::VAULT_SDL_UPDATE));
+
+        log_debug(m_log, "Updated GameServer SDLState: %s-v%d:\n\t%s\n",
+            current->get_desc()->name(),
+            current->get_desc()->version(),
+            current->str(",\n\t").c_str());
 
         // and forward to any players
         if (m_conns.size() > 2) {
@@ -832,113 +878,116 @@ Server::reason_t GameServer::backend_message(Connection *vault, BackendMessage *
           }
         }
       }
-      delete new_sdl;
     }
+    delete new_sdl;
+  }
     break;
-  case TRACK_ADD_PLAYER:
-    {
-      TrackAddPlayer_FromBackendMessage *msg = (TrackAddPlayer_FromBackendMessage*) in;
-      log_msgs(m_log, "TRACK_ADD_PLAYER kinum=%u\n", msg->kinum());
-      status_code_t result = NO_ERROR;
-      if (m_timed_shutdown) {
-        // XXX upon receiving this, the backend waits until the game server
-        // closes the TCP connection anyway, after which it restarts the
-        // server and re-adds the player, so maybe it is not needed to
-        // handle this case at all -- in which case we don't even need the
-        // shutdown handshake, we can just shut down, we don't even need
-        // the TRACK_GAME_BYE message.....
-        result = ERROR_REMOTE_SHUTDOWN;
-      }
-#ifndef STANDALONE
-      if (result == NO_ERROR) {
-        // register UUID/KI number to validate future client connections
-        struct timeval then;
-        gettimeofday(&then, NULL);
-        then.tv_sec += 4 * KEEPALIVE_INTERVAL; // wait for 2 whole minutes
-        JoinTimer *newplayer = new JoinTimer(then, m_joiners, msg->kinum(), msg->acct_uuid(), msg->player_name());
-        m_timers->insert(newplayer);
-      }
-#endif
-      TrackAddPlayer_ToBackendMessage *reply = new TrackAddPlayer_ToBackendMessage(m_ipaddr, m_id, msg->kinum(), result);
-      vault->enqueue(reply);
 
-      if (result == NO_ERROR) {
-        // a connection we've accepted is incoming (in theory); don't shut down
-        cancel_shutdown_timer();
+  case TRACK_ADD_PLAYER: {
+    TrackAddPlayer_FromBackendMessage *msg = (TrackAddPlayer_FromBackendMessage*) in;
+    log_msgs(m_log, "TRACK_ADD_PLAYER kinum=%u\n", msg->kinum());
+    status_code_t result = NO_ERROR;
+    if (m_timed_shutdown) {
+      // XXX upon receiving this, the backend waits until the game server
+      // closes the TCP connection anyway, after which it restarts the
+      // server and re-adds the player, so maybe it is not needed to
+      // handle this case at all -- in which case we don't even need the
+      // shutdown handshake, we can just shut down, we don't even need
+      // the TRACK_GAME_BYE message.....
+      result = ERROR_REMOTE_SHUTDOWN;
+    }
+#ifndef STANDALONE
+    if (result == NO_ERROR) {
+      // register UUID/KI number to validate future client connections
+      struct timeval then;
+      gettimeofday(&then, NULL);
+      then.tv_sec += 4 * KEEPALIVE_INTERVAL; // wait for 2 whole minutes
+      JoinTimer *newplayer = new JoinTimer(then, m_joiners, msg->kinum(), msg->acct_uuid(), msg->player_name());
+      m_timers->insert(newplayer);
+    }
+#endif
+    TrackAddPlayer_ToBackendMessage *reply = new TrackAddPlayer_ToBackendMessage(m_ipaddr, m_id, msg->kinum(), result);
+    vault->enqueue(reply);
+
+    if (result == NO_ERROR) {
+      // a connection we've accepted is incoming (in theory); don't shut down
+      cancel_shutdown_timer();
 
 #ifdef STANDALONE
-  // In standalone mode we don't need to validate client connections
-  // or track their names, so we don't bother, but this means we won't
-  // time out future connections either. So we restart the shutdown
-  // timer in case there are no client connections at all, otherwise an
-  // uncompleted "future" connection prevents the server from ever
-  // shutting down.
-  maybe_start_shutdown_timer();
+      // In standalone mode we don't need to validate client connections
+      // or track their names, so we don't bother, but this means we won't
+      // time out future connections either. So we restart the shutdown
+      // timer in case there are no client connections at all, otherwise an
+      // uncompleted "future" connection prevents the server from ever
+      // shutting down.
+      maybe_start_shutdown_timer();
 #endif
-      }
     }
+  }
     break;
+
   case TRACK_GAME_BYE:
     log_msgs(m_log, "TRACK_GAME_BYE received\n");
     // do a clean shutdown now
     delete in;
     return SERVER_SHUTDOWN;
-  case TRACK_INTERAGE_FWD:
-    {
-      TrackMsgForward_BackendMessage *msg = (TrackMsgForward_BackendMessage*) in;
 
-      log_msgs(m_log, "TRACK_INTERAGE_FWD received\n");
-      uint32_t recip_offset = msg->recips_offset();
-      const uint8_t *msg_body = msg->fwd_msg();
-      uint32_t msg_len = msg->fwd_msg_len();
-      // the message should be correctness-checked by the game server though
-      if (recip_offset < msg_len) {
-        uint32_t recip_ct = msg_body[recip_offset++];
-        PlNetMsgGameMessageDirected *fwd = new PlNetMsgGameMessageDirected(msg);
-        while (recip_ct > 0 && recip_offset + 4 <= msg_len) {
-          kinum_t recip_ki = read32(msg_body, recip_offset);
-          recip_offset += 4;
-          recip_ct--;
+  case TRACK_INTERAGE_FWD: {
+    TrackMsgForward_BackendMessage *msg = (TrackMsgForward_BackendMessage*) in;
 
-          // look for that recipient
-          std::list<Connection*>::iterator c_iter;
-          for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
-            Connection *c = *c_iter;
-            if (c != m_vault && c != m_timers) {
-              GameConnection *gc = (GameConnection*) c;
-              if (gc->kinum() == recip_ki) {
-                // send to this one
-                fwd->add_ref();
-                c->enqueue(fwd);
-                break;
-              }
+    log_msgs(m_log, "TRACK_INTERAGE_FWD received\n");
+    uint32_t recip_offset = msg->recips_offset();
+    const uint8_t *msg_body = msg->fwd_msg();
+    uint32_t msg_len = msg->fwd_msg_len();
+    // the message should be correctness-checked by the game server though
+    if (recip_offset < msg_len) {
+      uint32_t recip_ct = msg_body[recip_offset++];
+      PlNetMsgGameMessageDirected *fwd = new PlNetMsgGameMessageDirected(msg);
+      while (recip_ct > 0 && recip_offset + 4 <= msg_len) {
+        kinum_t recip_ki = read32(msg_body, recip_offset);
+        recip_offset += 4;
+        recip_ct--;
+
+        // look for that recipient
+        std::list<Connection*>::iterator c_iter;
+        for (c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
+          Connection *c = *c_iter;
+          if (c != m_vault && c != m_timers) {
+            GameConnection *gc = (GameConnection*) c;
+            if (gc->kinum() == recip_ki) {
+              // send to this one
+              fwd->add_ref();
+              c->enqueue(fwd);
+              break;
             }
-          } // for
-        } // while
-      }
-      if (in->del_ref() >= 1) {
-        // don't delete it, so return now
-        return NO_SHUTDOWN;
-      }
+          }
+        } // for
+      } // while
     }
-    break;
-  case TRACK_NEXT_GAMEID:
-    {
-      TrackNextGameID_BackendMessage *msg = (TrackNextGameID_BackendMessage*) in;
-      // note, only one ID at a time is currently requested, so the game
-      // server doesn't bother to save any extras that arrive (including
-      // for now-departed GameMgrs)
-      GameMgr *mgr = m_game_state.m_waiting_games.front();
-      if (!mgr) {
-        // the manager has gone now, oh well
-        log_msgs(m_log, "Received new game ID for now-gone GameMgr\n");
-      } else {
-        log_msgs(m_log, "Received new game ID %u\n", msg->start_at());
-        m_game_state.m_waiting_games.pop_front();
-        mgr->assign_id(msg->start_at(), this);
-      }
+    if (in->del_ref() >= 1) {
+      // don't delete it, so return now
+      return NO_SHUTDOWN;
     }
+  }
     break;
+
+  case TRACK_NEXT_GAMEID: {
+    TrackNextGameID_BackendMessage *msg = (TrackNextGameID_BackendMessage*) in;
+    // note, only one ID at a time is currently requested, so the game
+    // server doesn't bother to save any extras that arrive (including
+    // for now-departed GameMgrs)
+    GameMgr *mgr = m_game_state.m_waiting_games.front();
+    if (!mgr) {
+      // the manager has gone now, oh well
+      log_msgs(m_log, "Received new game ID for now-gone GameMgr\n");
+    } else {
+      log_msgs(m_log, "Received new game ID %u\n", msg->start_at());
+      m_game_state.m_waiting_games.pop_front();
+      mgr->assign_id(msg->start_at(), this);
+    }
+  }
+    break;
+
   default:
     log_warn(m_log, "Unrecognized backend message type 0x%08x\n", in->type());
   }
@@ -1080,7 +1129,7 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
       // it meant for? or is it game type dependent? BlueSpiral and Heek are
       // known to be problematic, and we have no multiplayer Marker games)
       GameMgr_FourByte_Message *msg;
-      msg = new GameMgr_FourByte_Message(mgr->id(), kGameCliPlayerLeftMsg, kinum);
+      msg = new GameMgr_FourByte_Message(mgr->id(), Srv2Cli_Game_PlayerLeft, kinum);
       mgr->send_to_all(msg, this);
       if (msg->del_ref() < 1) {
         delete msg;
@@ -1102,7 +1151,8 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
     for (iter = m_game_state.m_sdl.begin(); iter != m_game_state.m_sdl.end();) {
       SDLState *s = *iter;
       PlKey &key = s->key();
-      if ((key.m_flags & 0x01) && (key.m_clientid == (uint32_t) kinum)) {
+      if ((key.m_contents & PlKey::HasCloneIDs)
+          && (key.m_cloneplayerid == (uint32_t) kinum)) {
         // this discards everything with the player's Client ID
 #ifndef STANDALONE
         // this includes quabs (and intentional object clones), so be more
@@ -1110,8 +1160,8 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
         if (s->name_equals("physical")) {
           // this special case is for object clones, which have
           // physical SDL (not avatarPhysical)
-          log_debug(m_log, "SDL cleanup: Keeping SDL %s(%u:%u) because it's "
-              "physical SDL\n", key.m_name->c_str(), key.m_clientid, key.m_index);
+          log_debug(m_log, "SDL cleanup: Keeping SDL %s(%u:%u) because it's physical SDL\n",
+              key.m_name->c_str(), key.m_cloneplayerid, key.m_cloneid);
           iter++;
           continue;
         }
@@ -1133,7 +1183,7 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
               if ((submsg_type == plLoadAvatarMsg && is_player) || (*(key.m_name) == "BugFlockingEmitTest")) {
                 // player avatar and bugs
                 // prepare to send unload to other clients
-                log_debug(m_log, "SDL cleanup: Unloading %s (%u)\n", key.m_name->c_str(), key.m_clientid);
+                log_debug(m_log, "SDL cleanup: Unloading %s (%u)\n", key.m_name->c_str(), key.m_cloneplayerid);
                 unload_msg = new PlNetMsgLoadClone(sdl_buf + 5, clone_len, key, kinum, false, is_player);
                 unload_msgs.push_back(unload_msg);
               } else if (submsg_type == plLoadAvatarMsg) {
@@ -1141,15 +1191,14 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
                 // keep around, but only if there are other players
                 // in the age (necessary for quabs)
                 if (m_group_owner) {
-                  log_debug(m_log, "SDL cleanup: Keeping avatar %s(%u:%u)\n", key.m_name->c_str(),
-                      key.m_clientid, key.m_index);
+                  log_debug(m_log, "SDL cleanup: Keeping avatar %s(%u:%u)\n", key.m_name->c_str(), key.m_cloneplayerid, key.m_cloneid);
                   iter++;
                   continue;
                 }
               } else {
                 // keep object clones around
                 log_debug(m_log, "SDL cleanup: Keeping object clone "
-                    "%s(%u:%u)\n", key.m_name->c_str(), key.m_clientid, key.m_index);
+                    "%s(%u:%u)\n", key.m_name->c_str(), key.m_cloneplayerid, key.m_cloneid);
                 iter++;
                 continue;
               }
@@ -1170,8 +1219,8 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
             continue;
           }
         }
-        log_debug(m_log, "SDL cleanup: dropping %s SDL %s(%u:%u)\n", s->get_desc()->name(), key.m_name->c_str(),
-            key.m_clientid, key.m_index);
+        log_debug(m_log, "SDL cleanup: dropping %s SDL %s(%u:%u)\n",
+            s->get_desc()->name(), key.m_name->c_str(), key.m_cloneplayerid, key.m_cloneid);
 #endif
         iter = m_game_state.m_sdl.erase(iter);
         delete s;
@@ -1192,7 +1241,7 @@ Server::reason_t GameServer::conn_shutdown(Connection *conn, Server::reason_t wh
       if (conn == c) {
         c_iter = m_conns.erase(c_iter);
 #ifdef STANDALONE
-  break;
+        break;
 #endif
       } else {
 #ifndef STANDALONE
@@ -1286,11 +1335,10 @@ Server::reason_t GameServer::handle_negotiation(GameConnection *c, const void *k
 
       log_msgs(log, "Setting up session key (fd %d)\n", c->fd());
 #if defined(USING_RSA) || defined(USING_DH)
-      reason_t key_okay = c->setup_rc4_key(in->buffer()+1, in->message_len()-2,
-             keydata, c->fd(), log);
+      reason_t key_okay = c->setup_rc4_key(in->buffer() + 1, in->message_len() - 2, keydata, c->fd(), log);
       if (key_okay != NO_SHUTDOWN) {
-  // problem is already logged
-  return key_okay;
+        // problem is already logged
+        return key_okay;
       }
 #endif
       c->set_state(NONCE_DONE);
@@ -1309,7 +1357,7 @@ Server::reason_t GameServer::handle_negotiation(GameConnection *c, const void *k
     // this is very bad -- we have two threads using the connection
     log_err(log, "Game connection on %d must be passed to game server by now!\n", c->fd());
     return FORGET_THIS_CONNECTION; // maybe this can spare us a server crash
-  } else if (in->type() == kCli2Game_JoinAgeRequest) {
+  } else if (in->type() == Cli2Game_JoinAgeRequest) {
     if (!in->check_useable()) {
       // protocol error
       log_warn(log, "Game message on %d too short!\n", c->fd());
@@ -1328,7 +1376,7 @@ Server::reason_t GameServer::handle_negotiation(GameConnection *c, const void *k
       log_net(log, "Unrecognized game message on %d\n", c->fd());
     } else {
       // something sent before connecting to correct game server
-      if (in->type() == kCli2Game_PingRequest) {
+      if (in->type() == Cli2Game_PingRequest) {
         // PlasmaClient does this silly thing. We have to reply to the ping
         // before it will send the JoinAge. I think this is goofy. I like
         // abstraction and this breaks the obvious abstraction.
@@ -1402,7 +1450,7 @@ void GameServer::get_queued_connections() {
 
     Server::reason_t result;
     NetworkMessage *msg = iter->second;
-    if (msg->type() == kCli2Game_JoinAgeRequest) {
+    if (msg->type() == Cli2Game_JoinAgeRequest) {
       // this is the normal, expected code path
       result = handle_join_request(conn, msg);
 
@@ -1419,14 +1467,14 @@ void GameServer::get_queued_connections() {
             // this really, really shouldn't happen; who knows what's going
             // on, so toss this back to the select loop to deal with properly
           } else {
-            log_debug(m_log, "Handling data sent by the client on fd %d "
-                "before receiving the JoinAgeReply\n", conn->fd());
+            log_debug(m_log, "Handling data sent by the client on fd %d before receiving the JoinAgeReply\n",
+                conn->fd());
             Buffer *cbuf = conn->m_readbuf;
             int32_t to_read;
             do {
               try {
-                msg = conn->make_if_enough(cbuf->buffer() + conn->m_read_off,
-                    conn->m_read_fill - conn->m_read_off, &to_read, false);
+                msg = conn->make_if_enough(cbuf->buffer() + conn->m_read_off, conn->m_read_fill - conn->m_read_off, &to_read,
+                    false);
               } catch (const overlong_message &e) {
                 log_net(m_log, "Message on %d too long: claimed %d bytes\n", conn->fd(), e.claimed_len());
                 m_log->dump_contents(Logger::LOG_DEBUG, cbuf->buffer() + conn->m_read_off,
@@ -1449,8 +1497,8 @@ void GameServer::get_queued_connections() {
       // it is not possible for the message to be anything but JoinAgeRequest
       // (any other message does not contain the server ID and should be
       // handled/rejected by the dispatcher)
-      log_err(m_log, "A message other than JoinAgeRequest on %d was "
-          "dispatched during age join (type %d)\n", conn->fd(), msg->type());
+      log_err(m_log, "A message other than JoinAgeRequest on %d was dispatched during age join (type %d)\n",
+          conn->fd(), msg->type());
       delete msg;
       result = INTERNAL_ERROR;
     }
@@ -1643,8 +1691,7 @@ void GameServer::cancel_shutdown_timer() {
     // we were already shutting down, cancel that too
     // XXX can't be cancelled so don't try (revisit this)
     // XXX m_timed_shutdown = false;
-    log_debug(m_log, "Cancel request for shutdown timer arrived, but we "
-        "have already started shutdown\n");
+    log_debug(m_log, "Cancel request for shutdown timer arrived, but we have already started shutdown\n");
   }
 }
 
@@ -1652,8 +1699,7 @@ void GameServer::maybe_start_shutdown_timer() {
   if (m_conns.size() == 2 && m_joiners == 0) {
     if (m_shutdown_timer) {
       if (m_timed_shutdown) {
-        log_debug(m_log, "Maybe start shutdown timer arrived, "
-            "but we have already started shutdown\n");
+        log_debug(m_log, "Maybe start shutdown timer arrived, but we have already started shutdown\n");
       }
       return;
     }

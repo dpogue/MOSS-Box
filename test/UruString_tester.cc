@@ -66,39 +66,39 @@ const char *utf16_2_utf8_3_ = "\xAC\x20\0";
 const char *utf8_4_utf16_4_ = "\xF0\xA4\xAD\xA2"; // U+024B62
 const char *utf16_4_utf8_4_ = "\x52\xD8\x62\xDF\0";
 
-const u_char *c = (u_char*)c_;
-const u_char *c_with_len = (u_char*)c_with_len_;
-const u_char *c_with_len_with_null = (u_char*)c_with_len_with_null_;
-const u_char *c_with_extra = (u_char*)c_with_extra_;
-const u_char *uru = (u_char*)uru_;
-const u_char *uru_with_null = (u_char*)uru_with_null_;
-const u_char *uru_with_extra = (u_char*)uru_with_extra_;
-const u_char *uru_flip = (u_char*)uru_flip_;
-const u_char *uru_flip_with_null = (u_char*)uru_flip_with_null_;
-const u_char *c_wide = (u_char*)c_wide_;
-const u_char *c_wide_with_len = (u_char*)c_wide_with_len_;
-const u_char *c_wide_with_len_with_null = (u_char*)c_wide_with_len_with_null_;
-const u_char *c_wide_with_extra = (u_char*)c_wide_with_extra_;
-const u_char *uru_wide = (u_char*)uru_wide_;
-const u_char *uru_wide_with_null = (u_char*)uru_wide_with_null_;
-const u_char *uru_wide_with_extra = (u_char*)uru_wide_with_extra_;
-const u_char *uru_wide_flip = (u_char*)uru_wide_flip_;
-const u_char *uru_wide_flip_with_null = (u_char*)uru_wide_flip_with_null_;
-const u_char *empty_c = (u_char*)empty_c_;
-const u_char *empty_c_with_len = (u_char*)empty_c_with_len_;
-const u_char *empty_c_with_extra = (u_char*)empty_c_with_extra_;
-const u_char *empty_uru = (u_char*)empty_uru_;
-const u_char *empty_uru_with_extra = (u_char*)empty_uru_with_extra_;
-const u_char *empty_c_wide = (u_char*)empty_c_wide_;
-const u_char *empty_c_wide_with_len = (u_char*)empty_c_wide_with_len_;
-const u_char *empty_uru_wide = (u_char*)empty_uru_wide_;
-const u_char *empty_uru_wide_with_extra = (u_char*)empty_uru_wide_with_extra_;
-const u_char *utf8_2_utf16_2 = (u_char*)utf8_2_utf16_2_;
-const u_char *utf16_2_utf8_2 = (u_char*)utf16_2_utf8_2_;
-const u_char *utf8_3_utf16_2 = (u_char*)utf8_3_utf16_2_;
-const u_char *utf16_2_utf8_3 = (u_char*)utf16_2_utf8_3_;
-const u_char *utf8_4_utf16_4 = (u_char*)utf8_4_utf16_4_;
-const u_char *utf16_4_utf8_4 = (u_char*)utf16_4_utf8_4_;
+const uint8_t *c = (uint8_t*)c_;
+const uint8_t *c_with_len = (uint8_t*)c_with_len_;
+const uint8_t *c_with_len_with_null = (uint8_t*)c_with_len_with_null_;
+const uint8_t *c_with_extra = (uint8_t*)c_with_extra_;
+const uint8_t *uru = (uint8_t*)uru_;
+const uint8_t *uru_with_null = (uint8_t*)uru_with_null_;
+const uint8_t *uru_with_extra = (uint8_t*)uru_with_extra_;
+const uint8_t *uru_flip = (uint8_t*)uru_flip_;
+const uint8_t *uru_flip_with_null = (uint8_t*)uru_flip_with_null_;
+const uint8_t *c_wide = (uint8_t*)c_wide_;
+const uint8_t *c_wide_with_len = (uint8_t*)c_wide_with_len_;
+const uint8_t *c_wide_with_len_with_null = (uint8_t*)c_wide_with_len_with_null_;
+const uint8_t *c_wide_with_extra = (uint8_t*)c_wide_with_extra_;
+const uint8_t *uru_wide = (uint8_t*)uru_wide_;
+const uint8_t *uru_wide_with_null = (uint8_t*)uru_wide_with_null_;
+const uint8_t *uru_wide_with_extra = (uint8_t*)uru_wide_with_extra_;
+const uint8_t *uru_wide_flip = (uint8_t*)uru_wide_flip_;
+const uint8_t *uru_wide_flip_with_null = (uint8_t*)uru_wide_flip_with_null_;
+const uint8_t *empty_c = (uint8_t*)empty_c_;
+const uint8_t *empty_c_with_len = (uint8_t*)empty_c_with_len_;
+const uint8_t *empty_c_with_extra = (uint8_t*)empty_c_with_extra_;
+const uint8_t *empty_uru = (uint8_t*)empty_uru_;
+const uint8_t *empty_uru_with_extra = (uint8_t*)empty_uru_with_extra_;
+const uint8_t *empty_c_wide = (uint8_t*)empty_c_wide_;
+const uint8_t *empty_c_wide_with_len = (uint8_t*)empty_c_wide_with_len_;
+const uint8_t *empty_uru_wide = (uint8_t*)empty_uru_wide_;
+const uint8_t *empty_uru_wide_with_extra = (uint8_t*)empty_uru_wide_with_extra_;
+const uint8_t *utf8_2_utf16_2 = (uint8_t*)utf8_2_utf16_2_;
+const uint8_t *utf16_2_utf8_2 = (uint8_t*)utf16_2_utf8_2_;
+const uint8_t *utf8_3_utf16_2 = (uint8_t*)utf8_3_utf16_2_;
+const uint8_t *utf16_2_utf8_3 = (uint8_t*)utf16_2_utf8_3_;
+const uint8_t *utf8_4_utf16_4 = (uint8_t*)utf8_4_utf16_4_;
+const uint8_t *utf16_4_utf8_4 = (uint8_t*)utf16_4_utf8_4_;
 
 void verify(bool x, int line, const char *err) {
   if (!x) {
@@ -606,12 +606,12 @@ void verify_send_lens(UruString &str) {
   VERIFY(str.send_len(false, true, true) == 16);
 }
 
-void verify_c_2nd_half(UruString &str, const u_char *ptr) {
+void verify_c_2nd_half(UruString &str, const uint8_t *ptr) {
   VERIFY(!memcmp(str.get_str(true, false, true), c_with_len_with_null, 10));
   VERIFY(str.m_altstr_size == 8);
   VERIFY(str.m_altstr != ptr);
 
-  const u_char *keep = str.get_str(false, true, false);
+  const uint8_t *keep = str.get_str(false, true, false);
   VERIFY(!memcmp(keep, c_wide, 14));
   VERIFY(str.m_altstr_size == 7);
 
@@ -627,7 +627,7 @@ void verify_c_2nd_half(UruString &str, const u_char *ptr) {
 }
 
 void verify_flip_2nd_half(UruString &str) {
-  const u_char *keep = str.get_str(true, false, true, true);
+  const uint8_t *keep = str.get_str(true, false, true, true);
   VERIFY(str.m_altstr_size == 8);
   VERIFY(!memcmp(keep, uru_flip_with_null, 10));
 
@@ -749,7 +749,7 @@ int main(int argc, char *argv[]) {
   VERIFY((char*)the_c_with_len_with_null.get_str(true, false, false)+2 == the_c_with_len_with_null.c_str());
   VERIFY(!memcmp(the_c_with_len_with_null.get_str(true, false, false), c_with_len, 10));
 
-  VERIFY(the_c_with_len_with_null.get_str(false, false, true) == (u_char*)the_c_with_len_with_null.m_cstr+2);
+  VERIFY(the_c_with_len_with_null.get_str(false, false, true) == (uint8_t*)the_c_with_len_with_null.m_cstr+2);
   VERIFY(!memcmp(the_c_with_len_with_null.get_str(false, false, true), c, 8));
 
   verify_c_2nd_half(the_c_with_len_with_null, c_with_len_with_null);
@@ -884,7 +884,7 @@ int main(int argc, char *argv[]) {
   UruString s2(str_c, false);
   VERIFY(s2.send_len(true, true, false) == 16);
   VERIFY(!memcmp(s2.m_altstr, c_wide_with_len, 14));
-  verify_c_2nd_half(s2, (const u_char*)str_c.c_str());
+  verify_c_2nd_half(s2, (const uint8_t*)str_c.c_str());
   verify_flip_2nd_half(s2);
   UruString s3(c_);
   VERIFY(s3.m_cstr != c_);
@@ -896,7 +896,7 @@ int main(int argc, char *argv[]) {
   UruString s4(str_c);
   VERIFY(s4.send_len(true, true, false) == 16);
   VERIFY(!memcmp(s4.m_altstr, c_wide_with_len, 14));
-  verify_c_2nd_half(s4, (const u_char*)str_c.c_str());
+  verify_c_2nd_half(s4, (const uint8_t*)str_c.c_str());
   verify_flip_2nd_half(s4);
   UruString s5(c_with_len, -1, true, false, false);
   VERIFY(s5.arrival_len() == 9);
@@ -910,7 +910,7 @@ int main(int argc, char *argv[]) {
   UruString uru_str_wide(uru_wide, 16, true, true, false);
   UruString flip(uru_flip, 9, true, false, false);
   UruString with_null(uru_with_null, 10, true, false, false);
-  // equality tests will create c_str
+  // equality tests will create cstr
   VERIFY(no_len == c_);
   VERIFY(no_len == with_null);
   VERIFY(has_len == with_null);

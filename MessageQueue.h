@@ -1,22 +1,22 @@
 /* -*- c++ -*- */
 
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 /*
  * The MessageQueue is a per-client connection FIFO. The select loop simply
@@ -35,23 +35,26 @@
 //#include "constants.h"
 //
 //#include "NetworkMessage.h"
+
 #ifndef _MESSAGE_QUEUE_H_
 #define _MESSAGE_QUEUE_H_
 
 class MessageQueue {
 public:
   typedef enum {
-    NORMAL = 0, AVATAR, VOICE, FRONT // special priority that means: force to front of queue
+    NORMAL = 0,
+    AVATAR,
+    VOICE,
+    FRONT // special priority that means: force to front of queue
   } priority_t;
 
-  MessageQueue() {
-  }
+  MessageQueue() { }
 
   virtual ~MessageQueue() {
     std::deque<Entry>::iterator iter = m_queue.begin();
-    for (; iter != m_queue.end(); iter++) {
+    for ( ; iter != m_queue.end(); iter++) {
       if (iter->msg->del_ref() < 1) {
-        delete iter->msg;
+  delete iter->msg;
       }
     }
   }
@@ -61,9 +64,7 @@ public:
    * remove the first message if has been partially written.
    */
   virtual void enqueue(NetworkMessage *msg, priority_t p = NORMAL);
-  virtual size_t size() const {
-    return m_queue.size();
-  }
+  virtual size_t size() const { return m_queue.size(); }
   virtual void clear_queue();
   virtual void reset_head();
 
@@ -82,13 +83,12 @@ protected:
 
   class Entry {
   public:
-    Entry(NetworkMessage *net_msg, priority_t p = NORMAL) :
-        msg(net_msg),
+    Entry(NetworkMessage *net_msg, priority_t p = NORMAL)
+      : msg(net_msg), 
 #ifdef DO_PRIORITIES
   priority(p),
 #endif
-            so_far(0) {
-    }
+  so_far(0) { }
 
     MessageQueue::priority_t get_priority() const {
 #ifdef DO_PRIORITIES
@@ -120,15 +120,16 @@ protected:
  * is pretty much just wrapping a mutex lock around the base MessageQueue
  * methods; if priorities are implemented, few parent methods will be useable.
  */
-class MultiWriterMessageQueue: public MessageQueue {
+class MultiWriterMessageQueue : public MessageQueue {
 public:
-  MultiWriterMessageQueue() :
-      MessageQueue(),
+  MultiWriterMessageQueue()
+    : MessageQueue(),
 #ifdef DO_PRIORITIES
       m_data_queued(0), m_max_priority_queued(NORMAL),
       m_avatar_ct(0), m_voice_ct(0),
 #endif
-          m_draining(false) {
+      m_draining(false)
+  {
     m_owner_tid = pthread_self();
     if (pthread_mutex_init(&m_mutex, NULL)) {
       throw std::bad_alloc();

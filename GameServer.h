@@ -47,7 +47,7 @@
 class GameServer: public Server {
 public:
   GameServer(const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, const uint8_t *uuid,
-      const char *filename, uint32_t connect_ipaddr, AgeDesc *age, std::list<SDLDesc*> &sdl);
+      const char *filename, in_addr_t connect_ipaddr, in_port_t connect_ipport, AgeDesc *age, std::list<SDLDesc*> &sdl);
   virtual ~GameServer();
 
   int32_t type() const {
@@ -80,6 +80,21 @@ public:
     IN_GAME = 8,
     KILL_AFTER_QUEUE_EMPTY = 255
   } state_t;
+  static const char *state_c_str(state_t t) {
+    switch (t) {
+    case START:                  return "START";
+    case NEGOTIATION_DONE:       return "NEGOTIATION_DONE";
+    case NONCE_DONE:             return "NONCE_DONE";
+    case JOIN_REQ:               return "JOIN_REQ";
+    case JOINED:                 return "JOINED";
+    case HAVE_CLONE:             return "HAVE_CLONE";
+    case MEMBERS_REQUESTED:      return "MEMBERS_REQUESTED";
+    case STATE_REQUESTED:        return "STATE_REQUESTED";
+    case IN_GAME:                return "IN_GAME";
+    case KILL_AFTER_QUEUE_EMPTY: return "KILL_AFTER_QUEUE_EMPTY";
+    }
+    return "(unknown)";
+  }
 
   class GameConnection: public Server::Connection {
   public:
@@ -145,8 +160,7 @@ public:
   // the following three are called only by the dispatcher, as it needs to
   // handle connections until it is known which game server to pass them
   // to, and then pass them on
-  static reason_t handle_negotiation(GameConnection *conn, const void *keydata, NetworkMessage *in, Logger *log,
-      uint32_t &sid);
+  static reason_t handle_negotiation(GameConnection *conn, const void *keydata, NetworkMessage *in, Logger *log, uint32_t &sid);
   static void send_no_join(Connection *conn, const NetworkMessage *msg);
 #ifndef FORK_GAME_TOO
   void queue_client_connection(GameConnection *conn, NetworkMessage *msg);
@@ -196,7 +210,8 @@ protected:
   class GameTimer: public TimerQueue::Timer {
   public:
     typedef enum {
-      SHUTDOWN = 0, CLIENT_JOIN = 1
+      SHUTDOWN = 0,
+      CLIENT_JOIN = 1
     } timer_type_t;
     GameTimer(struct timeval &when, timer_type_t type) :
         Timer(when), m_type(type) {

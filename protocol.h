@@ -74,230 +74,351 @@ typedef uint32_t kinum_t;
  * >= 46: "Unknown error"
  * -1: "Pending"
  */
+
 typedef enum {
-  NO_ERROR = 0x0,
-  ERROR_INTERNAL = 0x1,
-  ERROR_NO_RESPONSE = 0x2,
-  ERROR_INVALID_DATA = 0x3,
-  ERROR_AGE_NOT_FOUND = 0x4,
-  ERROR_DISCONNECTED = 0x6,
-  ERROR_FILE_NOT_FOUND = 0x7,
-  ERROR_REMOTE_SHUTDOWN = 0x9,
-  ERROR_DB_TIMEOUT = 0xa,
-  ERROR_PLAYER_EXISTS = 0xc,
-  ERROR_ACCT_NOT_FOUND = 0xd,
-  ERROR_PLAYER_NOT_FOUND = 0xe,
-  ERROR_INVALID_PARAM = 0xf,
-  ERROR_NAME_LOOKUP = 0x10,
-  ERROR_LOGGED_IN_ELSEWHERE = 0x11,
-  ERROR_NODE_NOT_FOUND = 0x12,
-  ERROR_MAX_PLAYERS = 0x13,
-  ERROR_BAD_PASSWD = 0x14,
-  ERROR_LOGIN_DENIED = 0x16,
-  ERROR_KEY_NOT_FOUND = 0x1a,
-  ERROR_NAME_INVALID = 0x1c,
-  ERROR_NOT_SUPPORTED = 0x1d,
-  ERROR_FORBIDDEN = 0x1e,
-  ERROR_AUTH_TOO_OLD = 0x1f,
-  ERROR_TOO_MANY_FAILURES = 0x21,
-  ERROR_BANNED = 0x26,
-  ERROR_KICKED = 0x27,
-  ERROR_BAD_SCORE_TYPE = 0x28,
-  ERROR_SCORE_TOO_SMALL = 0x29,
-  ERROR_SCORE_EXISTS = 0x2a,
-  ERROR_NO_SCORE = 0x2b
+  NO_ERROR =                   0,
+  ERROR_INTERNAL =             1,  ///< "Internal Error"
+  ERROR_NO_RESPONSE =          2,  ///< "No Response From Server"
+  ERROR_INVALID_DATA =         3,  ///< "Invalid Server Data"
+  ERROR_AGE_NOT_FOUND =        4,  ///< "Age Not Found"
+                                   //   5: "Unable to connect to Myst Online."
+  ERROR_DISCONNECTED =         6,  ///< "Disconnected from Myst Online."
+  ERROR_FILE_NOT_FOUND =       7,  ///< "File Not Found"
+                                   //   8: "Old Build"
+  ERROR_REMOTE_SHUTDOWN =      9,  ///< "Remote Shutdown"
+  ERROR_DB_TIMEOUT =           10, ///< "Database Timeout"
+                                   //   10: "Account Already Exists"
+  ERROR_PLAYER_EXISTS =        12, ///< "Player Already Exists"
+  ERROR_ACCT_NOT_FOUND =       13, ///< "Account Not Found."
+  ERROR_PLAYER_NOT_FOUND =     14, ///< "Player Not Found"
+  ERROR_INVALID_PARAM =        15, ///< "Invalid Parameter"
+  ERROR_NAME_LOOKUP =          16, ///< "Name Lookup Failed"
+  ERROR_LOGGED_IN_ELSEWHERE =  17, ///< "Logged In Elsewhere"
+  ERROR_NODE_NOT_FOUND =       18, ///< "Vault Node Not Found"
+  ERROR_MAX_PLAYERS =          19, ///< "Max Players On Account"
+  ERROR_BAD_PASSWD =           20, ///< "Incorrect password.\nMake sure CAPS LOCK is not on."
+                                   //   21: "State Object Not Found"
+  ERROR_LOGIN_DENIED =         22, ///< "Login Denied"
+                                   //   23: "Circular Reference"
+                                   //   24: "Account Not Activated."
+                                   //   25: "Key Already Used"
+  ERROR_KEY_NOT_FOUND =        26, ///< "Key Not Found"
+                                   //   27: "Activation Code Not Found"
+  ERROR_NAME_INVALID =         28, ///< "Player Name Invalid"
+  ERROR_NOT_SUPPORTED =        29, ///< "Not Supported"
+  ERROR_FORBIDDEN =            30, ///< "Service Forbidden"
+  ERROR_AUTH_TOO_OLD =         31, ///< "Auth Token Too Old"
+                                   //   32: "Must Use GameTap Client"
+  ERROR_TOO_MANY_FAILURES =    33, ///< "Too Many Failed Logins"
+                                   //   34: "Unable to connect to GameTap, please try again in a few minutes."
+                                   //   35: "GameTap: Too Many Auth Options"
+                                   //   36: "GameTap: Missing Parameter"
+                                   //   37: see 34
+  ERROR_BANNED =               38, ///< "Your account has been banned from accessing Myst Online.  If you are unsure as to why this happened please contact customer support."
+  ERROR_KICKED =               39, ///< "Account kicked by CCR"
+  ERROR_BAD_SCORE_TYPE =       40, ///< "Wrong score type for operation"
+  ERROR_SCORE_TOO_SMALL =      41, ///< "Not enough points"
+  ERROR_SCORE_EXISTS =         42, ///< "Non-fixed score already exists"
+  ERROR_NO_SCORE    =          43, ///< "No score data found"
+                                   //   44: "Invite: Couldn't find player"
+                                   //   45: "Invite: Too many hoods"
+                                   //   >= 46: "Unknown error"
+                                   //   -1: "Pending"
 } status_code_t;
 
 /*
  * Visitor/paying status (accounts and players)
  */
 typedef enum {
-  GUEST_CUSTOMER = 0x0, PAYING_CUSTOMER = 0x1
+  GUEST_CUSTOMER = 0x0,
+  PAYING_CUSTOMER = 0x1
 } customer_type_t;
 
-/*
+/***************************************************************//*
+ * @addtogroup Vault
+ * @{
  * Vault bitfield values
  */
 
-typedef enum {
-  NodeID = 0x00000001,    // 4 bytes
-  CreateTime = 0x00000002,    // 4 bytes
-  ModifyTime = 0x00000004,    // 4 bytes
-  CreateAgeName = 0x00000008,   // 4-byte len + widestring
-  CreateAgeUUID = 0x00000010,   // UUID (16 bytes)
-  CreatorAcctID = 0x00000020,   // UUID (16 bytes)
-  CreatorID = 0x00000040,   // 4 bytes
-  NodeType = 0x00000080,    // 4 bytes
-  Int32_1 = 0x00000100,   // 4 bytes
-  Int32_2 = 0x00000200,   // 4 bytes
-  Int32_3 = 0x00000400,   // 4 bytes
-  Int32_4 = 0x00000800,   // 4 bytes
-  UInt32_1 = 0x00001000,    // 4 bytes
-  UInt32_2 = 0x00002000,    // 4 bytes
-  UInt32_3 = 0x00004000,    // 4 bytes
-  UInt32_4 = 0x00008000,    // 4 bytes
-  UUID_1 = 0x00010000,    // UUID (16 bytes)
-  UUID_2 = 0x00020000,    // UUID (16 bytes)
-  UUID_3 = 0x00040000,    // UUID (16 bytes)
-  UUID_4 = 0x00080000,    // UUID (16 bytes)
-  String64_1 = 0x00100000,    // 4-byte len + widestring
-  String64_2 = 0x00200000,    // 4-byte len + widestring
-  String64_3 = 0x00400000,    // 4-byte len + widestring
-  String64_4 = 0x00800000,    // 4-byte len + widestring
-  String64_5 = 0x01000000,    // 4-byte len + widestring
-  String64_6 = 0x02000000,    // 4-byte len + widestring
-  IString64_1 = 0x04000000,   // 4-byte len + widestring
-  IString64_2 = 0x08000000,   // 4-byte len + widestring
-  Text_1 = 0x10000000,    // 4-byte len + widestring
-  Text_2 = 0x20000000,    // 4-byte len + widestring
-  Blob_1 = 0x40000000,    // 4-byte len + blob
-  Blob_2 = 0x80000000   // 4-byte len + blob
+typedef enum vault_bitfield_e {
+  NodeID =        0x00000001,  ///< 4 bytes
+  CreateTime =    0x00000002,  ///< 4 bytes
+  ModifyTime =    0x00000004,  ///< 4 bytes
+  CreateAgeName = 0x00000008,  ///< 4-byte len + widestring
+  CreateAgeUUID = 0x00000010,  ///< UUID (16 bytes)
+  CreatorAcctID = 0x00000020,  ///< UUID (16 bytes)
+  CreatorID =     0x00000040,  ///< 4 bytes
+  NodeType =      0x00000080,  ///< 4 bytes
+  Int32_1 =       0x00000100,  ///< 4 bytes
+  Int32_2 =       0x00000200,  ///< 4 bytes
+  Int32_3 =       0x00000400,  ///< 4 bytes
+  Int32_4 =       0x00000800,  ///< 4 bytes
+  UInt32_1 =      0x00001000,  ///< 4 bytes
+  UInt32_2 =      0x00002000,  ///< 4 bytes
+  UInt32_3 =      0x00004000,  ///< 4 bytes
+  UInt32_4 =      0x00008000,  ///< 4 bytes
+  UUID_1 =        0x00010000,  ///< UUID (16 bytes)
+  UUID_2 =        0x00020000,  ///< UUID (16 bytes)
+  UUID_3 =        0x00040000,  ///< UUID (16 bytes)
+  UUID_4 =        0x00080000,  ///< UUID (16 bytes)
+  String64_1 =    0x00100000,  ///< 4-byte len + widestring
+  String64_2 =    0x00200000,  ///< 4-byte len + widestring
+  String64_3 =    0x00400000,  ///< 4-byte len + widestring
+  String64_4 =    0x00800000,  ///< 4-byte len + widestring
+  String64_5 =    0x01000000,  ///< 4-byte len + widestring
+  String64_6 =    0x02000000,  ///< 4-byte len + widestring
+  IString64_1 =   0x04000000,  ///< 4-byte len + widestring
+  IString64_2 =   0x08000000,  ///< 4-byte len + widestring
+  Text_1 =        0x10000000,  ///< 4-byte len + widestring
+  Text_2 =        0x20000000,  ///< 4-byte len + widestring
+  Blob_1 =        0x40000000,  ///< 4-byte len + blob
+  Blob_2 =        0x80000000   ///< 4-byte len + blob
 // second bitfield unused??
 } vault_bitfield_t;
+/** @} */
 
-/*
+/***************************************************************//*
  * plNetMsg flags
+ * (c.f. CWE PubUtilLib/plNetMessage)
  */
-#define kHasTimeSent    0x1 /* Alcugs: plNetTimestamp */
-#define kHasGameMsgRcvrs  0x2 /* plFlagsMaybeNotify below */
-#define kEchoBackToSender 0x4
-#define kRequestP2P   0x8
-#define kAllowTimeOut   0x10  /* XXX Alcugs: plNetIP */
-#define kIndirectMember   0x20  /* Alcugs: plNetFirewalled */
-#define kPublicIPClient   0x40
-#define kHasContext   0x80
-#define kAskVaultForGameState 0x100
-#define kHasTransactionID 0x200 /* Alcugs: plNetX */
-#define kNewSDLState    0x400 /* Alcugs: plNetBcast */
-#define kInitialAgeStateRequest 0x800 /* Alcugs: plNetStateReq */
-#define kHasPlayerID    0x1000  /* Alcugs: plNetKi */
-#define kUseRelevanceRegions  0x2000  /* plFlagsMaybeAvatarState below */
-#define kHasAcctUUID    0x4000  /* Alcugs: plNetGUI */
-#define kInterAgeRouting  0x8000  /* Alcugs: plNetDirected */
-#define kHasVersion   0x10000 /* Alcugs: plNetVersion */
-#define kIsSystemMessage  0x20000 /* Alcugs: plNetCustom */
-#define kNeedsReliableSend  0x40000 /* Alcugs: plNetAck */
-#define kRouteToAllPlayers  0x80000
+enum BitVectorFlags // indicates what is present in the message, always transmitted
+{
+  HasTimeSent =            0x1,          ///< means fTimeSent need sending
+  HasGameMsgRcvrs =        0x2,          ///< means that this is a direct (not bcast) game msg
+  EchoBackToSender =       0x4,          ///< if broadcasting, echo packet back to sender
+  RequestP2P =             0x8,          ///< sent to gameServer on joinReq
+  AllowTimeOut =           0x10,         ///< sent to gameServer on joinReq (if release code)
+  IndirectMember =         0x20,         ///< sent to client on joinAck if he is behind a firewall
+  PublicIPClient =         0x40,         ///< set on a client coming from a public IP
+                                          /// This flag is used when the servers are firewalled and NAT'ed
+                                          /// It tells a game or lobby server to ask the lookup for an external address
+  HasContext =             0x80,         ///< whether or not to write fContext field
+  AskVaultForGameState =   0x100,        ///< Used with StartProcess server msgs. Whether or not the ServerAgent
+                                          ///  must first ask the vault for a game state associated with the
+                                          ///  game about to be instanced.
+  HasTransactionID =       0x200,        ///< whether or not to write fTransactionID field
+  NewSDLState =            0x400,        ///< set by client on first state packet sent, may not be necessary anymore
+  InitialAgeStateRequest = 0x800,        ///< initial request for the age state
+  HasPlayerID =            0x1000,       ///< is fPlayerID set
+  UseRelevanceRegions =    0x2000,       ///< if players use relevance regions are used, this will be filtered by region, currently set on avatar physics and control msgs
+  HasAcctUUID =            0x4000,       ///< is fAcctUUID set
+  InterAgeRouting =        0x8000,       ///< give to pls for routing.
+  HasVersion =             0x10000,      ///< if version is set
+  IsSystemMessage =        0x20000,
+  NeedsReliableSend =      0x40000,
+  RouteToAllPlayers =      0x80000,      ///< send this message to all online players.
+};
+
 /*
  * no pl* type
  */
-#define no_plType   0x8000
+#define no_plType            0x8000
 
-/*
+/***************************************************************//*
  * compression flags
+ * (c.f. CWE PubUtilLib/plNetMessage)
  */
-#define kCompressionNone  0
-#define kCompressionFailed  1
-#define kCompressionZlib  2
-#define kCompressionDont  3
+enum CompressionType   // currently only used for plNetMsgStreams
+{
+  CompressionNone,    ///< not compressed
+  CompressionFailed,  ///< failed to compress
+  CompressionZlib,    ///< zlib compressed
+  CompressionDont     ///< don't compress
+};
 
-/*
+
+/***************************************************************//*
  * GameMgrMsg types
  */
-#define kGameCliPlayerJoinedMsg 0x00
-#define kGameCliPlayerLeftMsg 0x01
-#define kGameCliInviteFailedMsg 0x02
-#define kGameCliOwnerChangeMsg 0x03
+
+enum {
+  Srv2Cli_Game_PlayerJoined = 0,
+  Srv2Cli_Game_PlayerLeft,
+  Srv2Cli_Game_InviteFailed,
+  Srv2Cli_Game_OwnerChange,
+  Srv2Cli_NumGameMsgIds
+};
+
 
 // server->client
 
-#define kVarSyncStringVarChanged 0x04
-#define kVarSyncNumericVarChanged 0x05
-#define kVarSyncAllVarsSent 0x06
-#define kVarSyncStringVarCreated 0x07
-#define kVarSyncNumericVarCreated 0x08
+/*
+ * cf. CWE NucleusLib/pnGameMgr/VarSync
+ */
+enum {
+  Srv2Cli_VarSync_StringVarChanged = Srv2Cli_NumGameMsgIds,
+  Srv2Cli_VarSync_NumericVarChanged,
+  Srv2Cli_VarSync_AllVarsSent,
+  Srv2Cli_VarSync_StringVarCreated,
+  Srv2Cli_VarSync_NumericVarCreated
+};
 
-#define kBlueSpiralClothOrder 0x04
-#define kBlueSpiralSuccessfulHit 0x05
-#define kBlueSpiralGameWon 0x06
-#define kBlueSpiralGameOver 0x07
-#define kBlueSpiralGameStarted 0x08
+/*
+ * c.f. CWE NucleusLib/pnGameMgr/BlueSpiral
+ */
+enum {
+  Srv2Cli_BlueSpiral_ClothOrder = Srv2Cli_NumGameMsgIds,
+  Srv2Cli_BlueSpiral_SuccessfulHit,
+  Srv2Cli_BlueSpiral_GameWon,
+  Srv2Cli_BlueSpiral_GameOver,      ///< sent on time out and incorrect entry
+  Srv2Cli_BlueSpiral_GameStarted,
+};
 
-#define kMarkerTemplateCreated 0x04
-#define kMarkerTeamAssigned 0x05
-#define kMarkerGameType 0x06
-#define kMarkerGameStarted 0x07
-#define kMarkerGamePaused 0x08
-#define kMarkerGameReset 0x09
-#define kMarkerGameOver 0x0a
-#define kMarkerGameNameChanged 0x0b
-#define kMarkerTimeLimitChanged 0x0c
-#define kMarkerGameDeleted 0x0d
-#define kMarkerMarkerAdded 0x0e
-#define kMarkerMarkerDeleted 0x0f
-#define kMarkerMarkerNameChanged 0x10
-#define kMarkerMarkerCaptured 0x11
+/*
+ * cf. CWE NucleusLib/pnGameMgr/Marker
+ */
+enum {
+  Srv2Cli_Marker_TemplateCreated = Srv2Cli_NumGameMsgIds,
+  Srv2Cli_Marker_TeamAssigned,
+  Srv2Cli_Marker_GameType,
+  Srv2Cli_Marker_GameStarted,
+  Srv2Cli_Marker_GamePaused,
+  Srv2Cli_Marker_GameReset,
+  Srv2Cli_Marker_GameOver,
+  Srv2Cli_Marker_GameNameChanged,
+  Srv2Cli_Marker_TimeLimitChanged,
+  Srv2Cli_Marker_GameDeleted,
+  Srv2Cli_Marker_MarkerAdded,
+  Srv2Cli_Marker_MarkerDeleted,
+  Srv2Cli_Marker_MarkerNameChanged,
+  Srv2Cli_Marker_MarkerCaptured,
+};
 
-#define kHeekPlayGame 0x04
-#define kHeekGoodbye 0x05
-#define kHeekWelcome 0x06
-#define kHeekDrop 0x07
-#define kHeekSetup 0x08
-#define kHeekLightState 0x09
-#define kHeekInterfaceState 0x0a
-#define kHeekCountdownState 0x0b
-#define kHeekWinLose 0x0c
-#define kHeekGameWin 0x0d
-#define kHeekPointUpdate 0x0e
+/*
+ * cf. CWE NucleusLib/pnGameMgr/Heek
+ */
+enum {
+  Srv2Cli_Heek_PlayGame = Srv2Cli_NumGameMsgIds, ///<  Sent when the server allows or disallows a player to play
+  Srv2Cli_Heek_Goodbye,                           ///<  Sent when the server confirms the player leaving
+  Srv2Cli_Heek_Welcome,                           ///<  Sent to everyone when a new player joins
+  Srv2Cli_Heek_Drop,                              ///<  Sent when the admin needs to reset a position
+  Srv2Cli_Heek_Setup,                             ///<  Sent on link-in so observers see the correct game state (fast-forwarded)
+  Srv2Cli_Heek_LightState,                        ///<  Sent to a player when a light he owns changes state (animated)
+  Srv2Cli_Heek_InterfaceState,                    ///<  Sent to a player when his buttons change state (animated)
+  Srv2Cli_Heek_CountdownState,                    ///<  Sent to the admin to adjust the countdown state
+  Srv2Cli_Heek_WinLose,                           ///<  Sent to a player when he wins or loses a hand
+  Srv2Cli_Heek_GameWin,                           ///<  Sent to the admin when a game is won
+  Srv2Cli_Heek_PointUpdate,                       ///<  Sent to a player when their points change
+};
 
 // constants
 
-#define kGameInviteSuccess 0x00
-#define kGameInviteErrNotOwner 0x01
-#define kGameInviteErrAlreadyInvited 0x02
-#define kGameInviteErrAlreadyJoined 0x03
-#define kGameInviteErrGameStarted 0x04
-#define kGameInviteErrGameOver 0x05
-#define kGameInviteErrGameFull 0x06
-#define kGameInviteErrNoJoin 0x07
+/*
+ * cf. CWE NucleusLib/pnGameMgr
+ */
+enum EGameInviteError {
+  GameInviteSuccess,
+  GameInviteErrNotOwner,
+  GameInviteErrAlreadyInvited,
+  GameInviteErrAlreadyJoined,
+  GameInviteErrGameStarted,
+  GameInviteErrGameOver,
+  GameInviteErrGameFull,
+  GameInviteErrNoJoin,         ///< GameSrv reports the player may not join right now
+  NumGameInviteErrors
+};
 
-#define kMarkerGameQuest 0x00
-#define kMarkerGameCGZ 0x01
-#define kMarkerGameCapture 0x02
-#define kMarkerGameCaptureAndHold 0x03
+/*
+ * cf. CWE NucleusLib/pnGameMgr/Marker
+ */
+enum EMarkerGameType {
+  MarkerGameQuest,
+  MarkerGameCGZ,            ///< this is a quest game, but differentiating between the two on the client side makes some things easier
+  MarkerGameCapture,
+  MarkerGameCaptureAndHold,
+  NumMarkerGameTypes
+};
 
 /* These are backwards from PlasmaConstants.py */
-#define kMarkerNotCaptured 0x00 /* name made up */
-#define kMarkerCaptured 0x01
+#define MarkerNotCaptured           0x00 /* name made up */
+#define MarkerCaptured              0x01
 
-#define kHeekCountdownStart 0x00
-#define kHeekCountdownStop 0x01
-#define kHeekCountdownIdle 0x02
+/*
+ * cf. CWE NucleusLib/pnGameMgr/Heek
+ */
+enum EHeekCountdownState {
+  HeekCountdownStart,
+  HeekCountdownStop,
+  HeekCountdownIdle,
+  NumHeekCountdownStates
+};
 
-#define kHeekGameChoiceRock 0x00
-#define kHeekGameChoicePaper 0x01
-#define kHeekGameChoiceScissors 0x02
+enum EHeekChoice {
+  HeekRock,
+  HeekPaper,
+  HeekScissors,
+  NumHeekChoices
+};
 
-#define kHeekGameSeqCountdown 0x00
-#define kHeekGameSeqChoiceAnim 0x01
-#define kHeekGameSeqGameWinAnim 0x02
+enum EHeekSeqFinished {
+  HeekCountdownSeq,
+  HeekChoiceAnimSeq,
+  HeekGameWinAnimSeq,
+  NumHeekSeq
+};
 
-#define kHeekLightOn 0x00
-#define kHeekLightOff 0x01
-#define kHeekLightFlash 0x02
+enum EHeekLightState {
+  HeekLightOn,
+  HeekLightOff,
+  HeekLightFlash,
+  NumHeekLightStates
+};
 
 // client->server
 
-#define kVarSyncNumericVarChange 0x04
-#define kVarSyncNumericVarCreate 0x07
+/*
+ * cf. CWE NucleusLib/pnGameMgr
+ */
+enum {
+  Cli2Srv_Game_LeaveGame = 0,
+  Cli2Srv_Game_Invite,
+  Cli2Srv_Game_Uninvite,
+  Cli2Srv_NumGameMsgIds
+};
 
-#define kBlueSpiralGameStart 0x03
-#define kBlueSpiralClothHit 0x04
+/*
+ * cf. CWE NucleusLib/pnGameMgr/VarSync
+ */
+enum {
+  Cli2Srv_VarSync_SetStringVar = Cli2Srv_NumGameMsgIds,
+  Cli2Srv_VarSync_SetNumericVar,
+  Cli2Srv_VarSync_RequestAllVars,
+  Cli2Srv_VarSync_CreateStringVar,
+  Cli2Srv_VarSync_CreateNumericVar,
+};
 
-#define kMarkerGameStart 0x03
-#define kMarkerGamePause 0x04
-#define kMarkerGameResetReq 0x05
-#define kMarkerGameNameChange 0x06
-#define kMarkerTimeLimitChange 0x07  /* no sample - a guess here */
-#define kMarkerGameDelete 0x08
-#define kMarkerMarkerAdd 0x09
-#define kMarkerMarkerDelete 0x0a
-#define kMarkerMarkerNameChange 0x0b
-#define kMarkerMarkerCapture 0x0c
+/*
+ * cf. CWE NucleusLib/pnGameMgr/BlueSpiral
+ */
+enum {
+  Cli2Srv_BlueSpiral_StartGame = Cli2Srv_NumGameMsgIds,
+  Cli2Srv_BlueSpiral_HitCloth,
+};
 
-#define kHeekPlayGameReq 0x03
-#define kHeekGoodbyeReq 0x04
-#define kHeekChoice 0x05
-#define kHeekAnimationFinished 0x06
+/*
+ *  * cf. CWE NucleusLib/pnGameMgr/Marker
+ */
+enum {
+  Cli2Srv_Marker_StartGame = Cli2Srv_NumGameMsgIds,
+  Cli2Srv_Marker_PauseGame,
+  Cli2Srv_Marker_ResetGame,
+  Cli2Srv_Marker_ChangeGameName,
+  Cli2Srv_Marker_ChangeTimeLimit,
+  Cli2Srv_Marker_DeleteGame,
+  Cli2Srv_Marker_AddMarker,
+  Cli2Srv_Marker_DeleteMarker,
+  Cli2Srv_Marker_ChangeMarkerName,
+  Cli2Srv_Marker_CaptureMarker,
+};
+
+/*
+ * cf. CWE NucleusLib/pnGameMgr/Heek
+ */
+enum {
+  Cli2Srv_Heek_PlayGame = Cli2Srv_NumGameMsgIds, ///< Sent when a player wants to join in the game (instead of observing)
+  Cli2Srv_Heek_LeaveGame,                         ///< Sent when a player is done playing (and starts observing)
+  Cli2Srv_Heek_Choose,                            ///< Sent when a player choses a move
+  Cli2Srv_Heek_SeqFinished,                       ///< Sent when a client-side animation ends
+};
 
 #endif /* _PROTOCOL_H_ */

@@ -1,20 +1,20 @@
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 /*
  * Do not mess with this file unless you are masochistic.
@@ -180,8 +180,8 @@ UruString::UruString(const uint8_t *inbuf, int32_t buflen, bool has_length, bool
 }
 
 UruString::UruString(const UruString &other, bool copy) :
-    m_cstr(NULL), m_altstr(NULL), m_alt_type(other.m_alt_type), m_owns_cstr(false), m_owns_altstr(false), m_arrival_len(
-        other.m_arrival_len), m_cstr_size(other.m_cstr_size), m_altstr_size(other.m_altstr_size) {
+    m_cstr(NULL), m_altstr(NULL), m_alt_type(other.m_alt_type), m_owns_cstr(false), m_owns_altstr(false),
+    m_arrival_len(other.m_arrival_len), m_cstr_size(other.m_cstr_size), m_altstr_size(other.m_altstr_size) {
   if (other.m_cstr && (other.m_owns_cstr || copy)) {
     m_cstr = new char[m_cstr_size + 3];
     m_owns_cstr = true;
@@ -331,8 +331,8 @@ UruString& UruString::operator=(const std::string &str) {
 }
 
 UruString::UruString() :
-    m_cstr(NULL), m_altstr(NULL), m_alt_type(NO_NULL), m_owns_cstr(false), m_owns_altstr(false), m_arrival_len(0), m_cstr_size(
-        0), m_altstr_size(0) {
+    m_cstr(NULL), m_altstr(NULL), m_alt_type(NO_NULL), m_owns_cstr(false), m_owns_altstr(false), m_arrival_len(0),
+    m_cstr_size(0), m_altstr_size(0) {
 }
 
 UruString::~UruString() {
@@ -469,8 +469,7 @@ void UruString::make_cstr() {
       }
     }
     if (iconv_state != (iconv_t) -1) {
-      iconv(iconv_state, (ICONV_CONST char**)&read_at.c, &srclen,
-          &write_at, &dstlen);
+      iconv(iconv_state, (ICONV_CONST char**) &read_at.c, &srclen, &write_at, &dstlen);
       // see comments in get_str() about forging on
       write_at[0] = '\0';
       m_cstr_size = write_at - (m_cstr + 2);
@@ -675,8 +674,7 @@ const uint8_t* const UruString::get_str(bool include_length, bool as_wide, bool 
         }
       }
       if (iconv_state != (iconv_t) -1) {
-        iconv(iconv_state, (ICONV_CONST char**)&read_at.c, &srclen,
-            &write_at.c, &dstlen);
+        iconv(iconv_state, (ICONV_CONST char**) &read_at.c, &srclen, &write_at.c, &dstlen);
         // Since there is no sane way to fail the conversion back to the
         // client, we must forge on. Therefore it does not matter what
         // iconv returns. If no characters are converted we'll just have
@@ -761,8 +759,7 @@ const uint8_t* const UruString::get_str(bool include_length, bool as_wide, bool 
         }
       }
       if (iconv_state != (iconv_t) -1) {
-        iconv(iconv_state, (ICONV_CONST char**)&read_at.c, &srclen,
-            &write_at.c, &dstlen);
+        iconv(iconv_state, (ICONV_CONST char**) &read_at.c, &srclen, &write_at.c, &dstlen);
         // Again, we must forge on.
         m_altstr_size = write_at.u - (bitflip ? tempbufw : m_altstr + 2);
         if (include_null && (source_type & NO_NULL)) {

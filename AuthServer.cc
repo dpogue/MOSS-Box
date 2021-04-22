@@ -84,9 +84,9 @@
 #include "moss_serv.h"
 #include "AuthServer.h"
 
-AuthServer::AuthServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address) :
-    Server(server_dir, is_a_thread), m_keydata(NULL), m_vault_addr(vault_address), m_vault(NULL), m_state(START), m_reqid(
-        0), m_download_dir(NULL), m_download(NULL), m_is_visitor(true/*until authed*/), m_kinum(0) {
+AuthServer::AuthServer(int32_t the_fd, const char *server_dir, bool is_a_thread, struct sockaddr_in &vault_address, bool allow_vaultmanager) :
+    Server(server_dir, is_a_thread), m_keydata(NULL), m_vault_addr(vault_address), m_vault(NULL), m_state(START), m_reqid(0), m_nonce(
+        0), m_download_dir(NULL), m_download(NULL), m_is_visitor(true/*until authed*/), m_kinum(0), m_allow_vaultmanager(allow_vaultmanager) {
   memset(m_client_uuid, 0, 16);
   Connection *conn = new AuthConnection(the_fd, m_state, m_log);
   m_conns.push_back(conn);
@@ -102,7 +102,7 @@ AuthServer::~AuthServer() {
 #endif
 #ifdef USING_DH
   if (m_keydata) {
-    DH *dh = (DH *)m_keydata;
+    DH *dh = (DH*) m_keydata;
     DH_free(dh);
   }
 #endif
@@ -277,13 +277,11 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
 
       log_msgs(m_log, "Setting up session key (fd %d)\n", conn->fd());
 #if defined(USING_RSA) || defined(USING_DH)
-      reason_t key_okay = conn->setup_rc4_key(in->buffer()+1,
-                in->message_len()-2, m_keydata,
-                conn->fd(), m_log);
+      reason_t key_okay = conn->setup_rc4_key(in->buffer() + 1, in->message_len() - 2, m_keydata, conn->fd(), m_log);
       if (key_okay != NO_SHUTDOWN) {
-  // problem is already logged
-  delete in;
-  return key_okay;
+        // problem is already logged
+        delete in;
+        return key_okay;
       }
 #endif
       m_state = NONCE_DONE;
@@ -323,6 +321,8 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
       // normal message processing
       AuthClientMessage *ain = (AuthClientMessage*) in;
 
+      log_debug(m_log, "received %s AuthClientMessage\n", ain->msg_class_c_str(ain->msg_class()));
+
       switch (ain->msg_class()) {
       case AuthClientMessage::Ping:
         gettimeofday(&conn->m_timeout, NULL);
@@ -330,11 +330,13 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
         conn->enqueue(in);
         // we do not want to delete the message, so skip the end
         return NO_SHUTDOWN;
+
       case AuthClientMessage::LoginReq:
         if (m_state > LOGIN || m_state < REGISTER) {
-          log_warn(m_log, "AcctLoginRequest at unexpected time (state %s)\n", state_string());
+          log_warn(m_log, "AcctLoginRequest at unexpected time (state %s)\n", state_c_str());
         } else {
           AuthClientLoginMessage *login = (AuthClientLoginMessage*) in;
+          log_debug(m_log, "%s Message %s\n", ain->msg_class_c_str(ain->msg_class()), Cli2Auth_e_c_str(login->type()));
           if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
             if (login->token().strlen() != 0) {
               log_warn(m_log, "Non-empty \"auth token\" provided: %s\n", login->token().c_str());
@@ -361,61 +363,63 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
               atype = AuthAcctLogin_ToBackendMessage::PLAIN_HASH;
             }
             AuthAcctLogin_ToBackendMessage *query = new AuthAcctLogin_ToBackendMessage(m_ipaddr, m_id, m_reqid, login->login(),
-            		login->hash(), atype, m_nonce, login->nonce());
+                login->hash(), atype, m_nonce, login->nonce());
             m_vault->enqueue(query);
           }
         }
         break;
-      case AuthClientMessage::PasswordChange:
-        {
-          AuthClientChangePassMessage *pass = (AuthClientChangePassMessage*) in;
-          if (m_state > IN_GAME) {
-            log_warn(m_log, "Rejecting AcctChangePasswordRequest at unexpected"
-                " time (state %s)\n", state_string());
-            AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(pass->reqid(), ERROR_FORBIDDEN);
+
+      case AuthClientMessage::PasswordChange: {
+        AuthClientChangePassMessage *pass = (AuthClientChangePassMessage*) in;
+        log_debug(m_log, "%s Message %s\n", ain->msg_class_c_str(ain->msg_class()), Cli2Auth_e_c_str(pass->type()));
+        if (m_state > IN_GAME) {
+          log_warn(m_log, "Rejecting AcctChangePasswordRequest at unexpected"
+              " time (state %s)\n", state_c_str());
+          AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(pass->reqid(), ERROR_FORBIDDEN);
+          conn->enqueue(reply);
+        } else {
+          // send to backend
+          UruString &name = pass->login();
+          if (name.strlen() == 0) {
+            log_warn(m_log, "AcctChangePasswordRequest with empty name\n");
+            AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(pass->reqid(), ERROR_ACCT_NOT_FOUND);
+            conn->enqueue(reply);
+          } else if (!is_email_username(name.c_str(), name.strlen())) {
+            // The client always uses the email-address hash algorithm
+            // with /changepassword, even if the username isn't an
+            // email address. Without fixing the client, we can't do
+            // anything but reject such requests.
+            log_msgs(m_log, "AcctChangePasswordRequest for %s rejected due "
+                "to login name not being an email address\n", name.c_str());
+            AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(pass->reqid(), ERROR_INVALID_PARAM);
             conn->enqueue(reply);
           } else {
-            // send to backend
-            UruString &name = pass->login();
-            if (name.strlen() == 0) {
-              log_warn(m_log, "AcctChangePasswordRequest with empty name\n");
-              AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(pass->reqid(),
-                  ERROR_ACCT_NOT_FOUND);
-              conn->enqueue(reply);
-            } else if (!is_email_username(name.c_str(), name.strlen())) {
-              // The client always uses the email-address hash algorithm
-              // with /changepassword, even if the username isn't an
-              // email address. Without fixing the client, we can't do
-              // anything but reject such requests.
-              log_msgs(m_log, "AcctChangePasswordRequest for %s rejected due "
-                  "to login name not being an email address\n", name.c_str());
-              AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(pass->reqid(),
-                  ERROR_INVALID_PARAM);
-              conn->enqueue(reply);
-            } else {
-              log_msgs(m_log, "AcctChangePasswordRequest for %s\n", name.c_str());
-              // send message to backend server
-              AuthChangePassword_ToBackendMessage *query = new AuthChangePassword_ToBackendMessage(m_ipaddr, m_id,
-                  m_client_uuid, pass->reqid(), name, pass->hash());
-              m_vault->enqueue(query);
-            }
+            log_msgs(m_log, "AcctChangePasswordRequest for %s\n", name.c_str());
+            // send message to backend server
+            AuthChangePassword_ToBackendMessage *query = new AuthChangePassword_ToBackendMessage(m_ipaddr, m_id, m_client_uuid,
+                pass->reqid(), name, pass->hash());
+            m_vault->enqueue(query);
           }
         }
+      }
         break;
+
       case AuthClientMessage::File:
         if (m_state <= DOWNLOAD) {
           AuthClientFileMessage *msg = (AuthClientFileMessage*) in;
-          if (msg->type() == kCli2Auth_FileDownloadChunkAck) {
+          log_debug(m_log, "%s Message %08x,%08x %s\n", ain->msg_class_c_str(ain->msg_class()), m_ipaddr, m_id,
+              Cli2Auth_e_c_str(msg->type()));
+          if (msg->type() == Cli2Auth_FileDownloadChunkAck) {
 #ifndef DOWNLOAD_NO_ACKS
             if (!m_download) {
               log_warn(m_log, "Got FileDownloadChunkAck when no download in "
                   "progress\n");
             } else {
-              log_msgs(m_log, "FileDownloadChunkAck received\n");
+              log_msgs(m_log, "FileDownloadChunkAck received offset=%u length=%u\n", m_download->chunk_offset(),
+                  m_download->chunk_length());
               m_download->chunk_acked();
               if (!m_download->file_complete()) {
-                AuthServerFileMessage *reply = new AuthServerFileMessage(m_download,
-                kAuth2Cli_FileDownloadChunk);
+                AuthServerFileMessage *reply = new AuthServerFileMessage(m_download, Auth2Cli_FileDownloadChunk);
                 conn->enqueue(reply);
               } else {
                 delete m_download;
@@ -424,7 +428,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
             }
 #endif /* DOWNLOAD_NO_ACKS */
           } else {
-            bool is_manifest = (msg->type() == kCli2Auth_FileListRequest);
+            bool is_manifest = (msg->type() == Cli2Auth_FileListRequest);
             if (!m_download_dir) {
               // this should not happen, login sequence from client is wrong
               if (is_manifest) {
@@ -478,7 +482,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
             }
             m_download->init(m_download_dir, fname);
             AuthServerFileMessage *reply = new AuthServerFileMessage(m_download,
-                is_manifest ? kAuth2Cli_FileListReply : kAuth2Cli_FileDownloadChunk);
+                is_manifest ? Auth2Cli_FileListReply : Auth2Cli_FileDownloadChunk);
             conn->enqueue(reply);
 #ifndef DOWNLOAD_NO_ACKS
             if (is_manifest)
@@ -487,23 +491,24 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
               // and a Download at the same time (but not more than one of
               // each)
 #else
-        // if DOWNLOAD_NO_ACKS is defined, always forget the transaction
-        // (we don't use it again)
+              // if DOWNLOAD_NO_ACKS is defined, always forget the transaction
+              // (we don't use it again)
 #endif
               m_download = NULL;
           }
         } else {
           log_warn(m_log, "Got a File transaction at unexpected time "
-              "(state %s)\n", state_string());
+              "(state %s)\n", state_c_str());
           KICK_FOR_ERROR(ERROR_DISCONNECTED);
           delete in;
           return UNEXPECTED_STATE;
         }
         break;
+
       case AuthClientMessage::PlayerCreate:
         if (m_state != IN_STARTUP) {
           log_warn(m_log, "PlayerCreateRequest at incorrect time "
-              "(state %s)\n", state_string());
+              "(state %s)\n", state_c_str());
           KICK_FOR_ERROR(ERROR_DISCONNECTED);
           delete in;
           return UNEXPECTED_STATE;
@@ -518,12 +523,14 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
           conn->enqueue(reply);
         } else {
           AuthClientPlayerCreateMessage *msg = (AuthClientPlayerCreateMessage*) in;
+          log_debug(m_log, "%s Message %s\n", ain->msg_class_c_str(ain->msg_class()), Cli2Auth_e_c_str(msg->type()));
 
           m_reqid = msg->reqid();
           if (msg->code().strlen() > 0) {
             if (m_log && m_log->would_log_at(Logger::LOG_DEBUG)) {
-              log_debug(m_log, "PlayerCreateRequest with invite code %s (avatar %s, gender %s, reqid %u)\n",
-            		  msg->code().c_str(), msg->name().c_str(), msg->gender().c_str(), m_reqid);
+              log_debug(m_log, "PlayerCreateRequest with invite code %s "
+                  "(avatar %s, gender %s, reqid %u)\n", msg->code().c_str(), msg->name().c_str(), msg->gender().c_str(),
+                  m_reqid);
             }
           }
 
@@ -550,96 +557,96 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
             uint8_t repbuf[8];
             write32(repbuf, 0, m_reqid);
             write32(repbuf, 4, ERROR_NAME_INVALID);
-            AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, kAuth2Cli_AcctSetPlayerReply);
+            AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, Auth2Cli_AcctSetPlayerReply);
             conn->enqueue(reply);
             m_reqid = 0;
           } else {
             log_msgs(m_log, "PlayerCreateRequest for name \"%s\" -> backend\n", msg->name().c_str());
             VaultPlayerCreate_ToBackendMessage *query = new VaultPlayerCreate_ToBackendMessage(m_ipaddr, m_id, m_reqid,
-            		m_client_uuid, name, msg->gender());
+                m_client_uuid, name, msg->gender());
             m_vault->enqueue(query);
           }
         }
         break;
+
       case AuthClientMessage::Vault:
-        if (m_state < VAULT_DOWNLOAD) {
-          log_net(m_log, "Got a Vault message at an unexpected time (state %s)\n", state_string());
+        if ((m_state < VAULT_DOWNLOAD) && (!m_allow_vaultmanager)) {
+          log_net(m_log, "Got a Vault message at an unexpected time (state %s)\n", state_c_str());
           if (m_log) {
             m_log->dump_contents(Logger::LOG_NET, in->buffer(), in->message_len());
           }
           // ignore it, I guess
         } else {
           AuthClientVaultMessage *msg = (AuthClientVaultMessage*) in;
+          log_debug(m_log, "%s Message %s\n", ain->msg_class_c_str(ain->msg_class()), Cli2Auth_e_c_str(msg->type()));
           switch (msg->type()) {
-#ifndef OLD_PROTOCOL
-          case kCli2Auth_ScoreGetScores:
+          case Cli2Auth_ScoreGetScores:
 #ifdef PELLET_SCORE_CACHE
-      {
-        const uint8_t *score_buf = in->buffer();
-        kinum_t score_holder = (kinum_t)read32(score_buf, 6);
-        if (score_holder == m_kinum) {
-    UruString score_name(score_buf+10, in->message_len()-10,
-             true, false, false);
-    if (score_name == "PelletDrop") {
-      uint32_t reqid = read32(score_buf, 2);
-      if (m_pelletbuf) {
-        log_debug(m_log, "Providing cached pellet score\n");
-        write32(m_pelletbuf, 0, reqid);
-        size_t score_len = read32(m_pelletbuf, 12) + 16;
-        AuthServerMessage *cached
-          = new AuthServerMessage(m_pelletbuf, score_len,
-                kAuth2Cli_ScoreGetScoresReply);
-        conn->enqueue(cached);
-        break;
-      }
-      else {
-        // keep reqid
-        m_pelletreq = reqid;
-      }
-    }
-        }
-      }
-      // FALLTHROUGH if cached score not provided
-#endif /* PELLET_SCORE_CACHE */
-          case kCli2Auth_ScoreAddPoints:
-          case kCli2Auth_ScoreTransferPoints:
-          case kCli2Auth_ScoreCreate:
-#endif /* OLD_PROTOCOL */
-          case kCli2Auth_VaultFetchNodeRefs:
-          case kCli2Auth_VaultNodeFind:
-          case kCli2Auth_VaultNodeFetch:
-          case kCli2Auth_VaultNodeSave:
-          case kCli2Auth_VaultNodeCreate:
-          case kCli2Auth_VaultNodeAdd:
-          case kCli2Auth_VaultNodeRemove:
-          case kCli2Auth_VaultInitAgeRequest:
-          case kCli2Auth_VaultSendNode:
-          case kCli2Auth_GetPublicAgeList:
-          case kCli2Auth_SetAgePublic:
-            // pass through to vault server
             {
+              const uint8_t *score_buf = in->buffer();
+              kinum_t score_holder = (kinum_t)read32(score_buf, 6);
+              if (score_holder == m_kinum) {
+                UruString score_name(score_buf+10, in->message_len()-10,
+                    true, false, false);
+                if (score_name == "PelletDrop") {
+                  uint32_t reqid = read32(score_buf, 2);
+                  if (m_pelletbuf) {
+                    log_debug(m_log, "Providing cached pellet score\n");
+                    write32(m_pelletbuf, 0, reqid);
+                    size_t score_len = read32(m_pelletbuf, 12) + 16;
+                    AuthServerMessage *cached
+                    = new AuthServerMessage(m_pelletbuf, score_len,
+                        Auth2Cli_ScoreGetScoresReply);
+                    conn->enqueue(cached);
+                    break;
+                  }
+                  else {
+                    // keep reqid
+                    m_pelletreq = reqid;
+                  }
+                }
+              }
+            }
+            // FALLTHROUGH if cached score not provided
+#endif /* PELLET_SCORE_CACHE */
+          case Cli2Auth_ScoreAddPoints:
+          case Cli2Auth_ScoreTransferPoints:
+          case Cli2Auth_ScoreCreate:
+          case Cli2Auth_VaultFetchNodeRefs:
+          case Cli2Auth_VaultNodeFind:
+          case Cli2Auth_VaultNodeFetch:
+          case Cli2Auth_VaultNodeSave:
+          case Cli2Auth_VaultNodeCreate:
+          case Cli2Auth_VaultNodeAdd:
+          case Cli2Auth_VaultNodeRemove:
+          case Cli2Auth_VaultInitAgeRequest:
+          case Cli2Auth_VaultSendNode:
+          case Cli2Auth_GetPublicAgeList:
+          case Cli2Auth_SetAgePublic:
+            // pass through to vault server
+          {
 //        log_msgs(m_log, "Passthrough vault request 0x%04x\n",
 //           msg->type());
-#if !defined(OLD_PROTOCOL) && defined(PELLET_SCORE_CACHE)
-        if (m_pelletbuf
-      && (msg->type() == kCli2Auth_ScoreAddPoints
-          // XXX also ScoreDelete, ScoreSetPoints
-          || msg->type() == kCli2Auth_ScoreTransferPoints)) {
-    // throw out the cached score because it might be changing --
-    // this could be more selective but it's just a cache so
-    // there's no need to be picky
-    delete[] m_pelletbuf;
-    m_pelletbuf = NULL;
-        }
-#endif /* !OLD_PROTOCOL && PELLET_SCORE_CACHE */
-              VaultPassthrough_BackendMessage *vaultmsg = new VaultPassthrough_BackendMessage(m_ipaddr, m_id,
-                  in->buffer(), in->message_len(), true, msg->owns_buffer());
-              // make sure to do this before queuing or we may leak memory!
-              if (msg->owns_buffer()) {
-                msg->make_unowned();
-              }
-              m_vault->enqueue(vaultmsg);
+#if defined(PELLET_SCORE_CACHE)
+            if (m_pelletbuf
+                && (msg->type() == Cli2Auth_ScoreAddPoints
+                    // XXX also ScoreDelete, ScoreSetPoints
+                    || msg->type() == Cli2Auth_ScoreTransferPoints)) {
+              // throw out the cached score because it might be changing --
+              // this could be more selective but it's just a cache so
+              // there's no need to be picky
+              delete[] m_pelletbuf;
+              m_pelletbuf = NULL;
             }
+#endif /* PELLET_SCORE_CACHE */
+            VaultPassthrough_BackendMessage *vaultmsg = new VaultPassthrough_BackendMessage(m_ipaddr, m_id, in->buffer(),
+                in->message_len(), true, msg->owns_buffer());
+            // make sure to do this before queuing or we may leak memory!
+            if (msg->owns_buffer()) {
+              msg->make_unowned();
+            }
+            m_vault->enqueue(vaultmsg);
+          }
             break;
           default:
             log_debug(m_log, "Got an unimplemented Vault message from the "
@@ -647,45 +654,48 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
           }
         }
         break;
-      case AuthClientMessage::AgeReq:
-        {
-          if (m_state < VAULT_DOWNLOAD) {
-            log_warn(m_log, "AgeRequest before vault download (state %s)\n", state_string());
-            KICK_FOR_ERROR(ERROR_DISCONNECTED);
-            delete in;
-            return UNEXPECTED_STATE;
-          } else if (m_state == AGE_REQ && m_reqid) {
-            log_warn(m_log, "AgeRequest arrived when another AgeRequest "
-                "reqid=(%u) is not completed\n", m_reqid);
-          }
-          m_state = AGE_REQ;
-          AuthClientAgeRequestMessage *msg = (AuthClientAgeRequestMessage*) in;
 
-          m_reqid = msg->reqid();
-          if (m_log && m_log->would_log_at(Logger::LOG_MSGS)) {
-            char ageuuid[UUID_STR_LEN];
-            format_uuid(msg->uuid(), ageuuid);
-            log_msgs(m_log, "AgeRequest for %s UUID %s\n", msg->name().c_str(), ageuuid);
-          }
-
-          TrackAgeRequest_ToBackendMessage *query = new TrackAgeRequest_ToBackendMessage(m_ipaddr, m_id, m_reqid,
-              msg->name(), msg->uuid());
-          m_vault->enqueue(query);
+      case AuthClientMessage::AgeReq: {
+        if (m_state < VAULT_DOWNLOAD) {
+          log_warn(m_log, "AgeRequest before vault download (state %s)\n", state_c_str());
+          KICK_FOR_ERROR(ERROR_DISCONNECTED);
+          delete in;
+          return UNEXPECTED_STATE;
+        } else if (m_state == AGE_REQ && m_reqid) {
+          log_warn(m_log, "AgeRequest arrived when another AgeRequest "
+              "reqid=(%u) is not completed\n", m_reqid);
         }
+        m_state = AGE_REQ;
+        AuthClientAgeRequestMessage *msg = (AuthClientAgeRequestMessage*) in;
+
+        m_reqid = msg->reqid();
+        if (m_log && m_log->would_log_at(Logger::LOG_MSGS)) {
+          char ageuuid[UUID_STR_LEN];
+          format_uuid(msg->uuid(), ageuuid);
+          log_msgs(m_log, "AgeRequest for %s UUID %s\n", msg->name().c_str(), ageuuid);
+        }
+
+        TrackAgeRequest_ToBackendMessage *query = new TrackAgeRequest_ToBackendMessage(m_ipaddr, m_id, m_reqid, msg->name(),
+            msg->uuid());
+        m_vault->enqueue(query);
+      }
         break;
+
       case AuthClientMessage::Log:
         if (m_log && m_log->would_log_at(Logger::LOG_WARN)) {
           UruString str(in->buffer() + 4, in->message_len() - 4, false, true, false);
           log_warn(m_log, "Got a Log message from the client:\n%s\n", str.c_str());
         }
         break;
+
       case AuthClientMessage::Generic:
       default:
+        log_debug(m_log, "%s Message %s\n", ain->msg_class_c_str(ain->msg_class()), Cli2Auth_e_c_str(in->type()));
         switch (in->type()) {
-        case kCli2Auth_ClientRegisterRequest:
+        case Cli2Auth_ClientRegisterRequest:
           if (m_state > LOGIN) {
             log_warn(m_log, "ClientRegisterRequest at unexpected time "
-                "(state %s)\n", state_string());
+                "(state %s)\n", state_c_str());
           } else if (m_state == NONCE_DONE) {
             log_msgs(m_log, "Received ClientRegisterRequest\n");
             // XXX should I bother to check/care about the client version?
@@ -694,28 +704,27 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
             // technically, these need to be unpredictable much more than
             // the RC4 key or even UUIDs
             get_random_data((uint8_t*) &m_nonce, 4);
-            AuthServerMessage *reply = new AuthServerMessage((uint8_t*) &m_nonce, 4,
-            kAuth2Cli_ClientRegisterReply);
+            AuthServerMessage *reply = new AuthServerMessage((uint8_t*) &m_nonce, 4, Auth2Cli_ClientRegisterReply);
             conn->enqueue(reply);
             uint8_t repbuf[20];
             write32(repbuf, NO_ERROR, ntohl(m_ipaddr));
             memcpy(repbuf + 4, MOSS_UUID, 16);
-            reply = new AuthServerMessage(repbuf, 20, kAuth2Cli_ServerAddr);
+            reply = new AuthServerMessage(repbuf, 20, Auth2Cli_ServerAddr);
             conn->enqueue(reply);
           } else {
             // ignore it
             log_msgs(m_log, "Ignoring ClientRegisterRequest at weird time\n");
           }
           break;
-        case kCli2Auth_AcctSetPlayerRequest:
+        case Cli2Auth_AcctSetPlayerRequest:
 #ifdef DISALLOW_NO_DOWNLOAD
-    if (m_state < DOWNLOAD) {
-      // the user did not download anything
-      log_info(m_log, "Client did not initiate \"secure download\"\n");
-      KICK_FOR_ERROR(ERROR_DISCONNECTED);
-      delete in;
-      return UNEXPECTED_STATE;
-    }
+          if (m_state < DOWNLOAD) {
+            // the user did not download anything
+            log_info(m_log, "Client did not initiate \"secure download\"\n");
+            KICK_FOR_ERROR(ERROR_DISCONNECTED);
+            delete in;
+            return UNEXPECTED_STATE;
+          }
 #endif
           if (m_state != DOWNLOAD && m_state != IN_STARTUP
 #ifndef DISALLOW_NO_DOWNLOAD
@@ -724,7 +733,7 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
               // following is the "log out" -> StartUp transition
               && !(m_state == IN_GAME && read32(in->buffer(), 6) == 0)) {
             log_warn(m_log, "AcctSetPlayerRequest at unexpected time "
-                "(state %s)\n", state_string());
+                "(state %s)\n", state_c_str());
             // ignore it
           } else {
             if (m_state == DOWNLOAD && m_download) {
@@ -744,78 +753,69 @@ Server::reason_t AuthServer::message_read(Connection *conn, NetworkMessage *in) 
               // using the client UUID received earlier (we could instead
               // cache the values in the AcctPlayerInfo messages, if we had
               // to)
-              AuthKIValidate_ToBackendMessage *query = new AuthKIValidate_ToBackendMessage(m_ipaddr, m_id,
-                  m_client_uuid, newkinum);
+              AuthKIValidate_ToBackendMessage *query = new AuthKIValidate_ToBackendMessage(m_ipaddr, m_id, m_client_uuid,
+                  newkinum);
               m_vault->enqueue(query);
             } else {
               // shortcut
               m_reqid = 0;
-              AuthServerMessage *reply = new AuthServerMessage(playerbuf + 2, 8,
-              kAuth2Cli_AcctSetPlayerReply);
+              AuthServerMessage *reply = new AuthServerMessage(playerbuf + 2, 8, Auth2Cli_AcctSetPlayerReply);
               conn->enqueue(reply);
               if (m_kinum != 0) {
                 // need to tell backend so it can clean up the previously
                 // logged in player properly
-                AuthPlayerLogout_BackendMessage *notice = new AuthPlayerLogout_BackendMessage(m_ipaddr, m_id,
-                    m_kinum);
+                AuthPlayerLogout_BackendMessage *notice = new AuthPlayerLogout_BackendMessage(m_ipaddr, m_id, m_kinum);
                 m_vault->enqueue(notice);
               }
             }
             m_kinum = newkinum;
           }
           break;
-        case kCli2Auth_UpgradeVisitorRequest:
-          {
-            // XXX it appears we can safely ignore this
-            kinum_t req_ki = read32(in->buffer(), 6);
-            if (m_state != IN_STARTUP) {
-              log_warn(m_log, "UpgradeVisitorRequest for %u at unexpected "
-                  "time (state %s)\n", req_ki, state_string());
-            } else {
-              log_debug(m_log, "UpgradeVisitorRequest for %u ignored\n", req_ki);
-            }
+        case Cli2Auth_UpgradeVisitorRequest: {
+          // XXX it appears we can safely ignore this
+          kinum_t req_ki = read32(in->buffer(), 6);
+          if (m_state != IN_STARTUP) {
+            log_warn(m_log, "UpgradeVisitorRequest for %u at unexpected "
+                "time (state %s)\n", req_ki, state_c_str());
+          } else {
+            log_debug(m_log, "UpgradeVisitorRequest for %u ignored\n", req_ki);
           }
+        }
           break;
-        case kCli2Auth_PlayerDeleteRequest:
-          {
-            kinum_t req_ki = read32(in->buffer(), 6);
-            m_reqid = read32(in->buffer(), 2);
-            if (m_state != IN_STARTUP) {
-              log_warn(m_log, "PlayerDeleteReqeust for %u at unexpected time "
-                  "(state %s)\n", req_ki, state_string());
-              uint8_t no_delete[8];
-              write32(no_delete, 0, m_reqid);
-              write32(no_delete, 4, ERROR_INVALID_PARAM);
-              AuthServerMessage *reply = new AuthServerMessage(no_delete, 8,
-              kAuth2Cli_PlayerDeleteReply);
-              conn->enqueue(reply);
-              m_reqid = 0;
-            } else {
-              log_msgs(m_log, "PlayerDeleteRequest for %u -> backend\n", req_ki);
-              VaultPlayerDelete_ToBackendMessage *query = new VaultPlayerDelete_ToBackendMessage(m_ipaddr, m_id,
-                  m_reqid, req_ki);
-              m_vault->enqueue(query);
-            }
+        case Cli2Auth_PlayerDeleteRequest: {
+          kinum_t req_ki = read32(in->buffer(), 6);
+          m_reqid = read32(in->buffer(), 2);
+          if (m_state != IN_STARTUP) {
+            log_warn(m_log, "PlayerDeleteReqeust for %u at unexpected time "
+                "(state %s)\n", req_ki, state_c_str());
+            uint8_t no_delete[8];
+            write32(no_delete, 0, m_reqid);
+            write32(no_delete, 4, ERROR_INVALID_PARAM);
+            AuthServerMessage *reply = new AuthServerMessage(no_delete, 8, Auth2Cli_PlayerDeleteReply);
+            conn->enqueue(reply);
+            m_reqid = 0;
+          } else {
+            log_msgs(m_log, "PlayerDeleteRequest for %u -> backend\n", req_ki);
+            VaultPlayerDelete_ToBackendMessage *query = new VaultPlayerDelete_ToBackendMessage(m_ipaddr, m_id, m_reqid, req_ki);
+            m_vault->enqueue(query);
           }
+        }
           break;
-#ifndef OLD_PROTOCOL
-        case kCli2Auth_SendFriendInviteRequest:
+        case Cli2Auth_SendFriendInviteRequest:
           // not really supported, functionality-wise; we just handle the
           // message so as not to give grief to the client
-          {
-            log_msgs(m_log, "SendFriendInviteRequest\n");
-            uint8_t repbuf[8];
-            const uint8_t *playerbuf = in->buffer();
-            uint32_t reqid = read32(playerbuf, 2);
-            write32(repbuf, 0, reqid);
-            write32(repbuf, 4, ERROR_NOT_SUPPORTED);
-            AuthServerMessage *reply = new AuthServerMessage(repbuf, 8,
-            kAuth2Cli_SendFriendInviteReply);
-            conn->enqueue(reply);
-          }
+        {
+          log_msgs(m_log, "SendFriendInviteRequest\n");
+          uint8_t repbuf[8];
+          const uint8_t *playerbuf = in->buffer();
+          uint32_t reqid = read32(playerbuf, 2);
+          write32(repbuf, 0, reqid);
+          write32(repbuf, 4, ERROR_NOT_SUPPORTED);
+          AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, Auth2Cli_SendFriendInviteReply);
+          conn->enqueue(reply);
+        }
           break;
-#endif
-        case kCli2Auth_LogClientDebuggerConnect:
+        case Cli2Auth_LogClientDebuggerConnect:
           log_warn(m_log, "Got a DebuggerConnect from the client\n");
           break;
         default:
@@ -840,6 +840,11 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
       break;
     }
   }
+
+  char *m = BackendMessage::backend_msgtype_c_str_alloc(in->type());
+  log_debug(m_log, "received <0x%x>\"%s\" client=0x%x\n", in->type(), m, client);
+  free(m);
+
   if (!client) {
     // we lost the client connection, so we don't care about what's coming
     // from the backend
@@ -848,211 +853,208 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
   }
 
   switch (in->type() & ~FROM_SERVER) {
-  case ADMIN_HELLO:
-    {
-      Hello_BackendMessage *msg = (Hello_BackendMessage*) in;
-      log_msgs(m_log, "Backend connection protocol version %u\n", msg->peer_info());
-      // no more required at this time (all speak version 0)
-    }
+  case ADMIN_HELLO: {
+    Hello_BackendMessage *msg = (Hello_BackendMessage*) in;
+    log_msgs(m_log, "Backend connection protocol version %u\n", msg->peer_info());
+    // no more required at this time (all speak version 0)
+  }
     break;
-  case ADMIN_KILL_CLIENT:
-    {
-      bool terrible = true;
-      status_code_t reason = ERROR_INTERNAL;
-      KillClient_BackendMessage *msg = (KillClient_BackendMessage*) in;
-      switch (msg->why()) {
-      case KillClient_BackendMessage::IN_DOUBT:
-        log_warn(m_log, "Received a connection kill message due to "
-            "\"in doubt\"\n");
-        break;
-      case KillClient_BackendMessage::NEW_LOGIN:
-        reason = ERROR_LOGGED_IN_ELSEWHERE;
-        log_warn(m_log, "Received a connection kill message due to "
-            "account logging in elsewhere\n");
-        terrible = false;
-        break;
-      default:
-        log_warn(m_log, "Received a connection kill message, reason %u\n", msg->why());
-      }
-      if (terrible) {
-        log_warn(m_log, "Something terribly has gone wrong.  "
-            "Head for the cover!\n");
-      }
-      AuthServerKickMessage *kicked = new AuthServerKickMessage(reason);
-      client->msg_queue()->clear_queue(); // throw out any pending messages
-      client->enqueue(kicked);
-      delete in;
-      return SERVER_SHUTDOWN;
+  case ADMIN_KILL_CLIENT: {
+    bool terrible = true;
+    status_code_t reason = ERROR_INTERNAL;
+    KillClient_BackendMessage *msg = (KillClient_BackendMessage*) in;
+    switch (msg->why()) {
+    case KillClient_BackendMessage::IN_DOUBT:
+      log_warn(m_log, "Received a connection kill message due to "
+          "\"in doubt\"\n");
+      break;
+    case KillClient_BackendMessage::NEW_LOGIN:
+      reason = ERROR_LOGGED_IN_ELSEWHERE;
+      log_warn(m_log, "Received a connection kill message due to "
+          "account logging in elsewhere\n");
+      terrible = false;
+      break;
+    default:
+      log_warn(m_log, "Received a connection kill message, reason %u\n", msg->why());
     }
-    break;
-  case AUTH_ACCT_LOGIN:
-    {
-      AuthAcctLogin_FromBackendMessage *msg = (AuthAcctLogin_FromBackendMessage*) in;
-      msg_reqid = msg->reqid();
-      if (m_state != LOGIN) {
-        // old reply somehow?
-        log_debug(m_log, "Stale Login reply from backend (reqid=%u)!\n", msg_reqid);
-      } else if (m_reqid != msg_reqid) {
-        log_debug(m_log, "Superceded Login reply from backend (reqid=%u)\n", msg_reqid);
-      } else {
-        response = msg->result();
-        if (response != NO_ERROR) {
-          // login failed
-          log_msgs(m_log, "(backend) Login failed, result=%u\n", response);
-          AuthServerLoginMessage *reply = new AuthServerLoginMessage(m_reqid, response);
-          client->enqueue(reply);
-        } else {
-          log_msgs(m_log, "(backend) Login succeeded\n");
-          memcpy(m_client_uuid, msg->acct_uuid(), 16);
-          m_is_visitor = (msg->acct_type() == GUEST_CUSTOMER);
-
-          // get download directory
-          uint32_t len = strlen(m_serv_dir) + 2;
-          if (msg->dirname()->strlen() + 1 < sizeof("default")) {
-            len += sizeof("default");
-          } else {
-            len += msg->dirname()->strlen() + 1;
-          }
-          m_download_dir = new char[len];
-          snprintf(m_download_dir, len, "%s%s%s", m_serv_dir, PATH_SEPARATOR,
-              msg->dirname()->strlen() > 0 ? msg->dirname()->c_str() : "default");
-          if (msg->dirname()->strlen() > 0) {
-            struct stat s;
-            int32_t ret = stat(m_download_dir, &s);
-            if (ret < 0) {
-              log_warn(m_log, "Expected \"secure download\" directory %s not found\n", m_download_dir);
-              snprintf(m_download_dir, len, "%s%sdefault", m_serv_dir, PATH_SEPARATOR);
-            } else if (!(S_ISDIR(s.st_mode))) {
-              log_warn(m_log, "%s is not a directory\n", m_download_dir);
-              snprintf(m_download_dir, len, "%s%sdefault", m_serv_dir, PATH_SEPARATOR);
-            }
-          }
-
-          // get the key
-          char keyfile[len + sizeof("/encryption.key")];
-          uint8_t keybuf[16];
-          memset(keybuf, 0, 16);
-          snprintf(keyfile, len + sizeof("/encryption.key"), "%s%sencryption.key", m_download_dir, PATH_SEPARATOR);
-          int32_t fd = open(keyfile, O_RDONLY, 0);
-          if (fd < 0) {
-            log_warn(m_log, "Error opening encryption key file %s: %s\n", keyfile, strerror(errno));
-          } else {
-            if (read(fd, keybuf, 16) != 16) {
-              log_err(m_log, "Error in key file read: %s\n", strerror(errno));
-            }
-            close(fd);
-          }
-          m_state = LOGIN_DONE;
-
-          // send any AcctPlayerInfo messages
-          if (msg->player_info_len() > 0) {
-            AuthServerMessage *reply = new AuthServerMessage(msg->player_info() + 2, msg->player_info_len() - 2,
-            kAuth2Cli_AcctPlayerInfo);
-            client->enqueue(reply);
-          }
-          // send reply message
-          AuthServerLoginMessage *reply2 = new AuthServerLoginMessage(m_reqid, response, msg->acct_uuid(),
-              (customer_type_t) (2/*unknown*/| msg->acct_type()), keybuf);
-          client->enqueue(reply2);
-        }
-        m_reqid = 0;
-      }
+    if (terrible) {
+      log_warn(m_log, "Something terribly has gone wrong.  "
+          "Head for the cover!\n");
     }
+    AuthServerKickMessage *kicked = new AuthServerKickMessage(reason);
+    client->msg_queue()->clear_queue(); // throw out any pending messages
+    client->enqueue(kicked);
+    delete in;
+    return SERVER_SHUTDOWN;
+  }
     break;
-  case AUTH_KI_VALIDATE:
-    {
-      AuthKIValidate_FromBackendMessage *msg = (AuthKIValidate_FromBackendMessage*) in;
-
-      msg_reqid = msg->kinum(); // actually KI number
-      if (m_state != IN_STARTUP) {
-        // old reply somehow?
-        log_debug(m_log, "Stale KI validate reply from backend (ki=%u)!\n", msg_reqid);
-      } else if (m_kinum != msg_reqid) {
-        log_debug(m_log, "Superceded KI validate reply (ki=%u)\n", msg_reqid);
-      } else {
-        response = msg->result();
-        if (response != NO_ERROR) {
-          if (response == ERROR_PLAYER_NOT_FOUND) {
-            log_warn(m_log, "Attack: Attempt to use an improper KI number (%u)!\n", msg_reqid);
-            // kill that bugger
-            AuthServerKickMessage *kill = new AuthServerKickMessage(response);
-            client->msg_queue()->clear_queue();
-            client->enqueue(kill);
-            return UNEXPECTED_STATE;
-          } else {
-            log_warn(m_log, "Server error validating KI number: %u\n", response);
-          }
-        } else {
-          log_msgs(m_log, "(backend) Validating KI number %u suceeded\n", response);
-          m_state = VAULT_DOWNLOAD;
-        }
-        uint8_t repbuf[8];
-        write32(repbuf, 0, m_reqid);
-        write32(repbuf, 4, response);
-        AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, kAuth2Cli_AcctSetPlayerReply);
-        client->enqueue(reply);
-      }
-    }
-    break;
-  case AUTH_CHANGE_PASSWORD:
-    {
-      AuthChangePassword_FromBackendMessage *msg = (AuthChangePassword_FromBackendMessage*) in;
-
+  case AUTH_ACCT_LOGIN: {
+    AuthAcctLogin_FromBackendMessage *msg = (AuthAcctLogin_FromBackendMessage*) in;
+    msg_reqid = msg->reqid();
+    if (m_state != LOGIN) {
+      // old reply somehow?
+      log_debug(m_log, "Stale Login reply from backend (reqid=%u)!\n", msg_reqid);
+    } else if (m_reqid != msg_reqid) {
+      log_debug(m_log, "Superceded Login reply from backend (reqid=%u)\n", msg_reqid);
+    } else {
       response = msg->result();
-      log_msgs(m_log, "(backend) change password request %s\n", response == NO_ERROR ? "succeeded" : "failed");
-      AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(msg->reqid(), response);
-      client->enqueue(reply);
-    }
-    break;
-  case VAULT_PLAYER_CREATE:
-    {
-      VaultPlayerCreate_FromBackendMessage *msg = (VaultPlayerCreate_FromBackendMessage*) in;
-      msg_reqid = msg->reqid();
-      if (m_state != IN_STARTUP || m_reqid != msg_reqid) {
-        // ???
-        log_debug(m_log, "Stale player create reply from backend (reqid=%u)!\n", msg_reqid);
-      } else {
-        m_reqid = 0;
-      }
-      response = msg->result();
-      log_msgs(m_log, "(backend) Player create reply result=%u\n", msg->result());
       if (response != NO_ERROR) {
-        AuthServerPlayerCreateMessage *reply = new AuthServerPlayerCreateMessage(msg_reqid, response);
+        // login failed
+        log_msgs(m_log, "(backend) Login failed, result=%u\n", response);
+        AuthServerLoginMessage *reply = new AuthServerLoginMessage(m_reqid, response);
         client->enqueue(reply);
       } else {
-        AuthServerPlayerCreateMessage *reply = new AuthServerPlayerCreateMessage(msg_reqid, response, msg->kinum(),
-            msg->acct_type(), msg->name(), msg->gender());
-        client->enqueue(reply);
+        char uuid_formatted[UUID_STR_LEN];
+        format_uuid(msg->acct_uuid(), uuid_formatted);
+        log_msgs(m_log, "(backend) Login succeeded UUID %s\n", uuid_formatted);
+
+        memcpy(m_client_uuid, msg->acct_uuid(), 16);
+        m_is_visitor = (msg->acct_type() == GUEST_CUSTOMER);
+
+        // get download directory
+        uint32_t len = strlen(m_serv_dir) + 2;
+        if (msg->dirname()->strlen() + 1 < sizeof("default")) {
+          len += sizeof("default");
+        } else {
+          len += msg->dirname()->strlen() + 1;
+        }
+        m_download_dir = new char[len];
+        snprintf(m_download_dir, len, "%s%s%s", m_serv_dir, PATH_SEPARATOR,
+            msg->dirname()->strlen() > 0 ? msg->dirname()->c_str() : "default");
+        if (msg->dirname()->strlen() > 0) {
+          struct stat s;
+          int32_t ret = stat(m_download_dir, &s);
+          if (ret < 0) {
+            log_warn(m_log, "Expected \"secure download\" directory %s not found\n", m_download_dir);
+            snprintf(m_download_dir, len, "%s%sdefault", m_serv_dir,
+            PATH_SEPARATOR);
+          } else if (!(S_ISDIR(s.st_mode))) {
+            log_warn(m_log, "%s is not a directory\n", m_download_dir);
+            snprintf(m_download_dir, len, "%s%sdefault", m_serv_dir,
+            PATH_SEPARATOR);
+          }
+        }
+
+        // get the key
+        char keyfile[len + sizeof("/encryption.key")];
+        uint8_t keybuf[16];
+        memset(keybuf, 0, 16);
+        snprintf(keyfile, len + sizeof("/encryption.key"), "%s%sencryption.key", m_download_dir, PATH_SEPARATOR);
+        int32_t fd = open(keyfile, O_RDONLY, 0);
+        if (fd < 0) {
+          log_warn(m_log, "Error opening encryption key file %s: %s\n", keyfile, strerror(errno));
+        } else {
+          if (read(fd, keybuf, 16) != 16) {
+            log_err(m_log, "Error in key file read: %s\n", strerror(errno));
+          }
+          close(fd);
+        }
+        m_state = LOGIN_DONE;
+
+        // send any AcctPlayerInfo messages
+        if (msg->player_info_len() > 0) {
+          AuthServerMessage *reply = new AuthServerMessage(msg->player_info() + 2, msg->player_info_len() - 2,
+          Auth2Cli_AcctPlayerInfo);
+          client->enqueue(reply);
+        }
+        // send reply message
+        AuthServerLoginMessage *reply2 = new AuthServerLoginMessage(m_reqid, response, msg->acct_uuid(),
+            (customer_type_t) (2/*unknown*/| msg->acct_type()), keybuf);
+        client->enqueue(reply2);
       }
+      m_reqid = 0;
     }
+  }
     break;
-  case VAULT_PLAYER_DELETE:
-    {
-      VaultPlayerDelete_FromBackendMessage *msg = (VaultPlayerDelete_FromBackendMessage*) in;
-      msg_reqid = msg->reqid();
-      if (m_state != IN_STARTUP || m_reqid != msg_reqid) {
-        // ???
-        log_debug(m_log, "Stale player delete reply from backend (reqid=%u)!\n", msg_reqid);
-      } else {
-        m_reqid = 0;
-      }
+  case AUTH_KI_VALIDATE: {
+    AuthKIValidate_FromBackendMessage *msg = (AuthKIValidate_FromBackendMessage*) in;
+
+    msg_reqid = msg->kinum(); // actually KI number
+    if (m_state != IN_STARTUP) {
+      // old reply somehow?
+      log_debug(m_log, "Stale KI validate reply from backend (ki=%u)!\n", msg_reqid);
+    } else if (m_kinum != msg_reqid) {
+      log_debug(m_log, "Superceded KI validate reply (ki=%u)\n", msg_reqid);
+    } else {
       response = msg->result();
-      log_msgs(m_log, "(backend) Player delete reply result=%u\n", msg->result());
-      uint8_t deletebuf[8];
-      write32(deletebuf, 0, msg_reqid);
-      write32(deletebuf, 4, response);
-      AuthServerMessage *reply = new AuthServerMessage(deletebuf, 8, kAuth2Cli_PlayerDeleteReply);
+      if (response != NO_ERROR) {
+        if (response == ERROR_PLAYER_NOT_FOUND) {
+          log_warn(m_log, "Attack: Attempt to use an improper KI number (%u)!\n", msg_reqid);
+          // kill that bugger
+          AuthServerKickMessage *kill = new AuthServerKickMessage(response);
+          client->msg_queue()->clear_queue();
+          client->enqueue(kill);
+          return UNEXPECTED_STATE;
+        } else {
+          log_warn(m_log, "Server error validating KI number: %u\n", response);
+        }
+      } else {
+        log_msgs(m_log, "(backend) Validating KI number %u suceeded\n", response);
+        m_state = VAULT_DOWNLOAD;
+      }
+      uint8_t repbuf[8];
+      write32(repbuf, 0, m_reqid);
+      write32(repbuf, 4, response);
+      AuthServerMessage *reply = new AuthServerMessage(repbuf, 8, Auth2Cli_AcctSetPlayerReply);
       client->enqueue(reply);
     }
+  }
     break;
-  case VAULT_PASSTHRU:
-    {
-      VaultPassthrough_BackendMessage *msg = (VaultPassthrough_BackendMessage*) in;
-      AuthServerVaultMessage *reply = new AuthServerVaultMessage(msg);
-#if !defined(OLD_PROTOCOL) && defined(PELLET_SCORE_CACHE)
+  case AUTH_CHANGE_PASSWORD: {
+    AuthChangePassword_FromBackendMessage *msg = (AuthChangePassword_FromBackendMessage*) in;
+
+    response = msg->result();
+    log_msgs(m_log, "(backend) change password request %s\n", response == NO_ERROR ? "succeeded" : "failed");
+    AuthServerChangePassMessage *reply = new AuthServerChangePassMessage(msg->reqid(), response);
+    client->enqueue(reply);
+  }
+    break;
+  case VAULT_PLAYER_CREATE: {
+    VaultPlayerCreate_FromBackendMessage *msg = (VaultPlayerCreate_FromBackendMessage*) in;
+    msg_reqid = msg->reqid();
+    if (m_state != IN_STARTUP || m_reqid != msg_reqid) {
+      // ???
+      log_debug(m_log, "Stale player create reply from backend (reqid=%u)!\n", msg_reqid);
+    } else {
+      m_reqid = 0;
+    }
+    response = msg->result();
+    log_msgs(m_log, "(backend) Player create reply result=%u\n", msg->result());
+    if (response != NO_ERROR) {
+      AuthServerPlayerCreateMessage *reply = new AuthServerPlayerCreateMessage(msg_reqid, response);
+      client->enqueue(reply);
+    } else {
+      AuthServerPlayerCreateMessage *reply = new AuthServerPlayerCreateMessage(msg_reqid, response, msg->kinum(),
+          msg->acct_type(), msg->name(), msg->gender());
+      client->enqueue(reply);
+    }
+  }
+    break;
+  case VAULT_PLAYER_DELETE: {
+    VaultPlayerDelete_FromBackendMessage *msg = (VaultPlayerDelete_FromBackendMessage*) in;
+    msg_reqid = msg->reqid();
+    if (m_state != IN_STARTUP || m_reqid != msg_reqid) {
+      // ???
+      log_debug(m_log, "Stale player delete reply from backend (reqid=%u)!\n", msg_reqid);
+    } else {
+      m_reqid = 0;
+    }
+    response = msg->result();
+    log_msgs(m_log, "(backend) Player delete reply result=%u\n", msg->result());
+    uint8_t deletebuf[8];
+    write32(deletebuf, 0, msg_reqid);
+    write32(deletebuf, 4, response);
+    AuthServerMessage *reply = new AuthServerMessage(deletebuf, 8, Auth2Cli_PlayerDeleteReply);
+    client->enqueue(reply);
+  }
+    break;
+  case VAULT_PASSTHRU: {
+    VaultPassthrough_BackendMessage *msg = (VaultPassthrough_BackendMessage*) in;
+    AuthServerVaultMessage *reply = new AuthServerVaultMessage(msg);
+#if defined(PELLET_SCORE_CACHE)
       // before proceeding, snoop score messages (makes a difference with
       // client freezing)
-      if (reply->type() == kAuth2Cli_ScoreGetScoresReply) {
+      if (reply->type() == Auth2Cli_ScoreGetScoresReply) {
   if (reply->message_len() < 18) {
     log_err(m_log, "Too short score reply message from backend\n");
     if (m_log) {
@@ -1080,39 +1082,42 @@ Server::reason_t AuthServer::backend_message(Connection *vault, BackendMessage *
     }
   }
       }
-#endif /* !OLD_PROTOCOL && PELLET_SCORE_CACHE */
+#endif /* PELLET_SCORE_CACHE */
 //      log_msgs(m_log, "(backend) Passthrough vault msg\n");
 
-      // the reference taken by the reply message will prevent del_ref() from
-      // returning 0 as long as we forget about msg here *before* enqueuing on
-      // the final queue, so we don't need to test whether to delete msg
-      msg->del_ref();
-      // forget this reference
-      in = NULL;
+    // the reference taken by the reply message will prevent del_ref() from
+    // returning 0 as long as we forget about msg here *before* enqueuing on
+    // the final queue, so we don't need to test whether to delete msg
+    msg->del_ref();
+    // forget this reference
+    in = NULL;
+    client->enqueue(reply);
+  }
+    break;
+  case TRACK_FIND_GAME: {
+    TrackAgeRequest_FromBackendMessage *msg = (TrackAgeRequest_FromBackendMessage*) in;
+    if (m_state != AGE_REQ) {
+      // old reply somehow?
+      log_debug(m_log, "Stale find age reply from backend (reqid=%u)!\n", msg->reqid());
+    } else if (m_reqid != msg->reqid()) {
+      log_debug(m_log, "Superceded find age reply (reqid=%u)\n", msg->reqid());
+    } else {
+      m_reqid = 0;
+      if (msg->result() != NO_ERROR) {
+        log_warn(m_log, "AgeRequest failed, result=%u\n", msg->result());
+      } else {
+        log_msgs(m_log, "(backend) AgeRequest reply (reqid=%u, state=<%x>\"%s\", result=%u msg_body=0x%x body_len=%u)\n",
+            msg->reqid(), m_state, state_c_str(), msg->result(), msg->msg_body(), msg->body_len());
+        m_state = IN_GAME;
+      }
+      AuthServerAgeReplyMessage *reply = new AuthServerAgeReplyMessage(msg->reqid(), msg->result(), msg->msg_body(),
+          msg->body_len());
+
+      m_log->dump_contents(Logger::LOG_DEBUG, msg->msg_body(), msg->body_len());
+
       client->enqueue(reply);
     }
-    break;
-  case TRACK_FIND_GAME:
-    {
-      TrackAgeRequest_FromBackendMessage *msg = (TrackAgeRequest_FromBackendMessage*) in;
-      if (m_state != AGE_REQ) {
-        // old reply somehow?
-        log_debug(m_log, "Stale find age reply from backend (reqid=%u)!\n", msg->reqid());
-      } else if (m_reqid != msg->reqid()) {
-        log_debug(m_log, "Superceded find age reply (reqid=%u)\n", msg->reqid());
-      } else {
-        m_reqid = 0;
-        if (msg->result() != NO_ERROR) {
-          log_warn(m_log, "AgeRequest failed, result=%u\n", msg->result());
-        } else {
-          log_msgs(m_log, "(backend) AgeRequest reply\n");
-          m_state = IN_GAME;
-        }
-        AuthServerAgeReplyMessage *reply = new AuthServerAgeReplyMessage(msg->reqid(), msg->result(), msg->msg_body(),
-            msg->body_len());
-        client->enqueue(reply);
-      }
-    }
+  }
     break;
   default:
     ;

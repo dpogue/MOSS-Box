@@ -54,6 +54,29 @@ public:
   typedef enum {
     Generic = 0, Ping = 1, File = 2, Vault = 3, Log = 4, LoginReq = 16, PlayerCreate = 17, AgeReq = 18, PasswordChange = 19
   } msg_class_t;
+  static const char* msg_class_c_str(msg_class_t c) {
+    switch (c) {
+    case Generic:
+      return "Generic";
+    case Ping:
+      return "Ping";
+    case File:
+      return "File";
+    case Vault:
+      return "Vault";
+    case Log:
+      return "Log";
+    case LoginReq:
+      return "LoginReq";
+    case PlayerCreate:
+      return "PlayerCreate";
+    case AgeReq:
+      return "AgeReq";
+    case PasswordChange:
+      return "PasswordChange";
+    }
+    return "(unknown)";
+  }
   virtual msg_class_t msg_class() const {
     return Generic;
   }
@@ -191,7 +214,7 @@ public:
    * This class copies the buffer passed in.
    */
   AuthPingMessage(const uint8_t *msg_buf, size_t len) :
-      AuthClientMessage(NULL, len, kAuth2Cli_PingReply) {
+      AuthClientMessage(NULL, len, Auth2Cli_PingReply) {
 
     m_buf = new uint8_t[len];
     memcpy(m_buf, msg_buf, len);
@@ -319,7 +342,7 @@ protected:
   AuthClientFileMessage(const uint8_t *msg_buf, size_t msg_len, int32_t msg_type) :
       AuthClientMessage(msg_buf, msg_len, msg_type), m_name(msg_buf + 6, msg_len - 6, true, true, false), m_class(NULL) {
 
-    if (msg_type == kCli2Auth_FileListRequest) {
+    if (msg_type == Cli2Auth_FileListRequest) {
       m_class = new UruString(msg_buf + 6 + m_name.arrival_len(), -1, true, true, false);
     }
   }

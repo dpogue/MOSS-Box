@@ -35,15 +35,14 @@
 #include "PlKey.h"
 
 uint32_t PlKey::read_in(const uint8_t *buf, size_t buflen) {
+  // corresponds to CWE plUoid.cpp plUoid::Read()
   if (buflen < 1) {
     throw truncated_message("Buffer too short for plKey");
   }
 
   uint32_t needlen = 11;
-#ifndef OLD_STYLE
   needlen += 4;
-#endif
-  if (buf[0] & 0x02) {
+  if (buf[0] & HasLoadMask) {
     needlen += 2;
   }
   if (buflen < needlen) {
@@ -51,35 +50,37 @@ uint32_t PlKey::read_in(const uint8_t *buf, size_t buflen) {
   }
 
   uint32_t offset = 0;
-  m_flags = buf[offset++];
-  m_pageid = read32(buf, offset);
+  m_contents = buf[offset++];
+  m_locsequencenumber = read32(buf, offset);
   offset += 4;
-  m_pagetype = read16(buf, offset);
+  m_locflags = read16(buf, offset);
   offset += 2;
-  if (m_flags & 0x02) {
-    m_extra = buf[offset++];
+  if (m_contents & HasLoadMask) {
+    m_qualitycapability = buf[offset++];
   } else {
-    m_extra = 0;
+    m_qualitycapability = 0;
   }
-  m_objtype = read16(buf, offset);
+  m_classtype = read16(buf, offset);
   offset += 2;
-#ifndef OLD_STYLE
-  m_prpindex = read32(buf, offset);
+  m_objectid = read32(buf, offset);
   offset += 4;
-#endif
   // NOTE: we are not calling delete_name()
   m_name = new UruString(buf + offset, buflen - offset, true, false);
   offset += m_name->arrival_len();
-  if ((m_flags & 0x01) && (buflen < offset + 8)) {
+
+  if ((m_contents & HasCloneIDs) && (buflen < offset + 8)) {
     throw truncated_message("Buffer too short for plKey");
   }
-  if (m_flags & 0x01) {
-    m_index = read32(buf, offset);
-    offset += 4;
-    m_clientid = read32(buf, offset);
+
+  if (m_contents & HasCloneIDs) {
+    m_cloneid = read16(buf, offset);
+    offset += 2;
+    /* dummy = */ read16(buf, offset);
+    offset += 2;
+    m_cloneplayerid = read32(buf, offset);
     offset += 4;
   } else {
-    m_index = m_clientid = 0;
+    m_cloneid = m_cloneplayerid = 0;
   }
 
   return offset;
@@ -87,13 +88,11 @@ uint32_t PlKey::read_in(const uint8_t *buf, size_t buflen) {
 
 uint32_t PlKey::send_len() const {
   uint32_t len = 9;
-#ifndef OLD_STYLE
   len += 4;
-#endif
-  if (m_flags & 0x02) {
+  if (m_contents & HasLoadMask) {
     len += 1;
   }
-  if (m_flags & 0x01) {
+  if (m_contents & HasCloneIDs) {
     len += 8;
   }
   if (m_name) {
@@ -110,53 +109,76 @@ uint32_t PlKey::write_out(uint8_t *buf, size_t buflen, bool bitflip) const {
     return 0;
   }
   uint32_t offset = 0;
-  buf[offset++] = m_flags;
-  write32(buf, offset, m_pageid);
+  buf[offset++] = m_contents;
+  write32(buf, offset, m_locsequencenumber);
   offset += 4;
-  write16(buf, offset, m_pagetype);
+  write16(buf, offset, m_locflags);
   offset += 2;
-  if (m_flags & 0x02) {
-    buf[offset++] = m_extra;
+  if (m_contents & HasLoadMask) {
+    buf[offset++] = m_qualitycapability;
   }
-  write16(buf, offset, m_objtype);
+  write16(buf, offset, m_classtype);
   offset += 2;
-#ifndef OLD_STYLE
-  write32(buf, offset, m_prpindex);
+  write32(buf, offset, m_objectid);
   offset += 4;
-#endif
+  /*
+   * Note that in CWE hsStream.cpp WriteSafeString() that the length
+   * *always* is ORed with 0xf000, but the UruString() implementation
+   * does not issue the length (in the first 2 bytes) in this way.
+   * Here where m_name is not defined, we *do* write the zero length
+   * ORed with 0xf000.
+   */
   if (m_name) {
     uint32_t l = m_name->send_len(true, false, false);
     memcpy(buf + offset, m_name->get_str(true, false, false, bitflip), l);
     offset += l;
   } else {
-    write16(buf, offset, 0xf000);
+    write16(buf, offset, /* len | */ 0xf000);
     offset += 2;
   }
-  if (m_flags & 0x01) {
-    write32(buf, offset, m_index);
-    offset += 4;
-    write32(buf, offset, m_clientid);
+  if (m_contents & HasCloneIDs) {
+    write16(buf, offset, m_cloneid);
+    offset += 2;
+    write16(buf, offset, /*dummy*/0);
+    offset += 2;
+    write32(buf, offset, m_cloneplayerid);
     offset += 4;
   }
   return offset;
 }
 
-char* PlKey::format() {
-  uint32_t len = sizeof("Page ID: 0x12345678 Page Type: 0x1234 "
-      "Object Type: 0x1234 Name:  Index:  ClientID:  ") + 20;
-  if (m_name) {
-    len += m_name->strlen();
-  }
+char* PlKey::c_str(char *buf, size_t bufsize) {
+  char flagbuf[128];
+  char *f = flagbuf;
 
-  char *buf = (char*) malloc(len);
-  if (buf) {
-    snprintf(buf, len, "PageID: 0x%08x Page Type: 0x%04x Object Type: 0x%04x Name: %s ", m_pageid, m_pagetype, m_objtype,
-        m_name ? m_name->c_str() : "");
-    uint32_t at = strlen(buf);
-    if (m_flags & 0x01) {
-      snprintf(buf + at, len - at, "Index: %u ClientID: %u", m_index, m_clientid);
-    }
+  if (m_locflags & LocalOnly) {
+    f += strlcpy(f, "LocalOnly", sizeof(flagbuf) - (f - flagbuf));
   }
+  if (m_locflags & Volatile) {
+    if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
+      *f++ = '|';
+    f += strlcpy(f, "Volatile", sizeof(flagbuf) - (f - flagbuf));
+  }
+  if (m_locflags & Reserved) {
+    if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
+      *f++ = '|';
+    f += strlcpy(f, "Reserved", sizeof(flagbuf) - (f - flagbuf));
+  }
+  if (m_locflags & BuiltIn) {
+    if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
+      *f++ = '|';
+    f += strlcpy(f, "BuiltIn", sizeof(flagbuf) - (f - flagbuf));
+  }
+  if (m_locflags & Itinerant) {
+    if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
+      *f++ = '|';
+    f += strlcpy(f, "Itinerant", sizeof(flagbuf) - (f - flagbuf));
+  }
+  *f = 0;
+  snprintf(buf, bufsize, "(0x%08x:0x%x<%s>:%s:C:[0x%x,0x%x])",
+                      m_locsequencenumber, m_locflags, flagbuf,
+                      (m_name? m_name->c_str(): "(null)"),
+                      m_cloneplayerid, m_cloneid);
   return buf;
 }
 
@@ -164,9 +186,14 @@ bool PlKey::operator==(const PlKey &other) const {
   if (this == &other) {
     return true;
   }
-  if (m_flags != other.m_flags || m_extra != other.m_extra || m_pageid != other.m_pageid || m_pagetype != other.m_pagetype
-      || m_objtype != other.m_objtype || m_prpindex != other.m_prpindex || m_index != other.m_index
-      || m_clientid != other.m_clientid) {
+  if (m_contents != other.m_contents
+      || m_qualitycapability != other.m_qualitycapability
+      || m_locsequencenumber != other.m_locsequencenumber
+      || m_locflags != other.m_locflags
+      || m_classtype != other.m_classtype
+      || m_objectid != other.m_objectid
+      || m_cloneid != other.m_cloneid
+      || m_cloneplayerid != other.m_cloneplayerid) {
     return false;
   }
   if (m_name) {
@@ -185,7 +212,7 @@ bool PlKey::operator==(const PlKey &other) const {
 
 void PlKey::make_null() {
   memset(this, 0, sizeof(PlKey));
-  m_pageid = 0xFFFFFFFF;
+  m_locsequencenumber = 0xFFFFFFFF;
 }
 
 uint32_t PlKey::write_null_key(uint8_t *buf, size_t buflen) {

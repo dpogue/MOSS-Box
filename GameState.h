@@ -1,22 +1,22 @@
 /* -*- c++ -*- */
 
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2009  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2009  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 /*
  * The purpose of this file is to logically separate the game state from
@@ -47,24 +47,17 @@ class GameState {
   friend class GameServer;
 
 public:
-  GameState() {
-  }
+  GameState() { }
   ~GameState();
 
   /*
    * SDL
    */
-  const std::list<SDLDesc*>& sdl_descs() const {
-    return m_allsdl;
-  }
-  std::list<SDLState*>::const_iterator sdl_begin() {
-    return m_sdl.begin();
-  }
-  std::list<SDLState*>::const_iterator sdl_end() {
-    return m_sdl.end();
-  }
+  const std::list<SDLDesc*> & sdl_descs() const { return m_allsdl; }
+  std::list<SDLState*>::const_iterator sdl_begin() { return m_sdl.begin(); }
+  std::list<SDLState*>::const_iterator sdl_end() { return m_sdl.end(); }
   // returns NULL if not found
-  SDLState* find_sdl_like(SDLState *new_sdl) const;
+  SDLState * find_sdl_like(SDLState *new_sdl) const;
   void add_sdl(SDLState *new_sdl);
 
   /*
@@ -83,7 +76,7 @@ public:
   void setup_filter();
   // this returns the filter object, creating a new one (and putting the
   // state in the regular SDL list) if necessary
-  sdl_filter_t& get_filter(SDLState *new_sdl);
+  sdl_filter_t & get_filter(SDLState *new_sdl);
 
   /*
    * Server-mediated synchronization locks
@@ -95,11 +88,12 @@ public:
    * GameMgr stuff -- Heek, Quabs, Markers, Blue Spiral, etc.
    */
   // this returns NULL if the game type is not supported
-  GameMgr* setup_manager_for(kinum_t player, const uint8_t *uuid, bool &needs_new_id,
-  /* next two for marker games */
-  uint32_t id1, uint32_t id2);
+  GameMgr * setup_manager_for(kinum_t player, const uint8_t *uuid,
+            bool &needs_new_id,
+            /* next two for marker games */
+            uint32_t id1, uint32_t id2);
   // this returns NULL if there isn't a manager with that ID
-  GameMgr* get_manager_by_id(uint32_t game_id);
+  GameMgr * get_manager_by_id(uint32_t game_id);
   // this is called when a player leaves the age (for cleanup of marker games)
   void player_left(kinum_t player);
 
@@ -121,16 +115,13 @@ protected:
     kinum_t who;
     uint32_t lockseq;
     ObjectLock(PlKey &plkey);
-    ~ObjectLock() {
-      key.delete_name();
-    }
+    ~ObjectLock() { key.delete_name(); }
   };
   std::list<ObjectLock*> m_locks;
-  class ClearLockTimer: public Server::TimerQueue::Timer {
+  class ClearLockTimer : public Server::TimerQueue::Timer {
   public:
-    ClearLockTimer(struct timeval &when, ObjectLock *lock) :
-        Timer(when), m_lock(lock), m_lockseq(lock->lockseq) {
-    }
+    ClearLockTimer(struct timeval &when, ObjectLock *lock)
+      : Timer(when), m_lock(lock), m_lockseq(lock->lockseq) { }
     void callback();
   protected:
     ObjectLock *m_lock;
