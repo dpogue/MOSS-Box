@@ -50,14 +50,14 @@ NetworkMessage* GatekeeperClientMessage::make_if_enough(const uint8_t *buf, size
   }
   uint16_t type = read16(buf, 0);
   switch (type) {
-  case kCli2GateKeeper_PingRequest:
+  case Cli2GateKeeper_PingRequest:
     if (len < 14) {
       return NULL;
     }
     return new GatekeeperPingMessage(buf, 14);
     break;
-  case kCli2GateKeeper_FileSrvIpAddressRequest:
-  case kCli2GateKeeper_AuthSrvIpAddressRequest:
+  case Cli2GateKeeper_FileSrvIpAddressRequest:
+  case Cli2GateKeeper_AuthSrvIpAddressRequest:
     return new GatekeeperClientMessage(buf, 7, type);
     break;
   default:
@@ -98,7 +98,7 @@ uint32_t GatekeeperPingMessage::fill_buffer(uint8_t *buffer, size_t len, uint32_
 }
 
 GatekeeperServerMessage::GatekeeperServerMessage(bool for_file, uint32_t reqid, const char *ipaddr) :
-    NetworkMessage(for_file ? kGateKeeper2Cli_FileSrvIpAddressReply : kGateKeeper2Cli_AuthSrvIpAddressReply) {
+    NetworkMessage(for_file ? GateKeeper2Cli_FileSrvIpAddressReply : GateKeeper2Cli_AuthSrvIpAddressReply) {
   UruString addr(ipaddr, false);
   m_buflen = 6 + addr.send_len(true, true, false);
   m_buf = new uint8_t[m_buflen];

@@ -47,7 +47,7 @@ class BackendObj;
 
 class BackendServer: public Server {
 public:
-  BackendServer(int32_t listen_fd, uint32_t ipaddr, const char *db_address, const int32_t db_port, const char *db_user,
+  BackendServer(int32_t listen_fd, struct sockaddr_in &ipaddr, const char *db_address, const int32_t db_port, const char *db_user,
       const char *db_password, const char *db_name, const char *db_params, const uint32_t &egg_mask) :
       Server(listen_fd, ipaddr), my(NULL), m_egg_mask(egg_mask), m_db_addr(db_address), m_db_port(db_port), m_db_params(
           db_params), m_db_user(db_user), m_db_passwd(db_password), m_db_name(db_name), m_next_dispatcher(0), m_next_file(
@@ -143,10 +143,10 @@ protected:
     // this data is for *game* servers -- if it's a game connection it's
     // the server's ID, but if it's an auth connection, it's the game
     // server's ID for where the player most recently joined
-    uint32_t ipaddr() const {
+    in_addr_t ipaddr() const {
       return m_ipaddr;
     }
-    void set_ipaddr(uint32_t ipaddr) {
+    void set_ipaddr(in_addr_t ipaddr) {
       m_ipaddr = ipaddr;
     }
     uint32_t server_id() const {
@@ -231,7 +231,7 @@ protected:
   public:
     DispatcherInfo(uint32_t id1, uint32_t id2, Connection *conn) :
         m_id1(id1), m_id2(id2), m_conn(conn), m_accepting_new_game_servers(false), m_handles_file_service(false), m_handles_auth_service(
-            false), m_use_fa_hostname(true), m_fa_ipaddr(0) {
+            false), m_use_fa_hostname(true), m_fa_ipaddr(0), m_fa_ipport(0) {
     }
     uint32_t m_id1, m_id2;
     Connection *m_conn;
@@ -240,6 +240,7 @@ protected:
     bool m_handles_file_service, m_handles_auth_service;
     bool m_use_fa_hostname;
     uint32_t m_fa_ipaddr;
+    uint16_t m_fa_ipport;
     UruString m_fa_hostname;
   };
   std::vector<DispatcherInfo*> m_dispatchers;

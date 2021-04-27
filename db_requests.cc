@@ -1,20 +1,20 @@
 /*
- MOSS - A server for the Myst Online: Uru Live client/protocol
- Copyright (C) 2008-2011  a'moaca'
+  MOSS - A server for the Myst Online: Uru Live client/protocol
+  Copyright (C) 2008-2011  a'moaca'
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -51,6 +51,7 @@
 
 #include "db_requests.h"
 
+
 #ifdef USE_POSTGRES
 
 #ifdef USE_PQXX
@@ -58,7 +59,7 @@ std::string ESC_BIN(pqxx::transaction_base &T, const uint8_t *s, uint32_t len) {
   std::stringstream res;
   res << std::oct << std::setfill('0');
   for (uint32_t i = 0; i < len; i++) {
-    res << std::setw(2) << "\\\\" << std::setw(3) << (int32_t) s[i];
+    res << std::setw(2) << "\\\\" << std::setw(3) << (int32_t)s[i];
   }
   // copying is fun!
   return res.str();
@@ -84,7 +85,7 @@ void AuthAcctLogin_AcctQuery(BackendObj *conn, char *name,
   
   ExecStatusType exec_status = PQresultStatus(res);
   if (exec_status == PGRES_FATAL_ERROR) {
-    log_err(conn->log, "DB fatal error: %s", PQresultErrorMessage(res));
+    log_err(conn->log, "DB fatal error: %s\n", PQresultErrorMessage(res));
     if (PQstatus(conn->C) == CONNECTION_BAD) {
       if (tries == 0) {
   log_info(conn->log, "attempting to reconnect to DB\n");

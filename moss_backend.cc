@@ -127,7 +127,7 @@ public:
           free(log_level);
         }
         if (m_log) {
-          log_level = strdup(Logger::level_to_str(m_log->get_level()));
+          log_level = strdup(Logger::level_c_str(m_log->get_level()));
         } else {
           log_level = strdup("NET");
         }
@@ -142,16 +142,15 @@ public:
   }
 
   BackendProcessor(Logger *logger, const char *config_file) :
-      bind_addr_name(NULL), log_dir(NULL), log_level(NULL), pid_file(NULL), db_addr(NULL), db_user(NULL), db_passwd(NULL), db_name(
-          NULL), db_params(NULL), bind_port(0), db_port(0), egg_mask(0), m_log(logger), m_cfg_file(config_file), m_egg_disable(
-          NULL) {
+      bind_addr_name(NULL), log_dir(NULL), log_level(NULL), pid_file(NULL), db_addr(NULL), db_user(NULL), db_passwd(NULL),
+      db_name(NULL), db_params(NULL), bind_port(0), db_port(0), egg_mask(0), m_log(logger), m_cfg_file(config_file), m_egg_disable(NULL) {
   }
   void set_logger(Logger *logger) {
     m_log = logger;
   }
   void register_options() {
     m_back_config.register_config("bind_address", &bind_addr_name, "127.0.0.1");
-    m_back_config.register_config("bind_port", &bind_port, 14618);
+    m_back_config.register_config("bind_port", &bind_port, DEFAULT_PORT_BACKEND);
     m_back_config.register_config("log_dir", &log_dir, "log");
     m_back_config.register_config("log_level", &log_level, "NET");
     m_back_config.register_config("pid_file", &pid_file, "/var/run/moss_backend.pid");
@@ -265,8 +264,8 @@ int32_t main(int32_t argc, char *argv[]) {
   char *cfg_file = NULL;
   bool do_fork = true;
 
-  static struct option options[] = { { "config", required_argument, 0, 'c' }, { "daemon", no_argument, 0, 'd' }, {
-      "foreground", no_argument, 0, 'f' }, { 0, 0, 0, 0 } };
+  static struct option options[] = { { (char*) "config", required_argument, 0, 'c' }, { (char*) "daemon", no_argument, 0, 'd' },
+      { (char*) "foreground", no_argument, 0, 'f' }, { 0, 0, 0, 0 } };
   static const char *usage = "Usage: %s [-f] [-c <config file>]\n";
   char c;
   opterr = 0;
@@ -441,8 +440,8 @@ int32_t main(int32_t argc, char *argv[]) {
   }
 
   try {
-    server = new BackendServer(fd, bind_addr.sin_addr.s_addr, bp->db_addr, bp->db_port, bp->db_user, bp->db_passwd,
-        bp->db_name, bp->db_params, bp->egg_mask);
+    server = new BackendServer(fd, bind_addr, bp->db_addr, bp->db_port, bp->db_user, bp->db_passwd, bp->db_name, bp->db_params,
+        bp->egg_mask);
     server->set_logger(log);
     server->set_signal_data(todo, SIGNAL_RESPONSES, bp);
   } catch (const std::bad_alloc&) {

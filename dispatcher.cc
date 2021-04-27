@@ -83,6 +83,7 @@
 #include "exceptions.h"
 #include "constants.h"
 #include "protocol.h"
+#include "msg_typecodes.h"
 #include "backend_typecodes.h"
 #include "util.h"
 #include "UruString.h"
@@ -104,9 +105,7 @@
 #include "FileServer.h"
 #include "GameState.h"
 #include "GameServer.h"
-#ifndef OLD_PROTOCOL
 #include "GatekeeperServer.h"
-#endif
 
 #define RELOAD 0
 #define SHUTDOWN 1
@@ -149,45 +148,43 @@ public:
   Server::reason_t signalled(int32_t *todo, Server *s);
 
   DispatcherProcessor(Logger *logger, const char *config_file) :
-      bind_addr_name(NULL), track_addr_name(NULL), log_dir(NULL), log_level(NULL), pid_file(NULL), server_types(NULL), ext_addr_name(
-          NULL), child_name(NULL), auth_dir(NULL), file_dir(NULL), game_dir(NULL), auth_log_level(NULL), file_log_level(
-          NULL), game_log_level(NULL), gate_log_level(NULL), game_addr_name(NULL), auth_key_file(NULL), game_key_file(
-          NULL), gate_key_file(NULL), status_str(NULL), always_resolve(false), bind_port(0), track_port(0), status_len(
-          0), m_thread_manager(NULL), m_do_auth(0), m_do_file(0), m_do_game(0), m_do_gate(0), m_do_status(0), m_cfg_file(
-          config_file), m_log(logger) {
+      bind_addr_name(NULL), track_addr_name(NULL), log_dir(NULL), log_level(NULL), pid_file(NULL), server_types(NULL),
+      ext_addr_name(NULL), m_ext_addr(0), m_ext_port(0), child_name(NULL), auth_dir(NULL), file_dir(NULL), game_dir(NULL),
+      auth_log_level(NULL), file_log_level(NULL), game_log_level(NULL), gate_log_level(NULL), game_addr_name(NULL),
+      auth_key_file(NULL), game_key_file(NULL), gate_key_file(NULL), status_str(NULL), allow_vaultmanager(false),
+      always_resolve(false), bind_port(0), track_port(0), status_len(0), m_thread_manager(NULL), m_do_auth(0), m_do_file(0),
+      m_do_game(0), m_do_gate(0), m_do_status(0), m_cfg_file(config_file), m_log(logger) {
   }
   void set_logger(Logger *logger) {
     m_log = logger;
   }
   void register_options() {
-    m_disp_config.register_config("bind_address", &bind_addr_name, "");
-    m_disp_config.register_config("bind_port", &bind_port, 14617);
+    m_disp_config.register_config("bind_address",         &bind_addr_name,     "");
+    m_disp_config.register_config("bind_port",            &bind_port,          DEFAULT_PORT_SERVER);
     // note, if there is ever a separate vault and tracking server, add and
     // use track_* here
-    m_disp_config.register_config("vault_address", &track_addr_name, "");
-    m_disp_config.register_config("vault_port", &track_port, 14618);
-    m_disp_config.register_config("log_dir", &log_dir, "log");
-    m_disp_config.register_config("log_level", &log_level, "NET");
-    m_disp_config.register_config("pid_file", &pid_file, "/var/run/moss.pid");
-    m_disp_config.register_config("server_types", &server_types, "auth,file,game,gatekeeper");
-    m_disp_config.register_config("external_address", &ext_addr_name, "");
-    m_disp_config.register_config("always_resolve", &always_resolve, false);
-    m_disp_config.register_config("child_name", &child_name, "./bin/moss_serv");
-    m_disp_config.register_config("auth_download_dir", &auth_dir, "auth");
-    m_disp_config.register_config("file_download_dir", &file_dir, "file");
-    m_disp_config.register_config("game_data_dir", &game_dir, "game");
-    m_disp_config.register_config("auth_log_level", &auth_log_level, "NET");
-    m_disp_config.register_config("file_log_level", &file_log_level, "WARN");
-    m_disp_config.register_config("game_log_level", &game_log_level, "NET");
-    m_disp_config.register_config("gatekeeper_log_level", &gate_log_level, "NET");
-    m_disp_config.register_config("game_address", &game_addr_name, "");
-    m_disp_config.register_config("auth_key_file", &auth_key_file,
-    DEFAULT_AUTH_KEY);
-    m_disp_config.register_config("game_key_file", &game_key_file,
-    DEFAULT_GAME_KEY);
-    m_disp_config.register_config("gatekeeper_key_file", &gate_key_file,
-    DEFAULT_GATE_KEY);
-    m_disp_config.register_config("status_message", &status_str, "Welcome to MOSS");
+    m_disp_config.register_config("vault_address",        &track_addr_name,    "");
+    m_disp_config.register_config("vault_port",           &track_port,         DEFAULT_PORT_BACKEND);
+    m_disp_config.register_config("log_dir",              &log_dir,            "log");
+    m_disp_config.register_config("log_level",            &log_level,          "NET");
+    m_disp_config.register_config("pid_file",             &pid_file,           "/var/run/moss.pid");
+    m_disp_config.register_config("server_types",         &server_types,       "auth,file,game,gatekeeper");
+    m_disp_config.register_config("external_address",     &ext_addr_name,      "");
+    m_disp_config.register_config("always_resolve",       &always_resolve,     false);
+    m_disp_config.register_config("allow_vaultmanager",   &allow_vaultmanager, false);
+    m_disp_config.register_config("child_name",           &child_name,         "./bin/moss_serv");
+    m_disp_config.register_config("auth_download_dir",    &auth_dir,           "auth");
+    m_disp_config.register_config("file_download_dir",    &file_dir,           "file");
+    m_disp_config.register_config("game_data_dir",        &game_dir,           "game");
+    m_disp_config.register_config("auth_log_level",       &auth_log_level,     "NET");
+    m_disp_config.register_config("file_log_level",       &file_log_level,     "WARN");
+    m_disp_config.register_config("game_log_level",       &game_log_level,     "NET");
+    m_disp_config.register_config("gatekeeper_log_level", &gate_log_level,     "NET");
+    m_disp_config.register_config("game_address",         &game_addr_name,     "");
+    m_disp_config.register_config("auth_key_file",        &auth_key_file,      DEFAULT_AUTH_KEY);
+    m_disp_config.register_config("game_key_file",        &game_key_file,      DEFAULT_GAME_KEY);
+    m_disp_config.register_config("gatekeeper_key_file",  &gate_key_file,      DEFAULT_GATE_KEY);
+    m_disp_config.register_config("status_message",       &status_str,         "Welcome to MOSS");
   }
   bool read_config(bool complain) {
     try {
@@ -279,17 +276,20 @@ public:
     return true;
   }
   bool resolve_ext_addr(bool config_load, struct sockaddr_in *bind_addr, Logger *log) {
+
+    m_ext_port = bind_port;
+
     if (ext_addr_name && ext_addr_name[0] != '\0') {
       const char *result = resolve_hostname(ext_addr_name, &m_ext_addr);
       if (result) {
-        log_err(log, "Could not resolve \"%s\": %s\n", ext_addr_name, result);
+        log_err(log, "Could not resolve ext_addr_name \"%s\": %s\n", ext_addr_name, result);
         return false;
       }
     } else if (config_load && game_addr_name && game_addr_name[0] != '\0') {
       // for backwards compatability of pre-gatekeeper conf files
       const char *result = resolve_hostname(game_addr_name, &m_ext_addr);
       if (result) {
-        log_err(log, "Could not resolve \"%s\": %s\n", game_addr_name, result);
+        log_err(log, "Could not resolve game_addr_name \"%s\": %s\n", game_addr_name, result);
         return false;
       }
     } else if (bind_addr) {
@@ -336,8 +336,8 @@ public:
       if (create) {
         ret = recursive_mkdir(dir, S_IRWXU | S_IRWXG);
         if (ret) {
-          log_err(m_log, "Directory %s does not exist and "
-              "cannot be created (%s)\n", dir, strerror(errno));
+          log_err(m_log, "Directory %s does not exist and cannot be created (%s)\n",
+              dir, strerror(errno));
           return false;
         }
       } else {
@@ -362,12 +362,13 @@ public:
   char *bind_addr_name, *track_addr_name, *log_dir, *log_level, *pid_file, *server_types, *ext_addr_name, *child_name,
       *auth_dir, *file_dir, *game_dir, *auth_log_level, *file_log_level, *game_log_level, *gate_log_level,
       *game_addr_name, *auth_key_file, *game_key_file, *gate_key_file, *status_str;
-  bool always_resolve;
+  bool always_resolve, allow_vaultmanager;
   int32_t bind_port, track_port, status_len;
 
   ThreadManager *m_thread_manager;
   uint8_t m_do_auth, m_do_file, m_do_game, m_do_gate, m_do_status;
-  uint32_t m_ext_addr; // network order
+  in_addr_t m_ext_addr; // network order
+  in_port_t m_ext_port; // network order
 
   const char *m_cfg_file;
 
@@ -379,7 +380,7 @@ protected:
 
 class Dispatcher: public Server {
 public:
-  Dispatcher(int32_t listen_fd, uint32_t ipaddr, struct sockaddr_in &track_address) :
+  Dispatcher(int32_t listen_fd, struct sockaddr_in &ipaddr, struct sockaddr_in &track_address) :
       Server(listen_fd, ipaddr), m_track_addr(track_address),
 #ifndef FORK_ENABLE
           m_auth_log(NULL), m_file_log(NULL),
@@ -409,8 +410,8 @@ public:
       m_track->msg_queue()->clear_queue();
       DispatcherProcessor *dp = (DispatcherProcessor*) m_signal_processor;
       if (dp->m_do_game || dp->m_do_auth || dp->m_do_file) {
-        TrackServiceTypes_BackendMessage *bye = new TrackServiceTypes_BackendMessage(m_ipaddr, m_id, false, false,
-            false, 0U);
+        TrackServiceTypes_BackendMessage *bye = new TrackServiceTypes_BackendMessage(id1(), id2(), false, false, false,
+            0U, 0U);
         send_tracking_update(bye);
       }
       return false;
@@ -431,7 +432,7 @@ public:
    */
   uint32_t const id1() {
     return m_ipaddr;
-  }
+  } // from Server fields
   uint32_t const id2() {
     return m_id;
   }
@@ -485,8 +486,12 @@ int32_t main(int32_t argc, char *argv[]) {
   char *cfg_file = NULL;
   bool do_fork = true;
 
-  static struct option options[] = { { "config", required_argument, 0, 'c' }, { "daemon", no_argument, 0, 'd' }, {
-      "foreground", no_argument, 0, 'f' }, { 0, 0, 0, 0 } };
+  static struct option options[] = {
+      { (char*) "config", required_argument, 0, 'c' },
+      { (char*) "daemon", no_argument, 0, 'd' },
+      { (char*) "foreground", no_argument, 0, 'f' },
+      { 0, 0, 0, 0 }
+  };
   static const char *usage = "Usage: %s [-f] [-c <config file>]\n";
   char c;
   opterr = 0;
@@ -713,13 +718,12 @@ int32_t main(int32_t argc, char *argv[]) {
     // random data instead if the bind address is INADDR_ANY. This field is
     // just used as an identifier in backend traffic, so using random data is
     // safe.
-    uint32_t use_addr = (uint32_t) bind_addr.sin_addr.s_addr;
-    if (use_addr == INADDR_ANY) {
+    if (bind_addr.sin_addr.s_addr == INADDR_ANY) {
       // turn address into 0.x.x.x
-      uint8_t *addrp = (uint8_t*) &use_addr;
-      get_random_data(addrp + 1, 3);
+      uint8_t *addrp = (uint8_t*) &bind_addr.sin_addr;
+      get_random_data(addrp + 1, sizeof(bind_addr.sin_addr));
     }
-    server = new Dispatcher(fd, use_addr, track_addr);
+    server = new Dispatcher(fd, bind_addr, track_addr);
     server->set_logger(log);
     server->set_signal_data(todo, SIGNAL_RESPONSES, dp);
   } catch (const std::bad_alloc&) {
@@ -902,32 +906,32 @@ Server::reason_t DispatcherProcessor::signalled(int32_t *todo, Server *s) {
     uint8_t did_game = m_do_game, did_file = m_do_file, did_auth = m_do_auth;
     parse_server_types();
 #if defined(USING_RSA) || defined(USING_DH)
-      if (m_do_auth) {
-  if (server->update_keydata(auth_key_file, -1) == NULL) {
-    // we can't provide useful auth service with no key, so don't try
-    if (did_auth) {
-      log_warn(m_log, "Telling backend we are not running auth service "
-         "any longer because we have no key\n");
+    if (m_do_auth) {
+      if (server->update_keydata(auth_key_file, -1) == NULL) {
+        // we can't provide useful auth service with no key, so don't try
+        if (did_auth) {
+          log_warn(m_log, "Telling backend we are not running auth service "
+              "any longer because we have no key\n");
+        }
+        m_do_auth = 0;
+      }
     }
-    m_do_auth = 0;
-  }
+    if (m_do_game) {
+      if (server->update_keydata(game_key_file, 0) == NULL) {
+        // we can't provide useful game service with no key either
+        if (did_game) {
+          log_warn(m_log, "Telling backend we are not running game service "
+              "any longer because we have no key\n");
+        }
+        m_do_game = 0;
       }
-      if (m_do_game) {
-  if (server->update_keydata(game_key_file, 0) == NULL) {
-    // we can't provide useful game service with no key either
-    if (did_game) {
-      log_warn(m_log, "Telling backend we are not running game service "
-         "any longer because we have no key\n");
     }
-    m_do_game = 0;
-  }
+    if (m_do_gate) {
+      if (server->update_keydata(gate_key_file, 1) == NULL) {
+        // we can't provide useful gatekeeper service with no key either
+        m_do_gate = 0;
       }
-      if (m_do_gate) {
-  if (server->update_keydata(gate_key_file, 1) == NULL) {
-    // we can't provide useful gatekeeper service with no key either
-    m_do_gate = 0;
-  }
-      }
+    }
 #endif
     if ((did_game != m_do_game) || (did_auth != m_do_auth) || (did_file != m_do_file)
         || (old_always_resolve != always_resolve)
@@ -1031,9 +1035,15 @@ TrackServiceTypes_BackendMessage*
 DispatcherProcessor::construct_tracking_update(uint32_t id1, uint32_t id2) {
   bool doing_something = (m_do_auth || m_do_file || m_do_game);
   if (always_resolve && doing_something && ext_addr_name && strlen(ext_addr_name)) {
-    return new TrackServiceTypes_BackendMessage(id1, id2, m_do_auth, m_do_file, m_do_game, ext_addr_name);
+    log_debug(m_log, "TrackingUpdate %08x,%08x do_auth=%d do_file=%d do_game=%d ext_addr_name=\"%s\" ext_port=%d\n", id1,
+        id2, m_do_auth, m_do_file, m_do_game, ext_addr_name, m_ext_port);
+    return new TrackServiceTypes_BackendMessage(id1, id2, m_do_auth, m_do_file, m_do_game, ext_addr_name, m_ext_port);
   } else {
-    return new TrackServiceTypes_BackendMessage(id1, id2, m_do_auth, m_do_file, m_do_game, m_ext_addr);
+    char addrbuf[INET_ADDRSTRLEN + sizeof(":12345")];
+    inaddr_c_str(addrbuf, sizeof(addrbuf), m_ext_addr, m_ext_port, 0);
+    log_debug(m_log, "TrackingUpdate %08x,%08x do_auth=%d do_file=%d do_game=%d ext_addr=<0x%08x>\"%s\" ext_port=%d\n", id1,
+        id2, m_do_auth, m_do_file, m_do_game, m_ext_addr, addrbuf, m_ext_port);
+    return new TrackServiceTypes_BackendMessage(id1, id2, m_do_auth, m_do_file, m_do_game, m_ext_addr, m_ext_port);
   }
 }
 
@@ -1096,7 +1106,7 @@ void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
     // any other common auth infrastructure goes here
     AuthServer *server = NULL;
     try {
-      server = new AuthServer(fd, dp->auth_dir, true, m_track_addr);
+      server = new AuthServer(fd, dp->auth_dir, true, m_track_addr, dp->allow_vaultmanager);
     } catch (const std::bad_alloc&) {
       log_err(m_log, "Cannot allocate memory for Auth server\n");
       log_err(m_log, "Closing connection!\n");
@@ -1119,7 +1129,7 @@ void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
       }
 #endif
 #ifdef USING_DH
-      DH *dh = (DH *)m_auth_keydata;
+      DH *dh = (DH*) m_auth_keydata;
       if (dh) {
         DH_up_ref(dh);
         server->setkey(m_auth_keydata);
@@ -1227,7 +1237,6 @@ void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
     gettimeofday(&conn->m_timeout, NULL);
     conn->m_timeout.tv_sec += conn->m_interval;
   }
-#ifndef OLD_PROTOCOL
   else if (type == dp->m_do_gate) {
     if (!m_gate_log) {
       char *temp_str = NULL;
@@ -1271,7 +1280,7 @@ void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
       }
 #endif
 #ifdef USING_DH
-      DH *dh = (DH *)m_gate_keydata;
+      DH *dh = (DH*) m_gate_keydata;
       if (dh) {
         DH_up_ref(dh);
         server->setkey(m_gate_keydata);
@@ -1287,7 +1296,6 @@ void Dispatcher::add_client_conn(int32_t fd, uint8_t type) {
       }
     }
   }
-#endif /* !OLD_PROTOCOL */
   else if (type == dp->m_do_status) {
     // treat as an HTTP GET request, spit out status message
     log_msgs(m_log, "Connection %d: status\n", fd);
@@ -1392,7 +1400,7 @@ void* Dispatcher::update_keydata(const char *fname, int32_t auth_game_gate) {
       RSA_free(rsa);
 #endif
 #ifdef USING_DH
-      DH *dh = (DH *)(*keydata);
+      DH *dh = (DH*) (*keydata);
       DH_free(dh);
 #endif
     }
@@ -1411,15 +1419,15 @@ void Dispatcher::conn_completed(Connection *conn) {
     conn->m_timeout.tv_sec += conn->m_interval;
 
     log_msgs(m_log, "Sending Hello to backend\n");
-    Hello_BackendMessage *msg = new Hello_BackendMessage(m_ipaddr, m_id, type());
+    Hello_BackendMessage *msg = new Hello_BackendMessage(id1(), id2(), type());
     conn->enqueue(msg, MessageQueue::FRONT);
 
     DispatcherProcessor *dp = (DispatcherProcessor*) m_signal_processor;
     if (dp->m_do_game || dp->m_do_auth || dp->m_do_file) {
-      send_tracking_update(dp->construct_tracking_update(m_ipaddr, m_id));
+      send_tracking_update(dp->construct_tracking_update(id1(), id2()));
     }
   } else {
-    log_err(m_log, "Unknown outgoing connection (fd %d) completed!", conn->fd());
+    log_err(m_log, "Unknown outgoing connection (fd %d) completed!\n", conn->fd());
   }
 }
 
@@ -1428,6 +1436,11 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
   Server::reason_t result = NO_SHUTDOWN;
 
   if (conn == m_track) {
+
+    char *m = BackendMessage::backend_msgtype_c_str_alloc(msg->type());
+    log_debug(m_log, "TRACKconn received <0x%08x>\"%s\"\n", msg->type(), m);
+    free(m);
+
     if (msg_type == -1) {
       // unrecognized message
       log_err(m_log, "Unrecognized backend message!\n");
@@ -1436,93 +1449,92 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
       }
     } else {
       switch (msg_type) {
-      case (ADMIN_HELLO | FROM_SERVER):
-        {
-          Hello_BackendMessage *hello = (Hello_BackendMessage*) msg;
-          log_msgs(m_log, "Backend connection protocol version %u\n", hello->peer_info());
-          // no more required at this time (all speak version 0)
-        }
+
+      case (ADMIN_HELLO | FROM_SERVER): {
+        Hello_BackendMessage *hello = (Hello_BackendMessage*) msg;
+        log_msgs(m_log, "Backend connection protocol version %u\n", hello->peer_info());
+        // no more required at this time (all speak version 0)
+      }
         break;
-      case (TRACK_START_GAME | FROM_SERVER):
-        {
-          TrackStartAge_FromBackendMessage *request = (TrackStartAge_FromBackendMessage*) msg;
 
-          // see if we are allowed to do that
-          DispatcherProcessor *dp = (DispatcherProcessor*) m_signal_processor;
-          if (!dp->m_do_game) {
-            log_warn(m_log, "Received a request to start a game server but "
-                "we should not be registered to do so\n");
-            TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
-                request->age_uuid(), TrackStartAge_ToBackendMessage::NOT_ALLOWED);
-            conn->enqueue(reject);
-            break;
-          }
+      case (TRACK_START_GAME | FROM_SERVER): {
+        TrackStartAge_FromBackendMessage *request = (TrackStartAge_FromBackendMessage*) msg;
 
-          if (m_log && m_log->would_log_at(Logger::LOG_MSGS)) {
+        // see if we are allowed to do that
+        DispatcherProcessor *dp = (DispatcherProcessor*) m_signal_processor;
+        if (!dp->m_do_game) {
+          log_warn(m_log, "Received a request to start a game server but "
+              "we should not be registered to do so\n");
+          TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(id1(), id2(), request->age_uuid(),
+              TrackStartAge_ToBackendMessage::NOT_ALLOWED);
+          conn->enqueue(reject);
+          break;
+        }
+
+        if (m_log && m_log->would_log_at(Logger::LOG_MSGS)) {
+          char uuid[UUID_STR_LEN];
+          format_uuid(request->age_uuid(), uuid);
+          log_msgs(m_log, "TRACK_START_GAME %s (%s)\n", request->filename()->c_str(), uuid);
+        }
+#ifndef FORK_GAME_TOO
+        // read in the common SDL if necessary
+        if (m_common_sdl.size() == 0) {
+          std::string directory(dp->game_dir);
+          directory = directory + PATH_SEPARATOR + "SDL" + PATH_SEPARATOR + "common";
+          if (SDLDesc::parse_directory(m_log, m_common_sdl, directory, true, true)) {
+#ifndef STANDALONE
+            m_common_sdl.clear();
+            // can't actually start up a game server
+            log_err(m_log, "Cannot read common SDL\n");
+            log_info(m_log, "Telling backend we cannot create new game servers "
+                "(reload config after fixing problem to start "
+                "accepting new server requests again)\n");
+            dp->m_do_game = 0;
+            send_tracking_update(dp->construct_tracking_update(m_ipaddr, m_id));
             char uuid[UUID_STR_LEN];
             format_uuid(request->age_uuid(), uuid);
-            log_msgs(m_log, "TRACK_START_GAME %s (%s)\n", request->filename()->c_str(), uuid);
-          }
-#ifndef FORK_GAME_TOO
-          // read in the common SDL if necessary
-          if (m_common_sdl.size() == 0) {
-            std::string directory(dp->game_dir);
-            directory = directory + PATH_SEPARATOR + "SDL" + PATH_SEPARATOR + "common";
-            if (SDLDesc::parse_directory(m_log, m_common_sdl, directory, true, true)) {
-#ifndef STANDALONE
-              m_common_sdl.clear();
-              // can't actually start up a game server
-              log_err(m_log, "Cannot read common SDL\n");
-              log_info(m_log, "Telling backend we cannot create new game servers "
-                  "(reload config after fixing problem to start "
-                  "accepting new server requests again)\n");
-              dp->m_do_game = 0;
-              send_tracking_update(dp->construct_tracking_update(m_ipaddr, m_id));
-              char uuid[UUID_STR_LEN];
-              format_uuid(request->age_uuid(), uuid);
-              log_warn(m_log, "Rejecting request for new game server UUID %s\n", uuid);
-              TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
-                  request->age_uuid(), TrackStartAge_ToBackendMessage::NO_SDL);
-              conn->enqueue(reject);
-              break;
+            log_warn(m_log, "Rejecting request for new game server UUID %s\n", uuid);
+            TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(id1(), id2(), request->age_uuid(),
+                TrackStartAge_ToBackendMessage::NO_SDL);
+            conn->enqueue(reject);
+            break;
 #else
         // forge on (but if we can't read the age's SDL either some
         // game mechanics will break)
 #endif /* !STANDALONE */
+          }
+        }
+
+        // read in the .age file
+        AgeDesc *newage = NULL;
+        {
+          std::string fname(dp->game_dir);
+          fname = fname + PATH_SEPARATOR + "age" + PATH_SEPARATOR + request->filename()->c_str() + ".age";
+          std::ifstream file(fname.c_str(), std::ios_base::in);
+          if (file.fail()) {
+            log_warn(m_log, "Request for unavailable age %s\n", request->filename()->c_str());
+          } else {
+            try {
+              newage = AgeDesc::parse_file(file);
+            } catch (const parse_error &e) {
+              log_err(m_log, "Parse error in %s.age, line %u: %s\n", request->filename()->c_str(), e.lineno(), e.what());
+
             }
           }
-
-          // read in the .age file
-          AgeDesc *newage = NULL;
-          {
-            std::string fname(dp->game_dir);
-            fname = fname + PATH_SEPARATOR + "age" + PATH_SEPARATOR + request->filename()->c_str() + ".age";
-            std::ifstream file(fname.c_str(), std::ios_base::in);
-            if (file.fail()) {
-              log_warn(m_log, "Request for unavailable age %s\n", request->filename()->c_str());
-            } else {
-              try {
-                newage = AgeDesc::parse_file(file);
-              } catch (const parse_error &e) {
-                log_err(m_log, "Parse error in %s.age, line %u: %s\n", request->filename()->c_str(), e.lineno(),
-                    e.what());
-
-              }
-            }
-          }
-          if (!newage) {
-            TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
-                request->age_uuid(), TrackStartAge_ToBackendMessage::NO_AGE);
-            conn->enqueue(reject);
-            break;
-          }
+        }
+        if (!newage) {
+          TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(id1(), id2(), request->age_uuid(),
+              TrackStartAge_ToBackendMessage::NO_AGE);
+          conn->enqueue(reject);
+          break;
+        }
 #else
     // just make sure we aren't going to try to start an age with
     // an empty string for a name -- the forked server will load
     // the .age file and SDL files and let us know if there's a problem
     if (request->filename()->send_len(false, false, false) == 0) {
       TrackStartAge_ToBackendMessage *reject =
-        new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
+        new TrackStartAge_ToBackendMessage(id1(), id2(),
         request->age_uuid(),
         TrackStartAge_ToBackendMessage::NO_AGE);
       conn->enqueue(reject);
@@ -1530,29 +1542,29 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
     }
 #endif /* !FORK_GAME_TOO */
 
-          // resolve the address if necessary
-          if (dp->always_resolve) {
-            if (!dp->resolve_ext_addr(false, NULL, m_log) && m_log->would_log_at(Logger::LOG_WARN)) {
-              char addr[INET_ADDRSTRLEN];
-              if (inet_ntop(AF_INET, &dp->m_ext_addr, addr, INET_ADDRSTRLEN)) {
-                log_warn(m_log, "Using old external address %s\n", addr);
-              } else {
-                log_warn(m_log, "Using old external address 0x%08x\n", dp->m_ext_addr);
-              }
+        // resolve the address if necessary
+        if (dp->always_resolve) {
+          if (!dp->resolve_ext_addr(false, NULL, m_log) && m_log->would_log_at(Logger::LOG_WARN)) {
+            char addr[INET_ADDRSTRLEN];
+            if (inet_ntop(AF_INET, &dp->m_ext_addr, addr, INET_ADDRSTRLEN)) {
+              log_warn(m_log, "Using old external address %s\n", addr);
+            } else {
+              log_warn(m_log, "Using old external address 0x%08x\n", dp->m_ext_addr);
             }
           }
+        }
 
-          uint32_t new_id;
-          do {
-            get_random_data((uint8_t*) &new_id, 4);
-          } while (!dp->m_thread_manager->is_id_available(new_id));
+        uint32_t new_id;
+        do {
+          get_random_data((uint8_t*) &new_id, 4);
+        } while (!dp->m_thread_manager->is_id_available(new_id));
 #ifdef FORK_GAME_TOO
     // set up sockets for new game server
     int32_t sockets[2];
     if (socketpair(PF_LOCAL, SOCK_DGRAM, PF_UNSPEC, sockets) < 0) {
       log_err(m_log, "Cannot create socket pair for game server\n");
       TrackStartAge_ToBackendMessage *reject =
-        new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
+        new TrackStartAge_ToBackendMessage(id1(), id2(),
         request->age_uuid(),
         TrackStartAge_ToBackendMessage::NO_RESOURCE);
       conn->enqueue(reject);
@@ -1568,43 +1580,46 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
       = new GameServer::DispatcherConnection(sockets[0], m_log,
                sockets[1]);
 #else
-          // set up new game server thread
-          GameServer *server = NULL;
-          try {
-            server = new GameServer(dp->game_dir, true, m_track_addr, request->age_uuid(),
-                request->filename()->c_str(), dp->m_ext_addr, newage, m_common_sdl);
-          } catch (const std::bad_alloc&) {
-            log_err(m_log, "Cannot allocate memory for Game server\n");
-            TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
-                request->age_uuid(), TrackStartAge_ToBackendMessage::NO_RESOURCE);
-            conn->enqueue(reject);
-            delete newage;
-            break;
-          }
-          server->set_id(new_id);
+        // set up new game server thread
+        GameServer *server = NULL;
+        try {
+          server = new GameServer(dp->game_dir, true, m_track_addr, request->age_uuid(), request->filename()->c_str(),
+              dp->m_ext_addr, dp->m_ext_port, newage, m_common_sdl);
+        } catch (const std::bad_alloc&) {
+          log_err(m_log, "Cannot allocate memory for Game server\n");
+          TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(id1(), id2(), request->age_uuid(),
+              TrackStartAge_ToBackendMessage::NO_RESOURCE);
+          conn->enqueue(reject);
+          delete newage;
+          break;
+        }
+        server->set_id(new_id);
 #endif
 
-          size_t len = sizeof("game///.log") + UUID_STR_LEN;
-          len += dp->log_dir ? strlen(dp->log_dir) + 1 : 2;
-          len += request->filename()->send_len(false, false, false);
-          char temp_str[len];
-          snprintf(temp_str, len, "%s%sgame%s%s", dp->log_dir ? dp->log_dir : ".", PATH_SEPARATOR, PATH_SEPARATOR,
-              request->filename()->c_str());
-          if (recursive_mkdir(temp_str, S_IRWXU | S_IRWXG)) {
-            log_warn(m_log, "Cannot create game server log directory %s: %s\n", temp_str, strerror(errno));
-          } else {
-            len = strlen(temp_str);
-            temp_str[len++] = PATH_SEPARATOR[0];
-            format_uuid(request->age_uuid(), temp_str + len);
-            strcat(temp_str, ".log");
+        size_t len = sizeof("game///.log") + UUID_STR_LEN;
+        len += dp->log_dir ? strlen(dp->log_dir) + 1 : 2;
+        len += request->filename()->send_len(false, false, false);
+        char temp_str[len];
+        snprintf(temp_str, len, "%s%sgame%s%s", dp->log_dir ? dp->log_dir : ".", PATH_SEPARATOR,
+        PATH_SEPARATOR, request->filename()->c_str());
+
+        log_debug(m_log, "Game %s log dir %s\n", request->filename()->c_str(), temp_str);
+
+        if (recursive_mkdir(temp_str, S_IRWXU | S_IRWXG)) {
+          log_warn(m_log, "Cannot create game server log directory %s: %s\n", temp_str, strerror(errno));
+        } else {
+          len = strlen(temp_str);
+          temp_str[len++] = PATH_SEPARATOR[0];
+          format_uuid(request->age_uuid(), temp_str + len);
+          strcat(temp_str, ".log");
 #ifndef FORK_GAME_TOO
-            try {
-              Logger *game_log = new Logger("game", temp_str, Logger::str_to_level(dp->game_log_level));
-              server->set_logger(game_log);
-            } catch (const std::bad_alloc&) {
-            }
-#endif
+          try {
+            Logger *game_log = new Logger("game", temp_str, Logger::str_to_level(dp->game_log_level));
+            server->set_logger(game_log);
+          } catch (const std::bad_alloc&) {
           }
+#endif
+        }
 
 #ifdef FORK_GAME_TOO
     char fdnum[100], idstr[100];
@@ -1628,7 +1643,7 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
         log_err(m_log, "fork for game failed! (%s)\n", strerror(errno));
         delete game_conn;
         TrackStartAge_ToBackendMessage *reject =
-    new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
+    new TrackStartAge_ToBackendMessage(id1(), id2(),
         request->age_uuid(),
         TrackStartAge_ToBackendMessage::NO_RESOURCE);
         conn->enqueue(reject);
@@ -1642,22 +1657,22 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
       }
     }
 #else
-          // now actually make and start the thread
-          pthread_t tid;
+        // now actually make and start the thread
+        pthread_t tid;
 
-          int32_t ret = pthread_create(&tid, &m_thread_attr, serv_main, server);
-          if (ret) {
-            log_err(m_log, "Game pthread_create failed: %s\n", strerror(ret));
-            delete server;
-            TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(m_ipaddr, m_id,
-                request->age_uuid(), TrackStartAge_ToBackendMessage::NO_RESOURCE);
-            conn->enqueue(reject);
-            break;
-          } else {
-            dp->m_thread_manager->new_thread(tid, server, new_id);
-          }
-#endif
+        int32_t ret = pthread_create(&tid, &m_thread_attr, serv_main, server);
+        if (ret) {
+          log_err(m_log, "Game pthread_create failed: %s\n", strerror(ret));
+          delete server;
+          TrackStartAge_ToBackendMessage *reject = new TrackStartAge_ToBackendMessage(id1(), id2(), request->age_uuid(),
+              TrackStartAge_ToBackendMessage::NO_RESOURCE);
+          conn->enqueue(reject);
+          break;
+        } else {
+          dp->m_thread_manager->new_thread(tid, server, new_id);
         }
+#endif
+      }
         break;
       default:
         log_err(m_log, "Unknown message type 0x%08x\n", msg_type);
@@ -1667,13 +1682,17 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
     // it's a nascent game server connection
     GameServer::GameConnection *gconn = (GameServer::GameConnection*) conn;
     uint32_t sid;
+
+    log_debug(m_log, "GAMEconn state <0x%x>\"%s\" msgtype <0x%x>\"%s\"\n", gconn->state(),
+        GameServer::state_c_str(gconn->state()), msg->type(), Cli2Game_e_c_str(msg->type()));
+
     result = GameServer::handle_negotiation(gconn, m_game_keydata, msg, m_log, sid);
     if (gconn->state() == GameServer::JOIN_REQ) {
       DispatcherProcessor *dp = (DispatcherProcessor*) m_signal_processor;
 #ifdef FORK_GAME_TOO
       GameServer::DispatcherConnection *who
-  = (GameServer::DispatcherConnection *)
-    dp->m_thread_manager->get_server_from_id(sid);
+      = (GameServer::DispatcherConnection *)
+      dp->m_thread_manager->get_server_from_id(sid);
 #else
       GameServer *who = (GameServer*) dp->m_thread_manager->get_server_from_id(sid);
 #endif
@@ -1681,20 +1700,20 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
         GameServer::send_no_join(conn, msg);
       } else {
 #ifdef FORK_GAME_TOO
-  // NOTE: if the client sends anything after the JoinAge and it
-  // arrives in the same read as the JoinAge, we have to also forward
-  // the remaining data that is in the read buffer.
-  who->forward_conn(gconn);
-  // take the connection out of the dispatcher's list; the
-  // DispatcherConnection will delete it when handoff is complete
-  m_conns.remove(conn);
+        // NOTE: if the client sends anything after the JoinAge and it
+        // arrives in the same read as the JoinAge, we have to also forward
+        // the remaining data that is in the read buffer.
+        who->forward_conn(gconn);
+        // take the connection out of the dispatcher's list; the
+        // DispatcherConnection will delete it when handoff is complete
+        m_conns.remove(conn);
 #else
 #ifdef DEBUG_ENABLE
-  if (!msg->persistable()) {
-    // this message refers to memory that may be freed or overwritten!
-    throw std::logic_error("Message not marked as persistable "
-         "has been saved");
-  }
+        if (!msg->persistable()) {
+          // this message refers to memory that may be freed or overwritten!
+          throw std::logic_error("Message not marked as persistable "
+              "has been saved");
+        }
 #endif
         who->queue_client_connection(gconn, msg);
         // now that the connection is passed on, take it out of the
@@ -1715,7 +1734,7 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
 
 Server::reason_t Dispatcher::conn_timeout(Connection *conn, reason_t why) {
   if (conn == m_track) {
-    TrackPing_BackendMessage *msg = new TrackPing_BackendMessage(m_ipaddr, m_id);
+    TrackPing_BackendMessage *msg = new TrackPing_BackendMessage(id1(), id2());
     conn->enqueue(msg);
     conn->m_timeout.tv_sec += conn->m_interval;
     return NO_SHUTDOWN;
@@ -1748,7 +1767,7 @@ Server::reason_t Dispatcher::conn_shutdown(Connection *conn, reason_t why) {
       log_debug(m_log, "Incomplete game server connection (fd %d) timed out\n", conn->fd());
     } else {
       log_warn(m_log, "Shutting down incomplete game server connection (fd %d)"
-          " for reason %s\n", conn->fd(), Server::reason_to_string(why));
+          " for reason %s\n", conn->fd(), Server::reason_c_str(why));
     }
     // remove connection from list and mercilessly delete it
     for (std::list<Connection*>::iterator c_iter = m_conns.begin(); c_iter != m_conns.end(); c_iter++) {
@@ -1785,7 +1804,7 @@ Dispatcher::~Dispatcher() {
     RSA_free(rsa);
 #endif
 #ifdef USING_DH
-    DH *dh = (DH *)(m_auth_keydata);
+    DH *dh = (DH*) (m_auth_keydata);
     DH_free(dh);
 #endif
   }
@@ -1795,7 +1814,7 @@ Dispatcher::~Dispatcher() {
     RSA_free(rsa);
 #endif
 #ifdef USING_DH
-    DH *dh = (DH *)(m_game_keydata);
+    DH *dh = (DH*) (m_game_keydata);
     DH_free(dh);
 #endif
   }
@@ -1805,7 +1824,7 @@ Dispatcher::~Dispatcher() {
     RSA_free(rsa);
 #endif
 #ifdef USING_DH
-    DH *dh = (DH *)(m_gate_keydata);
+    DH *dh = (DH*) (m_gate_keydata);
     DH_free(dh);
 #endif
   }
@@ -1921,12 +1940,7 @@ bool DispatcherProcessor::parse_server_types() {
     m_do_auth = auth;
     m_do_file = file;
     m_do_game = game;
-#ifndef OLD_PROTOCOL
     m_do_gate = gate;
-#else
-    // automatically disable the gatekeeper if using an older protocol version
-    m_do_gate = 0;
-#endif
     m_do_status = status;
   }
   return return_value;

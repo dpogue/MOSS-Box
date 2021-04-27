@@ -61,21 +61,21 @@ NetworkMessage* GameMessage::make_if_enough(const uint8_t *buf, size_t len, int3
   }
   uint16_t type = read16(buf, 0);
   switch (type) {
-  case kCli2Game_PingRequest:
+  case Cli2Game_PingRequest:
     if (len < 6) {
       *want_len = 6;
       return NULL;
     }
     in = new GamePingMessage(buf, 6);
     break;
-  case kCli2Game_JoinAgeRequest:
+  case Cli2Game_JoinAgeRequest:
     in = (NetworkMessage*) GameJoinRequest::make_if_enough(buf, len, want_len);
     break;
-  case kCli2Game_PropagateBuffer:
+  case Cli2Game_PropagateBuffer:
     in = (NetworkMessage*) PropagateBufferMessage::make_if_enough(buf, len, want_len, become_owner);
     became_owner = true;
     break;
-  case kCli2Game_GameMgrMsg:
+  case Cli2Game_GameMgrMsg:
     in = (NetworkMessage*) GameMgrMessage::make_if_enough(buf, len, want_len, become_owner);
     became_owner = true;
     break;
@@ -280,21 +280,21 @@ uint32_t PropagateBufferMessage::body_offset() const {
   uint32_t offset = 12; // skip wrapper and type
   uint32_t bitvector = read32(m_sbuf->buffer(), offset);
   offset += 4;
-  if (bitvector & kHasTimeSent) {
+  if (bitvector & HasTimeSent) {
     offset += 8;
   }
-  if (bitvector & kHasTransactionID) {
+  if (bitvector & HasTransactionID) {
     // should never happen
     offset += 4;
   }
-  if (bitvector & kHasPlayerID) {
+  if (bitvector & HasPlayerID) {
     offset += 4;
   }
-  if (bitvector & kHasAcctUUID) {
+  if (bitvector & HasAcctUUID) {
     // should never happen
     offset += 16;
   }
-  if (bitvector & kAllowTimeOut) {
+  if (bitvector & AllowTimeOut) {
     // IP address and port present!?!
     // should never happen
     offset += 6;
@@ -304,21 +304,21 @@ uint32_t PropagateBufferMessage::body_offset() const {
 
 uint32_t PropagateBufferMessage::body_offset(uint32_t flags) {
   uint32_t offset = 16; // wrapper, type, and bitvector
-  if (flags & kHasTimeSent) {
+  if (flags & HasTimeSent) {
     offset += 8;
   }
-  if (flags & kHasTransactionID) {
+  if (flags & HasTransactionID) {
     // should never happen
     offset += 4;
   }
-  if (flags & kHasPlayerID) {
+  if (flags & HasPlayerID) {
     offset += 4;
   }
-  if (flags & kHasAcctUUID) {
+  if (flags & HasAcctUUID) {
     // should never happen
     offset += 16;
   }
-  if (flags & kAllowTimeOut) {
+  if (flags & AllowTimeOut) {
     // IP address and port present!?!
     // should never happen
     offset += 6;
@@ -331,14 +331,14 @@ kinum_t PropagateBufferMessage::kinum() const {
   uint8_t *buf = m_sbuf->buffer();
   uint32_t bitvector = read32(buf, 12);
   uint32_t offset = 16;
-  if (bitvector & kHasTimeSent) {
+  if (bitvector & HasTimeSent) {
     offset += 8;
   }
-  if (bitvector & kHasTransactionID) {
+  if (bitvector & HasTransactionID) {
     // should never happen
     offset += 4;
   }
-  if (bitvector & kHasPlayerID) {
+  if (bitvector & HasPlayerID) {
     kinum = (kinum_t) read32(buf, offset);
   }
   return kinum;
@@ -347,7 +347,7 @@ kinum_t PropagateBufferMessage::kinum() const {
 void PropagateBufferMessage::set_timestamp() const {
   uint8_t *buf = m_sbuf->buffer();
   uint32_t bitvector = read32(buf, 12);
-  if (bitvector & kHasTimeSent) {
+  if (bitvector & HasTimeSent) {
     struct timeval t;
     gettimeofday(&t, NULL);
     write32(buf, 16, t.tv_sec);
@@ -358,16 +358,16 @@ void PropagateBufferMessage::set_timestamp() const {
 uint32_t PropagateBufferMessage::format_header(uint16_t subtype, uint32_t message_len, uint32_t flags, kinum_t ki) {
   uint8_t *buf = m_sbuf->buffer();
   uint32_t offset = 16;
-  write16(buf, 0, kGame2Cli_PropagateBuffer);
+  write16(buf, 0, Game2Cli_PropagateBuffer);
   write32(buf, 2, subtype);
   write32(buf, 6, message_len - 10);
   write16(buf, 10, subtype);
   write32(buf, 12, flags);
-  if (flags & kHasTimeSent) {
+  if (flags & HasTimeSent) {
     // skip 8 bytes of timestamp (filled in later)
     offset += 8;
   }
-  if (flags & kHasPlayerID) {
+  if (flags & HasPlayerID) {
     write32(buf, offset, ki);
     offset += 4;
   }
@@ -377,12 +377,11 @@ uint32_t PropagateBufferMessage::format_header(uint16_t subtype, uint32_t messag
 PlNetMsgGroupOwner::PlNetMsgGroupOwner(bool is_owner) :
     PropagateBufferMessage() {
   // fixed-length message
-  m_buflen = body_offset(kHasTimeSent | kIsSystemMessage) + 12;
+  m_buflen = body_offset(HasTimeSent | IsSystemMessage) + 12;
   m_sbuf = new Buffer(m_buflen);
 
   uint8_t *buf = m_sbuf->buffer();
-  uint32_t offset = format_header(plNetMsgGroupOwner, m_buflen,
-  kHasTimeSent | kIsSystemMessage);
+  uint32_t offset = format_header(plNetMsgGroupOwner, m_buflen, HasTimeSent | IsSystemMessage);
   set_timestamp();
   if (offset != 24) {
     // bug in format_header, should never happen
@@ -397,7 +396,7 @@ PlNetMsgGroupOwner::PlNetMsgGroupOwner(bool is_owner) :
 
 PlNetMsgSDLState::PlNetMsgSDLState(SDLState *sdl, bool is_initial_sdl, bool use_timestamp) :
     PropagateBufferMessage() {
-  uint32_t msg_flags = (use_timestamp ? kHasTimeSent : 0);
+  uint32_t msg_flags = (use_timestamp ? HasTimeSent : 0);
   uint32_t offset = body_offset(msg_flags);
   m_buflen = offset + sdl->send_len() + 3;
   m_sbuf = new Buffer(m_buflen);
@@ -428,12 +427,11 @@ PlNetMsgSDLState::PlNetMsgSDLState(SDLState *sdl, bool is_initial_sdl, bool use_
 PlNetMsgInitialAgeStateSent::PlNetMsgInitialAgeStateSent(uint32_t howmany) :
     PropagateBufferMessage() {
   // fixed-length message
-  m_buflen = body_offset(kHasTimeSent) + 4;
+  m_buflen = body_offset(HasTimeSent) + 4;
   m_sbuf = new Buffer(m_buflen);
 
   uint8_t *buf = m_sbuf->buffer();
-  uint32_t offset = format_header(plNetMsgInitialAgeStateSent, m_buflen,
-  kHasTimeSent | kIsSystemMessage);
+  uint32_t offset = format_header(plNetMsgInitialAgeStateSent, m_buflen, HasTimeSent | IsSystemMessage);
   set_timestamp();
   if (offset != 24) {
     // bug in format_header, should never happen
@@ -447,12 +445,12 @@ PlNetMsgMembersMsg::PlNetMsgMembersMsg(kinum_t requester_ki)
   : PropagateBufferMessage()
 {
   // fixed-length message
-  m_buflen = body_offset(kHasTimeSent|kHasPlayerID|kIsSystemMessage) + 2;
+  m_buflen = body_offset(HasTimeSent|HasPlayerID|IsSystemMessage) + 2;
   m_sbuf = new Buffer(m_buflen);
 
   uint8_t *buf = m_sbuf->buffer();
   uint32_t offset = format_header(plNetMsgMembersList, m_buflen,
-             kHasTimeSent|kHasPlayerID|kIsSystemMessage,
+             HasTimeSent|HasPlayerID|IsSystemMessage,
              requester_ki);
   set_timestamp();
   if (offset != 28) {
@@ -476,7 +474,7 @@ void PlNetMsgMembersMsg::addMember(kinum_t ki, UruString *name, const PlKey *key
 }
 
 void PlNetMsgMembersMsg::finalize(bool list_or_update) {
-  m_buflen = body_offset(kHasTimeSent | kHasPlayerID | kIsSystemMessage);
+  m_buflen = body_offset(HasTimeSent | HasPlayerID | IsSystemMessage);
   std::list<struct info>::iterator iter;
   for (iter = m_members.begin(); iter != m_members.end(); iter++) {
     m_buflen += 10; // flags, content, and kinum
@@ -497,8 +495,11 @@ void PlNetMsgMembersMsg::finalize(bool list_or_update) {
   m_sbuf = new Buffer(m_buflen);
 
   uint8_t *buf = m_sbuf->buffer();
-  uint32_t offset = format_header((list_or_update ? plNetMsgMembersList : plNetMsgMemberUpdate), m_buflen,
-  kHasTimeSent | kHasPlayerID | kIsSystemMessage, m_requester_ki);
+  uint32_t offset = format_header(
+      (list_or_update ? plNetMsgMembersList : plNetMsgMemberUpdate),
+      m_buflen,
+      HasTimeSent | HasPlayerID | IsSystemMessage,
+      m_requester_ki);
   if (list_or_update) {
     write16(buf, offset, m_members.size());
     offset += 2;
@@ -507,23 +508,23 @@ void PlNetMsgMembersMsg::finalize(bool list_or_update) {
     write32(buf, offset, 0); // unk
     offset += 4;
     // contents
-    uint32_t contents = kPlayerID;
+    uint32_t contents = PlayerID;
     if (iter->name && iter->pagein) {
-      contents |= kPlayerName | kCCRLevel;
+      contents |= PlayerName | CCRLevel;
     }
     write16(buf, offset, contents);
     offset += 2;
-    if (contents & kPlayerID) {
+    if (contents & PlayerID) {
       write32(buf, offset, iter->ki);
       offset += 4;
     }
-    if (contents & kPlayerName) {
+    if (contents & PlayerName) {
       uint32_t len = iter->name->send_len(true, false, false);
       // this is NOT NOT NOT an UruString! it must not be bitflipped
       memcpy(buf + offset, iter->name->get_str(true, false, false, false), len);
       offset += len;
     }
-    if (contents & kCCRLevel) {
+    if (contents & CCRLevel) {
       // XXX nonzero values not supported
       buf[offset++] = 0;
     }
@@ -603,13 +604,12 @@ void PlNetMsgGameMessage::build_msg(uint32_t prop_flags, kinum_t prop_ki, const 
 
   if (offset + 1 != m_buflen) { // +1 is for "end thing" yet to come
     // bug in PlKey::send_len()
-    throw std::logic_error("PlKey::send_len() returned different length "
-        "than PlKey::write_out()");
+    throw std::logic_error("PlKey::send_len() returned different length than PlKey::write_out()");
   }
 
   uint32_t len = offset - contents_at;
   write32(buf, start_at, 0);
-  buf[start_at + 4] = kCompressionNone;
+  buf[start_at + 4] = CompressionNone;
   write32(buf, start_at + 5, len);
   // now check on compression
   if (!no_compress) {
@@ -624,7 +624,7 @@ void PlNetMsgGameMessage::build_msg(uint32_t prop_flags, kinum_t prop_ki, const 
 
   // finally, do the outer layer
   format_header(plNetMsgGameMessage, m_buflen, prop_flags, prop_ki);
-  if (prop_flags & kHasTimeSent) {
+  if (prop_flags & HasTimeSent) {
     set_timestamp();
   }
 }
@@ -633,32 +633,30 @@ PlServerReplyMsg::PlServerReplyMsg(bool grant, PlKey &key) :
     PlNetMsgGameMessage() {
   uint32_t result = (grant ? 1 : 0);
   PlKey *keyp = &key;
-  build_msg(kHasTimeSent, 0, (uint8_t*) &result, 4, plServerReplyMsg, 0x00000800/*unk*/, 0, NULL, &keyp, 1);
+  build_msg(HasTimeSent, 0, (uint8_t*) &result, 4, plServerReplyMsg, 0x00000800/*unk*/, 0, NULL, &keyp, 1);
 }
 
 // XXX retrofit this and *all* clone stuff to use build_msg() -- that means
 // parsing the message more, keeping track of whether it's plLoadAvatarMsg
-// or plLoadCloneMsg, using kNetClientMgr_KEY for the subobject, etc.
+// or plLoadCloneMsg, using NetClientMgr_KEY for the subobject, etc.
 // XXX do SDL too afterwards
-PlNetMsgLoadClone::PlNetMsgLoadClone(const uint8_t *clonebuf, size_t clonelen, PlKey &obj_name, kinum_t kinum, bool is_load,
-    uint32_t player) :
+PlNetMsgLoadClone::PlNetMsgLoadClone(const uint8_t *clonebuf, size_t clonelen,
+                                      PlKey &obj_name, kinum_t kinum, bool is_load, uint32_t player) :
     PlNetMsgGameMessage() {
-  m_buflen = body_offset(kHasTimeSent | kHasPlayerID) + clonelen + obj_name.send_len() + 3;
+  m_buflen = body_offset(HasTimeSent | HasPlayerID) + clonelen + obj_name.send_len() + 3;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer();
-  uint32_t offset = format_header(plNetMsgLoadClone, m_buflen,
-  kHasTimeSent | kHasPlayerID, kinum);
+  uint32_t offset = format_header(plNetMsgLoadClone, m_buflen, HasTimeSent | HasPlayerID, kinum);
   set_timestamp();
   memcpy(buf + offset, clonebuf, clonelen);
   offset += clonelen;
   offset += obj_name.write_out(buf + offset, m_buflen - offset);
   if (offset + 3 != m_buflen) {
     // bug in PlKey::send_len()
-    throw std::logic_error("PlKey::send_len() returned different length "
-        "than PlKey::write_out()");
+    throw std::logic_error("PlKey::send_len() returned different length than PlKey::write_out()");
   }
   buf[offset++] = (uint8_t) (player & 0xFF);
-  buf[offset] = (is_load ? 0x01 : 0x00);
+  buf[offset] = (is_load ? PlKey::HasCloneIDs : 0x00);
   buf[offset + 1] = buf[offset];
 }
 
@@ -696,7 +694,7 @@ NetworkMessage* GameMgrMessage::make_if_enough(const uint8_t *buf, size_t len, i
 }
 
 GameMgrMessage::GameMgrMessage(const uint8_t *buf, size_t len, bool become_owner) :
-    SharedGameMessage(kCli2Game_GameMgrMsg, buf, len, become_owner), m_msgtype(0), m_reqid(0), m_gameid(0) {
+    SharedGameMessage(Cli2Game_GameMgrMsg, buf, len, become_owner), m_msgtype(0), m_reqid(0), m_gameid(0) {
   if (m_buflen >= 18) {
     m_msgtype = read32(buf, 6);
     m_reqid = read32(buf, 10);
@@ -728,7 +726,7 @@ bool GameMgrMessage::check_useable() const {
 uint32_t GameMgrMessage::format_header(size_t body_len) {
   size_t total_len = header_len - 6 + body_len;
   uint8_t *buf = m_sbuf->buffer();
-  write16(buf, 0, kGame2Cli_GameMgrMsg);
+  write16(buf, 0, Game2Cli_GameMgrMsg);
   write32(buf, 2, total_len);
   write32(buf, 6, m_msgtype);
   write32(buf, 10, m_reqid);
@@ -794,7 +792,7 @@ GameMgr_FourByte_Message::GameMgr_FourByte_Message(uint32_t gameid, uint32_t mgr
 
 GameMgr_VarSync_VarCreated_Message::GameMgr_VarSync_VarCreated_Message(uint32_t gameid, uint32_t idx, UruString &name,
     double value) :
-    GameMgrMessage(kVarSyncNumericVarCreated, 0, gameid) {
+    GameMgrMessage(Srv2Cli_VarSync_NumericVarCreated, 0, gameid) {
   // these have a fixed-size buffer in them, so the message size is
   // constant
   size_t body_len = 524;
@@ -817,7 +815,7 @@ GameMgr_VarSync_VarCreated_Message::GameMgr_VarSync_VarCreated_Message(uint32_t 
 }
 
 GameMgr_Marker_GameCreated_Message::GameMgr_Marker_GameCreated_Message(uint32_t gameid, const uint8_t *uuid) :
-    GameMgrMessage(kMarkerTemplateCreated, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Marker_TemplateCreated, 0, gameid) {
   m_buflen = header_len + 160/*:-P*/;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -832,7 +830,7 @@ GameMgr_Marker_GameCreated_Message::GameMgr_Marker_GameCreated_Message(uint32_t 
 }
 
 GameMgr_Marker_GameNameChanged_Message::GameMgr_Marker_GameNameChanged_Message(uint32_t gameid, UruString *name) :
-    GameMgrMessage(kMarkerGameNameChanged, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Marker_GameNameChanged, 0, gameid) {
   m_buflen = header_len + 512/*:-P*/;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -842,10 +840,11 @@ GameMgr_Marker_GameNameChanged_Message::GameMgr_Marker_GameNameChanged_Message(u
   memset(buf + off, 0, 512 - off);
 }
 
-GameMgr_Marker_MarkerAdded_Message::GameMgr_Marker_MarkerAdded_Message(uint32_t gameid,
-    const Marker_BackendMessage::marker_data_t *data, UruString *name, UruString *age, BackendMessage *orig_msg) :
-    GameMgrMessage(kMarkerMarkerAdded, 0, gameid), m_data(data), m_marker_name(*name, true), m_age_name(*age, true), m_backing_msg(
-        orig_msg), m_zeros(NULL) {
+GameMgr_Marker_MarkerAdded_Message::GameMgr_Marker_MarkerAdded_Message(
+      uint32_t gameid, const Marker_BackendMessage::marker_data_t *data,
+      UruString *name, UruString *age, BackendMessage *orig_msg) :
+    GameMgrMessage(Srv2Cli_Marker_MarkerAdded, 0, gameid),
+    m_data(data), m_marker_name(*name, true), m_age_name(*age, true), m_backing_msg(orig_msg), m_zeros(NULL) {
   orig_msg->add_ref();
   m_buflen = header_len;
   m_sbuf = new Buffer(m_buflen);
@@ -1067,7 +1066,7 @@ uint32_t GameMgr_Marker_MarkerAdded_Message::fill_buffer(uint8_t *buffer, size_t
 }
 
 GameMgr_Marker_MarkerCaptured_Message::GameMgr_Marker_MarkerCaptured_Message(uint32_t gameid, int32_t marker, char value) :
-    GameMgrMessage(kMarkerMarkerCaptured, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Marker_MarkerCaptured, 0, gameid) {
   m_buflen = header_len + 5;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer();
@@ -1078,7 +1077,7 @@ GameMgr_Marker_MarkerCaptured_Message::GameMgr_Marker_MarkerCaptured_Message(uin
 
 GameMgr_Marker_MarkerNameChanged_Message::GameMgr_Marker_MarkerNameChanged_Message(uint32_t gameid, int32_t marker,
     UruString *name) :
-    GameMgrMessage(kMarkerMarkerNameChanged, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Marker_MarkerNameChanged, 0, gameid) {
   m_buflen = header_len + 4 + 512/*:-P*/;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -1090,7 +1089,7 @@ GameMgr_Marker_MarkerNameChanged_Message::GameMgr_Marker_MarkerNameChanged_Messa
 }
 
 GameMgr_BlueSpiral_ClothOrder_Message::GameMgr_BlueSpiral_ClothOrder_Message(uint32_t gameid, const uint8_t *order) :
-    GameMgrMessage(kBlueSpiralClothOrder, 0, gameid) {
+    GameMgrMessage(Srv2Cli_BlueSpiral_ClothOrder, 0, gameid) {
   m_buflen = header_len + 7;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -1099,7 +1098,7 @@ GameMgr_BlueSpiral_ClothOrder_Message::GameMgr_BlueSpiral_ClothOrder_Message(uin
 }
 
 GameMgr_Heek_PlayGame_Message::GameMgr_Heek_PlayGame_Message(uint32_t gameid, bool playing, bool single, bool enable) :
-    GameMgrMessage(kHeekPlayGame, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Heek_PlayGame, 0, gameid) {
   m_buflen = header_len + 3;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -1110,7 +1109,7 @@ GameMgr_Heek_PlayGame_Message::GameMgr_Heek_PlayGame_Message(uint32_t gameid, bo
 }
 
 GameMgr_Heek_Welcome_Message::GameMgr_Heek_Welcome_Message(uint32_t gameid, int32_t score, uint32_t rank, UruString &name) :
-    GameMgrMessage(kHeekWelcome, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Heek_Welcome, 0, gameid) {
   m_buflen = header_len + 8 + 512/*:-P*/;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -1125,7 +1124,7 @@ GameMgr_Heek_Welcome_Message::GameMgr_Heek_Welcome_Message(uint32_t gameid, int3
 
 GameMgr_Heek_PointUpdate_Message::GameMgr_Heek_PointUpdate_Message(uint32_t gameid, bool send_message, int32_t score,
     uint32_t rank) :
-    GameMgrMessage(kHeekPointUpdate, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Heek_PointUpdate, 0, gameid) {
   m_buflen = header_len + 9;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -1136,7 +1135,7 @@ GameMgr_Heek_PointUpdate_Message::GameMgr_Heek_PointUpdate_Message(uint32_t game
 }
 
 GameMgr_Heek_WinLose_Message::GameMgr_Heek_WinLose_Message(uint32_t gameid, bool win, uint8_t choice) :
-    GameMgrMessage(kHeekWinLose, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Heek_WinLose, 0, gameid) {
   m_buflen = header_len + 2;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;
@@ -1146,7 +1145,7 @@ GameMgr_Heek_WinLose_Message::GameMgr_Heek_WinLose_Message(uint32_t gameid, bool
 }
 
 GameMgr_Heek_Lights_Message::GameMgr_Heek_Lights_Message(uint32_t gameid, uint32_t light, GameMgr_Heek_Lights_Message::type_t type) :
-    GameMgrMessage(kHeekLightState, 0, gameid) {
+    GameMgrMessage(Srv2Cli_Heek_LightState, 0, gameid) {
   m_buflen = header_len + 2;
   m_sbuf = new Buffer(m_buflen);
   uint8_t *buf = m_sbuf->buffer() + header_len;

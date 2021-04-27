@@ -33,86 +33,130 @@
 
 #include "VaultNode.h"
 
+//    bits            datatype          col_name        fetch_name    fetch_required
+
 static uint32_t CommonBits = NodeID | NodeType | CreateTime | ModifyTime | CreatorAcctID | CreatorID;
-static VaultNode::ColumnSpec CommonSpec[] = { { NodeID, VaultNode::UINT, "nodeid", "", false }, // special case...
-    { NodeType, VaultNode::INT, "nodetype", "v_nodetype", true }, { CreateTime, VaultNode::UINT, "createtime",
-        "v_createtime", true }, { ModifyTime, VaultNode::UINT, "modifytime", "v_modifytime", true }, { CreatorAcctID,
-        VaultNode::UUID, "creatoracctid", "v_creatoracctid", true }, { CreatorID, VaultNode::UINT, "creatorid",
-        "v_creatorid", true } };
+static VaultNode::ColumnSpec CommonSpec[] = {
+    { NodeID,         VaultNode::UInt,    "nodeid",       "",           false }, // special case...
+    { NodeType,       VaultNode::Int,     "nodetype",     "v_nodetype", true },
+    { CreateTime,     VaultNode::UInt,    "createtime",   "v_createtime", true },
+    { ModifyTime,     VaultNode::UInt,    "modifytime",   "v_modifytime", true },
+    { CreatorAcctID,  VaultNode::UUID,    "creatoracctid","v_creatoracctid", true },
+    { CreatorID,      VaultNode::UInt,    "creatorid",    "v_creatorid", true }
+};
 static const size_t CommonSize = sizeof(CommonSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t CreateAgeBits = CreateAgeName | CreateAgeUUID;
 static VaultNode::ColumnSpec CreateAgeSpec[] = {
-    { CreateAgeName, VaultNode::STRING, "createagename", "v_createagename", false }, { CreateAgeUUID, VaultNode::UUID,
-        "createageuuid", "v_createageuuid", false } };
+    { CreateAgeName,  VaultNode::String,  "createagename","v_createagename", false },
+    { CreateAgeUUID,  VaultNode::UUID,    "createageuuid","v_createageuuid", false }
+};
 static const size_t CreateAgeSize = sizeof(CreateAgeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t AgeNodeBits = UUID_1 | UUID_2 | String64_1;
-static VaultNode::ColumnSpec AgeNodeSpec[] = { { UUID_1, VaultNode::UUID, "uuid_1", "v_uuid_1", true }, { UUID_2,
-    VaultNode::UUID, "uuid_2", "v_uuid_2", false }, // parent age
-    { String64_1, VaultNode::STRING, "filename", "v_filename", true } };
+static VaultNode::ColumnSpec AgeNodeSpec[] = {
+    { UUID_1,         VaultNode::UUID,    "uuid_1",       "v_uuid_1",   true },
+    { UUID_2,         VaultNode::UUID,    "uuid_2",       "v_uuid_2",   false }, // parent age
+    { String64_1,     VaultNode::String,  "filename",     "v_filename", true }
+};
 static const size_t AgeNodeSize = sizeof(AgeNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
-static uint32_t AgeInfoNodeBits = Int32_1 | Int32_2 | Int32_3 | UInt32_1 | UInt32_2 | UInt32_3 | UUID_1 | UUID_2 | String64_2
-    | String64_3 | String64_4 | Text_1;
-static VaultNode::ColumnSpec AgeInfoNodeSpec[] = { { Int32_1, VaultNode::INT, "int32_1", "v_int32_1", true }, { Int32_2,
-    VaultNode::INT, "int32_2", "v_int32_2", false }, { Int32_3, VaultNode::INT, "int32_3", "v_int32_3", true }, { UInt32_1,
-    VaultNode::UINT, "uint32_1", "v_uint32_1", true }, { UInt32_2, VaultNode::UINT, "uint32_2", "v_uint32_2", true }, {
-    UInt32_3, VaultNode::UINT, "uint32_3", "v_uint32_3", true }, { UUID_1, VaultNode::UUID, "uuid_1", "v_uuid_1", true }, {
-    UUID_2, VaultNode::UUID, "uuid_2", "v_uuid_2", false }, { String64_2, VaultNode::STRING, "string64_2", "v_string64_2",
-    true }, { String64_3, VaultNode::STRING, "string64_3", "v_string64_3", true }, { String64_4, VaultNode::STRING,
-    "string64_4", "v_string64_4", false }, { Text_1, VaultNode::STRING, "text_1", "v_text_1", false } };
+static uint32_t AgeInfoNodeBits =
+    Int32_1 | Int32_2 | Int32_3 | UInt32_1 | UInt32_2 | UInt32_3 | UUID_1 | UUID_2 | String64_2 | String64_3 | String64_4 | Text_1;
+static VaultNode::ColumnSpec AgeInfoNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,     "int32_1",      "v_int32_1",  true },
+    { Int32_2,        VaultNode::Int,     "int32_2",      "v_int32_2",  false },
+    { Int32_3,        VaultNode::Int,     "int32_3",      "v_int32_3",  true },
+    { UInt32_1,       VaultNode::UInt,    "uint32_1",     "v_uint32_1", true },
+    { UInt32_2,       VaultNode::UInt,    "uint32_2",     "v_uint32_2", true },
+    { UInt32_3,       VaultNode::UInt,    "uint32_3",     "v_uint32_3", true },
+    { UUID_1,         VaultNode::UUID,    "uuid_1",       "v_uuid_1",   true },
+    { UUID_2,         VaultNode::UUID,    "uuid_2",       "v_uuid_2",   false },
+    { String64_2,     VaultNode::String,  "string64_2",   "v_string64_2", true },
+    { String64_3,     VaultNode::String,  "string64_3",   "v_string64_3", true },
+    { String64_4,     VaultNode::String,  "string64_4",   "v_string64_4", false },
+    { Text_1,         VaultNode::String,  "text_1",       "v_text_1",   false }
+};
 static const size_t AgeInfoNodeSize = sizeof(AgeInfoNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t AgeInfoListNodeBits = Int32_1;
-static VaultNode::ColumnSpec AgeInfoListNodeSpec[] = { { Int32_1, VaultNode::INT, "type", "v_type", true } };
+static VaultNode::ColumnSpec AgeInfoListNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,     "type",         "v_type",     true }
+};
 static const size_t AgeInfoListNodeSize = sizeof(AgeInfoListNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t AgeLinkNodeBits = Int32_1 | Int32_2 | Blob_1;
-static VaultNode::ColumnSpec AgeLinkNodeSpec[] = { { Int32_1, VaultNode::INT, "shared", "v_int32_1", false }, { Int32_2,
-    VaultNode::INT, "volatile", "v_int32_2", false }, { Blob_1, VaultNode::BLOB, "linkpoints", "v_linkpoints", false } };
+static VaultNode::ColumnSpec AgeLinkNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,     "shared",       "v_int32_1",  false },
+    { Int32_2,        VaultNode::Int,     "volatile",     "v_int32_2",  false },
+    { Blob_1,         VaultNode::Blob,    "linkpoints",   "v_linkpoints", false }
+};
 static const size_t AgeLinkNodeSize = sizeof(AgeLinkNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t ChronicleNodeBits = Int32_1 | String64_1 | Text_1;
-static VaultNode::ColumnSpec ChronicleNodeSpec[] = { { Int32_1, VaultNode::INT, "type", "v_type", false }, { String64_1,
-    VaultNode::STRING, "name", "v_name", true }, { Text_1, VaultNode::STRING, "value", "v_value", true } };
+static VaultNode::ColumnSpec ChronicleNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,     "type",         "v_type",     false },
+    { String64_1,     VaultNode::String,  "name",         "v_name",     true },
+    { Text_1,         VaultNode::String,  "value",        "v_value",    true }
+};
 static const size_t ChronicleNodeSize = sizeof(ChronicleNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t FolderNodeBits = Int32_1 | String64_1;
-static VaultNode::ColumnSpec FolderNodeSpec[] = { { Int32_1, VaultNode::INT, "type", "v_type", false }, { String64_1,
-    VaultNode::STRING, "name", "v_name", false } };
+static VaultNode::ColumnSpec FolderNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,     "type",         "v_type",     false },
+    { String64_1,     VaultNode::String,  "name",         "v_name",     false }
+};
 static const size_t FolderNodeSize = sizeof(FolderNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t ImageNodeBits = Int32_1 | String64_1 | Blob_1;
-static VaultNode::ColumnSpec ImageNodeSpec[] = { { Int32_1, VaultNode::INT, "exists", "v_exists", true }, { String64_1,
-    VaultNode::STRING, "name", "v_name", true }, { Blob_1, VaultNode::BLOB, "image", "v_image", false } };
+static VaultNode::ColumnSpec ImageNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,     "exists",       "v_exists",   true },
+    { String64_1,     VaultNode::String,  "name",         "v_name",     true },
+    { Blob_1,         VaultNode::Blob,    "image",        "v_image",    false }
+};
 static const size_t ImageNodeSize = sizeof(ImageNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t MarkergameNodeBits = Text_1 | UUID_1;
-static VaultNode::ColumnSpec MarkergameNodeSpec[] = { { Text_1, VaultNode::STRING, "name", "v_name", true }, { UUID_1,
-    VaultNode::UUID, "uuid_1", "v_uuid_1", true } };
+static VaultNode::ColumnSpec MarkergameNodeSpec[] = {
+    { Text_1,         VaultNode::String,    "name",       "v_name",     true },
+    { UUID_1,         VaultNode::UUID,      "uuid_1",     "v_uuid_1",   true }
+};
 static const size_t MarkergameNodeSize = sizeof(MarkergameNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t PlayerNodeBits = Int32_1 | Int32_2 | UInt32_1 | UUID_1 | UUID_2 | String64_1 | IString64_1;
-static VaultNode::ColumnSpec PlayerNodeSpec[] = { { Int32_1, VaultNode::INT, "int32_1", "v_int32_1", true }, { Int32_2,
-    VaultNode::INT, "int32_2", "v_int32_2", true }, { UInt32_1, VaultNode::UINT, "uint32_1", "v_uint32_1", true }, { UUID_1,
-    VaultNode::UUID, "uuid_1", "v_uuid_1", true }, { UUID_2, VaultNode::UUID, "uuid_2", "v_uuid_2", false }, { String64_1,
-    VaultNode::STRING, "gender", "v_gender", true }, { IString64_1, VaultNode::STRING, "name", "v_name", true } };
+static VaultNode::ColumnSpec PlayerNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,       "int32_1",    "v_int32_1",  true },
+    { Int32_2,        VaultNode::Int,       "int32_2",    "v_int32_2",  true },
+    { UInt32_1,       VaultNode::UInt,      "uint32_1",   "v_uint32_1", true },
+    { UUID_1,         VaultNode::UUID,      "uuid_1",     "v_uuid_1",   true },
+    { UUID_2,         VaultNode::UUID,      "uuid_2",     "v_uuid_2",   false },
+    { String64_1,     VaultNode::String,    "gender",     "v_gender",   true },
+    { IString64_1,    VaultNode::String,    "name",       "v_name",     true }
+};
 static const size_t PlayerNodeSize = sizeof(PlayerNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t PlayerInfoNodeBits = Int32_1 | UInt32_1 | UUID_1 | String64_1 | IString64_1;
-static VaultNode::ColumnSpec PlayerInfoNodeSpec[] = { { Int32_1, VaultNode::INT, "online", "v_online", false }, { UInt32_1,
-    VaultNode::UINT, "ki", "v_ki", true }, { UUID_1, VaultNode::UUID, "uuid_1", "v_uuid_1", false }, { String64_1,
-    VaultNode::STRING, "string64_1", "v_string64_1", false }, { IString64_1, VaultNode::STRING, "name", "v_name", true } };
+static VaultNode::ColumnSpec PlayerInfoNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,       "online",     "v_online",   false },
+    { UInt32_1,       VaultNode::UInt,      "ki",         "v_ki",       true },
+    { UUID_1,         VaultNode::UUID,      "uuid_1",     "v_uuid_1",   false },
+    { String64_1,     VaultNode::String,    "string64_1", "v_string64_1", false },
+    { IString64_1,    VaultNode::String,    "name",       "v_name",     true }
+};
 static const size_t PlayerInfoNodeSize = sizeof(PlayerInfoNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t PlayerInfoListNodeBits = Int32_1;
-static VaultNode::ColumnSpec PlayerInfoListNodeSpec[] = { { Int32_1, VaultNode::INT, "type", "v_type", true } };
+static VaultNode::ColumnSpec PlayerInfoListNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,       "type",        "v_type",    true }
+};
 static const size_t PlayerInfoListNodeSize = sizeof(PlayerInfoListNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t SDLNodeBits = Int32_1 | String64_1 | Blob_1;
-static VaultNode::ColumnSpec SDLNodeSpec[] = { { Int32_1, VaultNode::INT, "int32_1", "v_int32_1", false }, { String64_1,
-    VaultNode::STRING, "name", "v_name", false }, { Blob_1, VaultNode::BLOB, "blob", "v_blob", false } };
+static VaultNode::ColumnSpec SDLNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,       "int32_1",      "v_int32_1", false },
+    { String64_1,     VaultNode::String,    "name",         "v_name",   false },
+    { Blob_1,         VaultNode::Blob,      "blob",         "v_blob",   false }
+};
 static const size_t SDLNodeSize = sizeof(SDLNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t SystemNodeBits = 0;
@@ -120,9 +164,12 @@ static VaultNode::ColumnSpec SystemNodeSpec[] = { };
 static const size_t SystemNodeSize = sizeof(SystemNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 static uint32_t TextNoteNodeBits = Int32_1 | Int32_2 | String64_1 | Text_1;
-static VaultNode::ColumnSpec TextNoteNodeSpec[] = { { Int32_1, VaultNode::INT, "int32_1", "v_int32_1", false }, { Int32_2,
-    VaultNode::INT, "int32_2", "v_int32_2", false }, { String64_1, VaultNode::STRING, "title", "v_title", false }, { Text_1,
-    VaultNode::STRING, "value", "v_value", false } };
+static VaultNode::ColumnSpec TextNoteNodeSpec[] = {
+    { Int32_1,        VaultNode::Int,       "int32_1",      "v_int32_1", false },
+    { Int32_2,        VaultNode::Int,       "int32_2",      "v_int32_2", false },
+    { String64_1,     VaultNode::String,    "title",        "v_title",  false },
+    { Text_1,         VaultNode::String,    "value",        "v_value",  false }
+};
 static const size_t TextNoteNodeSize = sizeof(TextNoteNodeSpec) / sizeof(VaultNode::ColumnSpec);
 
 // this data is internal to this file and is used in for loops to avoid
@@ -131,16 +178,41 @@ typedef struct {
   uint32_t bit;
   VaultNode::datatype_t type;
 } int_colspec_t;
-static const int_colspec_t colspecs[] = { { NodeID, VaultNode::UINT }, { CreateTime, VaultNode::UINT }, { ModifyTime,
-    VaultNode::UINT }, { CreateAgeName, VaultNode::STRING }, { CreateAgeUUID, VaultNode::UUID }, { CreatorAcctID,
-    VaultNode::UUID }, { CreatorID, VaultNode::UINT }, { NodeType, VaultNode::INT }, { Int32_1, VaultNode::INT }, { Int32_2,
-    VaultNode::INT }, { Int32_3, VaultNode::INT }, { Int32_4, VaultNode::INT }, { UInt32_1, VaultNode::UINT }, { UInt32_2,
-    VaultNode::UINT }, { UInt32_3, VaultNode::UINT }, { UInt32_4, VaultNode::UINT }, { UUID_1, VaultNode::UUID }, { UUID_2,
-    VaultNode::UUID }, { UUID_3, VaultNode::UUID }, { UUID_4, VaultNode::UUID }, { String64_1, VaultNode::STRING }, {
-    String64_2, VaultNode::STRING }, { String64_3, VaultNode::STRING }, { String64_4, VaultNode::STRING }, { String64_5,
-    VaultNode::STRING }, { String64_6, VaultNode::STRING }, { IString64_1, VaultNode::STRING }, { IString64_2,
-    VaultNode::STRING }, { Text_1, VaultNode::STRING }, { Text_2, VaultNode::STRING }, { Blob_1, VaultNode::BLOB }, {
-    Blob_2, VaultNode::BLOB } };
+//    bit             type
+static const int_colspec_t colspecs[] = {
+    { NodeID,         VaultNode::UInt },
+    { CreateTime,     VaultNode::UInt },
+    { ModifyTime,     VaultNode::UInt },
+    { CreateAgeName,  VaultNode::String },
+    { CreateAgeUUID,  VaultNode::UUID },
+    { CreatorAcctID,  VaultNode::UUID },
+    { CreatorID,      VaultNode::UInt },
+    { NodeType,       VaultNode::Int },
+    { Int32_1,        VaultNode::Int },
+    { Int32_2,        VaultNode::Int },
+    { Int32_3,        VaultNode::Int },
+    { Int32_4,        VaultNode::Int },
+    { UInt32_1,       VaultNode::UInt },
+    { UInt32_2,       VaultNode::UInt },
+    { UInt32_3,       VaultNode::UInt },
+    { UInt32_4,       VaultNode::UInt },
+    { UUID_1,         VaultNode::UUID },
+    { UUID_2,         VaultNode::UUID },
+    { UUID_3,         VaultNode::UUID },
+    { UUID_4,         VaultNode::UUID },
+    { String64_1,     VaultNode::String },
+    { String64_2,     VaultNode::String },
+    { String64_3,     VaultNode::String },
+    { String64_4,     VaultNode::String },
+    { String64_5,     VaultNode::String },
+    { String64_6,     VaultNode::String },
+    { IString64_1,    VaultNode::String },
+    { IString64_2,    VaultNode::String },
+    { Text_1,         VaultNode::String },
+    { Text_2,         VaultNode::String },
+    { Blob_1,         VaultNode::Blob },
+    { Blob_2,         VaultNode::Blob }
+};
 
 bool VaultNode::check_len_by_bitfields(const uint8_t *buf, size_t len) {
   uint32_t bits1, bits2;
@@ -151,15 +223,15 @@ bool VaultNode::check_len_by_bitfields(const uint8_t *buf, size_t len) {
   for (uint32_t i = 0; i < 32; i++) {
     if (bits1 & colspecs[i].bit) {
       switch (colspecs[i].type) {
-      case INT:
-      case UINT:
+      case Int:
+      case UInt:
         offset += 4;
         break;
       case UUID:
         offset += 16;
         break;
-      case STRING:
-      case BLOB:
+      case String:
+      case Blob:
         if (offset + 4 > len) {
           return false;
         }
@@ -193,8 +265,8 @@ VaultNode::VaultNode(const uint8_t *inbuf, bool copy_data) :
   for (uint32_t i = 0; i < 32; i++) {
     if (m_bits1 & colspecs[i].bit) {
       switch (colspecs[i].type) {
-      case INT:
-      case UINT:
+      case Int:
+      case UInt:
         m_fields1[i].intval = read32le(inbuf, offset);
         offset += 4;
         break;
@@ -207,8 +279,8 @@ VaultNode::VaultNode(const uint8_t *inbuf, bool copy_data) :
         }
         offset += 16;
         break;
-      case STRING:
-      case BLOB:
+      case String:
+      case Blob:
         buflen = read32(inbuf, offset);
         if (copy_data) {
           m_fields1[i].bufval = new uint8_t[buflen + 4];
@@ -217,6 +289,7 @@ VaultNode::VaultNode(const uint8_t *inbuf, bool copy_data) :
           m_fields1[i].bufval = const_cast<uint8_t*>(inbuf + offset);
         }
         offset += buflen + 4;
+        break;
       default:
         // can't happen
         break;
@@ -230,7 +303,7 @@ VaultNode::VaultNode(const uint8_t *inbuf, bool copy_data) :
 VaultNode::~VaultNode() {
   if (m_owns_bufs) {
     for (uint32_t i = 0; i < 32; i++) {
-      if ((colspecs[i].type != INT) && (colspecs[i].type != UINT) && (m_bits1 & colspecs[i].bit) && m_fields1[i].bufval) {
+      if ((colspecs[i].type != Int) && (colspecs[i].type != UInt) && (m_bits1 & colspecs[i].bit) && m_fields1[i].bufval) {
         delete[] m_fields1[i].bufval;
       }
     }
@@ -447,7 +520,7 @@ VaultNode::vault_nodetype_t VaultNode::type() const {
 uint32_t& VaultNode::num_ref(vault_bitfield_t bit) {
   for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
-      if (colspecs[i].type != INT && colspecs[i].type != UINT) {
+      if (colspecs[i].type != Int && colspecs[i].type != UInt) {
         // non-integer field!
         break;
       }
@@ -488,7 +561,7 @@ uint8_t* VaultNode::uuid_ptr(vault_bitfield_t bit) {
 uint8_t* VaultNode::data_ptr(vault_bitfield_t bit, uint32_t len) {
   for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
-      if (colspecs[i].type != STRING && colspecs[i].type != BLOB) {
+      if (colspecs[i].type != String && colspecs[i].type != Blob) {
         // non-blob/string field!
         break;
       }
@@ -526,7 +599,7 @@ uint8_t* VaultNode::data_ptr(vault_bitfield_t bit, uint32_t len) {
 const uint32_t VaultNode::num_val(vault_bitfield_t bit) const {
   for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
-      if (colspecs[i].type != INT && colspecs[i].type != UINT) {
+      if (colspecs[i].type != Int && colspecs[i].type != UInt) {
         // non-integer field!
         break;
       }
@@ -556,7 +629,7 @@ const uint8_t* VaultNode::const_uuid_ptr(vault_bitfield_t bit) const {
 const uint8_t* VaultNode::const_data_ptr(vault_bitfield_t bit) const {
   for (uint32_t i = 0; i < 32; i++) {
     if (colspecs[i].bit == bit) {
-      if (colspecs[i].type != STRING && colspecs[i].type != BLOB) {
+      if (colspecs[i].type != String && colspecs[i].type != Blob) {
         // non-blob/string field!
         break;
       }
@@ -569,36 +642,21 @@ const uint8_t* VaultNode::const_data_ptr(vault_bitfield_t bit) const {
 
 const char* VaultNode::tablename_for_type(vault_nodetype_t type) {
   switch (type) {
-  case CCRNode:
-    return "ccr";
-  case PlayerNode:
-    return "player";
-  case AgeNode:
-    return "age";
-  case FolderNode:
-    return "folder";
-  case PlayerInfoNode:
-    return "playerinfo";
-  case SystemNode:
-    return "system";
-  case ImageNode:
-    return "image";
-  case TextNoteNode:
-    return "textnote";
-  case SDLNode:
-    return "sdl";
-  case AgeLinkNode:
-    return "agelink";
-  case ChronicleNode:
-    return "chronicle";
-  case PlayerInfoListNode:
-    return "playerinfolist";
-  case AgeInfoNode:
-    return "ageinfo";
-  case AgeInfoListNode:
-    return "ageinfolist";
-  case MarkergameNode:
-    return "markergame";
+  case CCRNode:            return "ccr";
+  case PlayerNode:         return "player";
+  case AgeNode:            return "age";
+  case FolderNode:         return "folder";
+  case PlayerInfoNode:     return "playerinfo";
+  case SystemNode:         return "system";
+  case ImageNode:          return "image";
+  case TextNoteNode:       return "textnote";
+  case SDLNode:            return "sdl";
+  case AgeLinkNode:        return "agelink";
+  case ChronicleNode:      return "chronicle";
+  case PlayerInfoListNode: return "playerinfolist";
+  case AgeInfoNode:        return "ageinfo";
+  case AgeInfoListNode:    return "ageinfolist";
+  case MarkergameNode:     return "markergame";
   default:
     return "unknown_table_name";
   }
@@ -625,8 +683,8 @@ uint32_t VaultNode::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t sta
     }
     if (to_include & colspecs[i].bit) {
       switch (colspecs[i].type) {
-      case INT:
-      case UINT:
+      case Int:
+      case UInt:
         if (start_at < 4) {
           iov[done].iov_base = (&m_fields1[i].intval) + start_at;
           iov[done].iov_len = 4 - start_at;
@@ -646,8 +704,8 @@ uint32_t VaultNode::fill_iovecs(struct iovec *iov, uint32_t iov_ct, uint32_t sta
           start_at -= 16;
         }
         break;
-      case STRING:
-      case BLOB:
+      case String:
+      case Blob:
         wrlen = read32(m_fields1[i].bufval, 0) + 4;
         if (start_at < wrlen) {
           iov[done].iov_base = (m_fields1[i].bufval) + start_at;
@@ -737,8 +795,8 @@ uint32_t VaultNode::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, 
   for (uint32_t i = 0; i < 32; i++) {
     if (to_include & colspecs[i].bit) {
       switch (colspecs[i].type) {
-      case INT:
-      case UINT:
+      case Int:
+      case UInt:
         if (start_at < 4) {
           wrlen = 4 - start_at;
           if (wrlen > len - done) {
@@ -766,8 +824,8 @@ uint32_t VaultNode::fill_buffer(uint8_t *buffer, size_t len, uint32_t start_at, 
           start_at -= 16;
         }
         break;
-      case STRING:
-      case BLOB:
+      case String:
+      case Blob:
         wrlen = read32(m_fields1[i].bufval, 0) + 4;
         if (start_at < wrlen) {
           if (wrlen > len - done) {

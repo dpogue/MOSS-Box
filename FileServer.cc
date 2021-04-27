@@ -125,8 +125,8 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
         int32_t version = msg->client_version();
         char uuid[UUID_STR_LEN];
         format_uuid(msg->uuid(), uuid);
-        log_info(m_log, "Client version: %u%s Release: %u UUID: %s\n", version, version == 0 ? " (launcher)" : "",
-            msg->release_number(), uuid);
+        log_info(m_log, "Client version: %u%s Release: %u UUID: %s\n",
+            version, version == 0 ? " (launcher)" : "", msg->release_number(), uuid);
       }
     } else {
       // well, I don't *need* that info...
@@ -158,13 +158,14 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
       return PROTOCOL_ERROR;
     } else {
       FileClientMessage *msg = (FileClientMessage*) in;
-      if (msg->type() == PingRequestTrans) {
+      log_debug(m_log, "FILE_CLIENT: received <0x%x>\"%s\"\n", msg->type(), Cli2File_e_c_str(msg->type()));
+      if (msg->type() == Cli2File_PingRequest) {
         gettimeofday(&conn->m_timeout, NULL);
         conn->m_timeout.tv_sec += conn->m_interval;
         FileServerMessage *reply = new FileServerMessage(msg);
         conn->enqueue(reply, MessageQueue::NORMAL);
-      } else if (msg->type() == ManifestRequestTrans || msg->type() == DownloadRequestTrans) {
-        bool is_manifest = (msg->type() == ManifestRequestTrans);
+      } else if (msg->type() == Cli2File_ManifestRequest || msg->type() == Cli2File_FileDownloadRequest) {
+        bool is_manifest = (msg->type() == Cli2File_ManifestRequest);
         FileTransaction *trans = new FileTransaction(msg->request_id(), m_log, is_manifest, false);
 
         UruString namestr(msg->object_name(), msg->object_name_maxlen(), false, true, false);
@@ -183,8 +184,8 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
             if (!is_manifest && (fname[i] == '\\' || fname[i] == '/')) {
               fname[i] = PATH_SEPARATOR[0];
             } else {
-              log_warn(m_log, "Possibly malicious %s requested: %s; "
-                  "killing connection\n", is_manifest ? "manifest" : "download", fname);
+              log_warn(m_log, "Possibly malicious %s requested: %s; killing connection\n",
+                  is_manifest ? "manifest" : "download", fname);
               if (m_log) {
                 m_log->dump_contents(Logger::LOG_WARN, msg->object_name(), msg->object_name_maxlen());
               }
@@ -199,7 +200,7 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
         m_pending_transactions.push_back(trans);
         FileServerMessage *reply = new FileServerMessage(trans, msg->type());
         conn->enqueue(reply, MessageQueue::NORMAL);
-      } else if (msg->type() == FileRcvdFileDownloadChunkTrans || msg->type() == FileRcvdFileManifestChunkTrans) {
+      } else if (msg->type() == Cli2File_FileDownloadChunkAck || msg->type() == Cli2File_ManifestEntryAck) {
         uint32_t id = msg->request_id();
         bool found = false;
         std::list<FileTransaction*>::iterator iter;
@@ -213,8 +214,8 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
               m_pending_transactions.erase(iter); // invalidates iter
             } else {
               FileServerMessage *next = new FileServerMessage(trans,
-                  msg->type() == FileRcvdFileDownloadChunkTrans ?
-                      DownloadRequestTrans : ManifestRequestTrans);
+                  msg->type() == Cli2File_FileDownloadChunkAck ?
+                      Cli2File_FileDownloadRequest : Cli2File_ManifestRequest);
               conn->enqueue(next, MessageQueue::NORMAL);
             }
             found = true;
@@ -226,16 +227,8 @@ Server::reason_t FileServer::message_read(Connection *c, NetworkMessage *in) {
         } else {
 //      log_msgs(m_log, "ChunkAck for transaction %u\n", id);
         }
-      } else if (msg->type() == BuildIdRequestTrans) {
-#ifdef OLD_PROTOCOL
-#ifdef OLD_PROTOCOL4
-    int32_t build = 556; // Live4
-#else
-    int32_t build = 401; // last open beta?
-#endif
-#else
-        int32_t build = 847; // Live9
-#endif
+      } else if (msg->type() == Cli2File_BuildIdRequest) {
+        int32_t build = 918; // Live9; updated 2021-04-10 PR
         FileServerMessage *reply = new FileServerMessage(msg->request_id(), NO_ERROR, build);
         conn->enqueue(reply, MessageQueue::NORMAL);
       } else {

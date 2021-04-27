@@ -249,32 +249,5 @@ AC_ARG_ENABLE([debug],
 	 fi],
 	[])
 
-# configure option for older protocol (changed sometime in Live 5-8)
-AC_ARG_ENABLE([old-protocol],
-	[AS_HELP_STRING([--enable-old-protocol],
-		[enable older protocol (Live 1-3: yes, Live 4: 4, Live 8-9: no) [default=no]])],
-	[if test "x$enableval" = "xyes" -o "x$enableval" = "x4"; then
-		moss_old_protocol=1
-		AC_DEFINE(OLD_PROTOCOL,1,
-			  [Define to 1 to enable older protocol])
-		if test "x$enableval" = "x4"; then
-			AC_DEFINE(OLD_PROTOCOL4,1,
-				  [Define to 1 to enable Live 4 protocol])
-		else
-			if ! test "x$enable_fast_download" = "xyes"; then
-				AC_MSG_WARN([--enable-old-protocol given without --enable-fast-download; automatically enabling fast download])
-				AC_DEFINE(DOWNLOAD_NO_ACKS,1,
-					  [Define to 1 to enable downloads without ChunkAcks])
-			fi
-		fi
-	 else
-		moss_old_protocol=0
-		if ! test "x$enableval" = "xno"; then
-			AC_MSG_ERROR([--enable-old-protocol must be one of yes,no,4])
-		fi
-	 fi],
-	[moss_old_protocol=0])
-AM_CONDITIONAL(OLD_PROTOCOL, test "x$moss_old_protocol" = "x1")
-
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -1,4 +1,6 @@
 /*
+ *
+ *
  MOSS - A server for the Myst Online: Uru Live client/protocol
  Copyright (C) 2008-2011  a'moaca'
 
@@ -22,14 +24,14 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 #include <errno.h>
 #include <ctype.h> /* for tolower() */
 
 #include <stdarg.h>
 #include <iconv.h>
 
-#include <sys/time.h>
+#include <time.h>
 #include <dirent.h>
 
 #include <stdexcept>
@@ -39,6 +41,8 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <iterator>
+#include <ctime>
 
 #include <zlib.h>
 
@@ -48,6 +52,7 @@
 #include "constants.h"
 #include "protocol.h"
 #include "util.h"
+#include "strcasestr.h"
 #include "UruString.h"
 #include "PlKey.h"
 
@@ -55,7 +60,7 @@
 #include "SDL.h"
 
 SDLDesc::SDLDesc(const std::string &name) :
-    m_name(NULL), m_version(0) {
+    m_name(NULL), m_version(0), m_chars(NULL), m_string("") {
   m_name = new char[name.length() + 1];
   memcpy(m_name, name.c_str(), name.length() + 1);
 }
@@ -77,15 +82,16 @@ SDLDesc::~SDLDesc() {
 SDLDesc* SDLDesc::find_by_name(const char *name, const std::list<SDLDesc*> &l, uint32_t version) {
   SDLDesc *ret = NULL;
   std::list<SDLDesc*>::const_iterator iter;
+  uint32_t namelen = strlen(name);
   for (iter = l.begin(); iter != l.end(); iter++) {
     SDLDesc *desc = *iter;
-    if (strlen(desc->name()) == strlen(name) && !strcasecmp(desc->name(), name)) {
-      if (!version) {
-        if (!ret || (ret->version() < desc->version())) {
+    if (strlen(desc->name()) == namelen && !strcasecmp(desc->name(), name)) {
+      if (version) {
+        if (desc->version() == version)
+          return desc;
+      } else {
+        if (!ret || (ret->version() < desc->version()))
           ret = desc;
-        }
-      } else if (desc->version() == version) {
-        return desc;
       }
     }
   }
@@ -108,70 +114,85 @@ void SDLDesc::parse_file(std::list<SDLDesc*> &sdls, std::ifstream &file) {
 }
 
 // Formatter for dirent struct
-char *f_dirent(dirent *d) {
-    static char out[1024];
-    snprintf(out, sizeof(out), "{ino=%u name=%s}", d->d_ino, d->d_name);
-    return out;
+char* f_dirent(char *out, size_t outsize, struct dirent *d) {
+  snprintf(out, outsize, "{ino=%lu name=%s}",
+      (uint32_t)(d->d_ino), (char *)(d->d_name));
+  return out;
 }
 
-int SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls,
-    std::string &dirname, bool is_common,
-    bool not_present_is_error) {
-  log_debug(log, "dirname=\"%s\" is_common=%s not_present_is_error=%s\n", dirname.c_str(),
-      is_common ? "true" : "false",
+int32_t SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls, std::string &dirname_s,
+                                    bool is_common, bool not_present_is_error) {
+
+  const char *dirname = dirname_s.c_str();
+
+  size_t pathmax = pathconf(dirname, _PC_NAME_MAX);
+  char *filepath = new char [pathmax+1];
+
+  log_debug(log, "dirname=\"%s\" is_common=%s not_present_is_error=%s\n",
+      dirname, is_common ? "true" : "false",
       not_present_is_error ? "true" : "false");
 
-  DIR *dir = opendir(dirname.c_str());
+  DIR *dir = opendir(dirname);
   if (!dir) {
     if (not_present_is_error) {
-      log_err(log, "Cannot open directory %s for listing: %s\n", dirname.c_str(), strerror(errno));
+      log_err(log, "Cannot open directory \"%s\" for listing: %s\n", dirname, strerror(errno));
     }
     return 1;
   }
-  struct dirent *entry = (struct dirent *) malloc(sizeof(struct dirent) + pathconf(dirname.c_str(), _PC_NAME_MAX));
-  struct dirent *result;
+
+  struct dirent *direntrybuf = (struct dirent*) calloc(sizeof(struct dirent) + pathmax, 1);
+  struct dirent *direntry;
 
   // this needs to be thread-safe because more than one game server could
   // be loading SDL files at the same time
-  int ret;
+  int32_t ret;
   errno = 0;
-  while ((ret = readdir_r(dir, entry, &result)) == 0) {
-    if (!result) {
+  while ((ret = readdir_r(dir, direntrybuf, &direntry)) == 0) {
+    if (!direntry) {
       break;
     }
-    int ret = strlen(result->d_name);
-    log_msgs(log, "result=\"%s\" %s ret=%u\n", result->d_name, f_dirent(result), ret);
-    if (ret > 4 && !strcasecmp(&result->d_name[ret - 4], ".sdl")) {
+    int32_t ret = strlen(direntry->d_name);
+    log_debug(log, "result=\"%s\" %s ret=%u\n", direntry->d_name, f_dirent(filepath, pathmax, direntry), ret);
+    if (ret > 4 && !strcasecmp(&direntry->d_name[ret - 4], ".sdl")) {
       std::list<SDLDesc*> these;
-      std::string fname = dirname + std::string(PATH_SEPARATOR) + std::string(result->d_name);
-      log_msgs(log, "SDL open file=\"%s\" \n", fname.c_str());
-      std::ifstream file((char *) fname.c_str(), std::ios_base::binary | std::ios_base::in);
+
+      strncpy(filepath, dirname, pathmax);
+      strncat(filepath, PATH_SEPARATOR, pathmax);
+      strncat(filepath, direntry->d_name, pathmax);
+      log_debug(log, "SDL open file=\"%s\" \n", filepath);
+      std::ifstream file((const char *)filepath, std::ios_base::binary | std::ios_base::in);
       if (file.fail()) {
-        log_err(log, "Cannot open SDL file=\"%s\" \n", fname.c_str());
+        log_err(log, "Cannot open SDL file \"%s\" \n", filepath);
         closedir(dir);
-        free(result);
+        free(direntrybuf);
+        delete[] filepath;
+
         return -1;
       }
       try {
         SDLDesc::parse_file(these, file);
       } catch (const parse_error &e) {
-        log_err(log, "Parse error in file %s line %u: %s\n", result->d_name, e.lineno(), e.what());
+        log_err(log, "Parse error in file \"%s\" line %u: %s\n", direntry->d_name, e.lineno(), e.what());
         closedir(dir);
-        free(result);
+        free(direntrybuf);
+        delete[] filepath;
         return -1;
       }
       sdls.splice(sdls.end(), these);
     }
     errno = 0;
   }
+  closedir(dir);
+
+  free(direntrybuf);
+  delete[] filepath;
+
   if (errno) {
-    log_err(log, "Error reading directory %s: %s\n", dirname.c_str(), strerror(errno));
-    closedir(dir);
+    log_err(log, "Error reading directory %s: %s\n", dirname_s.c_str(), strerror(errno));
     return -1;
   }
-  closedir(dir);
-  free(entry);
-  if (is_common) {
+
+  if (is_common) { // <SDL-dir>/common directory
     // now, move the most common SDLs to the front of the list
     std::list<SDLDesc*>::iterator avatarPhysical, avatar, MorphSequence, clothing, physical, Layer, iter;
     avatarPhysical = avatar = MorphSequence = clothing = physical = Layer = sdls.end();
@@ -190,6 +211,7 @@ int SDLDesc::parse_directory(Logger *log, std::list<SDLDesc*> &sdls,
         if (avatar == sdls.end() || ((*avatar)->version() < (*iter)->version())) {
           avatar = iter;
         }
+        return 0;
       } else if (namelen == 5 && !strcasecmp(sdlname, "Layer")) {
         if (Layer == sdls.end() || ((*Layer)->version() < (*iter)->version())) {
           Layer = iter;
@@ -231,7 +253,7 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
   const char *tokenc;
   SDLDesc *desc = NULL;
   bool started, openbrace, version, gotvar, complete;
-  sdl_type_t type;
+  sdl_vartype_t type;
   SDLDesc::Variable *var = NULL;
   SDLDesc::Struct *sct = NULL;
 
@@ -262,6 +284,7 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
         }
       } else if (!desc) {
         // this should be the name
+        // std::cout << "    Calling SDLDesc(" << token1 << ")\n";
         desc = new SDLDesc(token1);
       } else if (!openbrace) {
         if (strlen(tokenc) == 1 && tokenc[0] == '{') {
@@ -314,7 +337,7 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
             delete desc;
             throw parse_error(lineno, std::string("struct type ") + token1 + " not found");
           }
-        } else if ((type = string_to_type(token1)) != INVALID_SDL) {
+        } else if ((type = string_to_type(token1)) != SDLDesc::Variable::None) {
           var = new SDLDesc::Variable(type);
         } else {
           delete desc;
@@ -353,67 +376,58 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
             tokenc = token1.c_str();
           }
           /*
-           * Sigh, it seems that DISPLAYOPTION and DEFAULTOPTION are
-           * interchangeable as of MOUL, or maybe the SDL files are just
-           * *BUGGY* (guess which my money's on?)
+           * The old assumption about "defaultoption" and "displayoption" being equivalent
+           * wasn't correct.
+           *
+           * In CWE plSDL/plSDLParser.cpp, they are processed as follows:
+           *
+           * - DEFAULTOPTION only takes the VAULT flag.  No other values allowed.
+           *   The VAULT flag sets the CWE flag kAlwaysNew.
+           *
+           * - DISPLAYOPTION takes a HIDDEN flag. and also appears to be unconstrained
+           *   as to the names of other flags, up to 256 char max, possibly to pass to Python.
+           *   The HIDDEN flag sets the CWE flag kInternal.
+           *
+           * There are two other attributes in the CWE code, INTERNAL and PHASED, but they
+           * are marked with a comment to "delete me by May 2003" so I assume they are
+           * deprecated and we won't see them again. As an aside, INTERNAL had the same
+           * effect as DISPLAYOPTION=HIDDEN.
            */
-#if 1
-          // this test must be before "default"
-          if (strcasestr(tokenc, "defaultoption") == tokenc || strcasestr(tokenc, "displayoption") == tokenc) {
+
+          if (strcasestr(tokenc, "defaultoption") == tokenc) {
+            // this test must be before "default"
             if (!strchr(tokenc, '=')) {
               partial = token1;
               continue;
             }
             if (strcasestr(tokenc, "vault")) {
-              var->m_options |= SDL_OPT_VAULT;
-            } else if (strcasestr(tokenc, "hidden")) {
-              var->m_options |= SDL_DISP_HIDDEN;
-            } else if (strcasestr(tokenc, "red")) {
-              var->m_options |= SDL_DISP_RED;
-            } else {
+              var->m_varoptions |= AlwaysNew;
+            }
+            else {
+              std::string errmsg = std::string("var ") + std::string(var->m_name) + std::string(" unrecognized DEFAULTOPTION ") + token1;
               delete var;
               delete desc;
-              throw parse_error(lineno, std::string("unrecognized DEFAULTOPTION ") + token1);
+              throw parse_error(lineno, errmsg);
             }
           }
-#else
-    if (strcasestr(tokenc, "defaultoption") == tokenc) {
-      // this test must be before "default"
-      if (!strchr(tokenc, '=')) {
-        partial = token1;
-        continue;
-      }
-      if (strcasestr(tokenc, "vault")) {
-        var->m_options |= SDL_OPT_VAULT;
-      }
-      else {
-        delete var;
-        delete desc;
-        throw parse_error(lineno,
-        std::string("unrecognized DEFAULTOPTION ")
-        + token1);
-      }
-    }
-    else if (strcasestr(tokenc, "displayoption") == tokenc) {
-      if (!strchr(tokenc, '=')) {
-        partial = token1;
-        continue;
-      }
-      if (strcasestr(tokenc, "hidden")) {
-        var->m_options |= SDL_DISP_HIDDEN;
-      }
-      else if (strcasestr(tokenc, "red")) {
-        var->m_options |= SDL_DISP_RED;
-      }
-      else {
-        delete var;
-        delete desc;
-        throw parse_error(lineno,
-        std::string("unrecognized DISPLAYOPTION ")
-        + token1);
-      }
-    }
-#endif
+          else if (strcasestr(tokenc, "displayoption") == tokenc) {
+            const char *at;
+            if (!(at = strchr(tokenc, '='))) {
+              partial = token1;
+            }
+            at++;
+            if (strcasestr(tokenc, "hidden")) { // hidden has special meaning in flags
+              var->m_varoptions |= Internal;
+            }
+            if (!var->m_dispoptions) { // build a string of option1[,option2]...
+              var->m_dispoptions = new char[256];
+              strncpy(var->m_dispoptions, at, 256);
+            } else {
+              strncat(var->m_dispoptions, ",", 256);
+              strncat(var->m_dispoptions, at, 256);
+            }
+            continue;
+          }
           else if (strcasestr(tokenc, "default") == tokenc) {
             const char *at;
             if (!(at = strchr(tokenc, '='))) {
@@ -423,14 +437,16 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
             at++;
             std::stringstream vstr(at);
             switch (var->m_type) {
-            case STRING32:
+
+            case Variable::String32:
               if (!strcasecmp(at, "empty")) {
                 // do nothing, we have an empty string representation already
               } else {
                 strncpy(var->m_default.v_string, at, 32);
               }
               break;
-            case BOOL:
+
+            case Variable::Bool:
               if (strchr(at, '(')) {
                 std::getline(vstr, token2, '(');
               }
@@ -449,11 +465,12 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
                 var->m_default.v_bool = (val ? true : false);
               }
               break;
-            case INT:
-            case BYTE:
-            case SHORT:
-            case TIME: // really 8 bytes?
-            case AGETIMEOFDAY:
+
+            case Variable::Int:
+            case Variable::Byte:
+            case Variable::Short:
+            case Variable::Time: // really 8 bytes?
+            case Variable::AgeTimeOfDay:
               if (strchr(at, '(')) {
                 std::getline(vstr, token2, '(');
               }
@@ -465,26 +482,33 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
                 throw parse_error(lineno, std::string("cannot parse ") + at + " as an integer");
               }
               switch (var->m_type) {
-              case INT:
+
+              case Variable::Int:
                 var->m_default.v_int = val;
                 break;
-              case BYTE:
+
+              case Variable::Byte:
                 var->m_default.v_byte = (int8_t) val;
                 break;
-              case SHORT:
+
+              case Variable::Short:
                 var->m_default.v_short = (int16_t) val;
                 break;
-              case TIME:
+
+              case Variable::Time:
                 var->m_default.v_time.tv_sec = val;
                 break;
-              case AGETIMEOFDAY:
+
+              case Variable::AgeTimeOfDay:
                 var->m_default.v_agetime.tv_sec = val;
                 break;
+
               default:
                 break;
               }
               break;
-            case FLOAT:
+
+            case Variable::Float:
               float fval;
               vstr >> fval;
               if (vstr.fail()) {
@@ -494,64 +518,72 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
               }
               var->m_default.v_float = fval;
               break;
-            case PLKEY:
+
+            case Variable::Key:
               if (strcmp(at, "nil")) {
                 delete var;
                 delete desc;
                 throw parse_error(lineno, "PLKEY can't have a default");
               }
               break;
-            case CREATABLE:
+
+            case Variable::Creatable:
               delete var;
               delete desc;
-              throw parse_error(lineno, "CREATABLE can't have a default");
-            case VECTOR3:
-            case POINT3:
-            case QUATERNION:
+              throw parse_error(lineno, "Creatable can't have a default");
+
+            case Variable::Vector3:
+            case Variable::Point3:
+            case Variable::Quaternion:
               // tuples
-              {
-                std::getline(vstr, token2, '(');
+            {
+              std::getline(vstr, token2, '(');
+              if (vstr.fail()) {
+                delete var;
+                delete desc;
+                throw parse_error(lineno, "tuple expected, ( not found");
+              }
+              int32_t howmany = 3;
+              if (var->m_type == Variable::Quaternion) {
+                howmany++;
+              }
+              for (int32_t i = 0; i < howmany; i++) {
+                std::getline(vstr, token2, (i + 1 == howmany ? ')' : ','));
                 if (vstr.fail()) {
                   delete var;
                   delete desc;
-                  throw parse_error(lineno, "tuple expected, ( not found");
+                  throw parse_error(lineno, "tuple incomplete");
                 }
-                int32_t howmany = 3;
-                if (var->m_type == QUATERNION) {
-                  howmany++;
+                std::stringstream nstr(token2);
+                float nval;
+                nstr >> nval;
+                if (nstr.fail()) {
+                  delete var;
+                  delete desc;
+                  throw parse_error(lineno, std::string("cannot parse ") + token2 + " as a float");
                 }
-                for (int32_t i = 0; i < howmany; i++) {
-                  std::getline(vstr, token2, (i + 1 == howmany ? ')' : ','));
-                  if (vstr.fail()) {
-                    delete var;
-                    delete desc;
-                    throw parse_error(lineno, "tuple incomplete");
-                  }
-                  std::stringstream nstr(token2);
-                  float nval;
-                  nstr >> nval;
-                  if (nstr.fail()) {
-                    delete var;
-                    delete desc;
-                    throw parse_error(lineno, std::string("cannot parse ") + token2 + " as a float");
-                  }
-                  switch (var->m_type) {
-                  case VECTOR3:
-                    var->m_default.v_vector3[i] = nval;
-                    break;
-                  case POINT3:
-                    var->m_default.v_point3[i] = nval;
-                    break;
-                  case QUATERNION:
-                    var->m_default.v_quaternion[i] = nval;
-                    break;
-                  default:
-                    break;
-                  }
+                switch (var->m_type) {
+
+                case Variable::Vector3:
+                  var->m_default.v_vector3[i] = nval;
+                  break;
+
+                case Variable::Point3:
+                  var->m_default.v_point3[i] = nval;
+                  break;
+
+                case Variable::Quaternion:
+                  var->m_default.v_quaternion[i] = nval;
+                  break;
+
+                default:
+                  break;
                 }
               }
+            }
               break;
-            case RGB8:
+
+            case Variable::RGB8:
               // tuples as well
               std::getline(vstr, token2, '(');
               if (vstr.fail()) {
@@ -577,7 +609,8 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
                 var->m_default.v_rgb8[i] = (uint8_t) nval;
               }
               break;
-            case INVALID_SDL:
+
+            case Variable::None:
             default:
               delete var;
               delete desc;
@@ -630,43 +663,85 @@ SDLDesc* SDLDesc::read_desc(std::ifstream &file, uint32_t &lineno, std::list<SDL
   return desc;
 }
 
-SDLDesc::sdl_type_t SDLDesc::string_to_type(std::string &s) {
+SDLDesc::sdl_vartype_t SDLDesc::string_to_type(std::string &s) {
   int32_t len = s.length();
   const char *str = s.c_str();
-  if (len == 3 && !strcasecmp(str, "int32_t")) {
-    return INT;
+  if (len == 3 && !strcasecmp(str, "int")) {
+    return Variable::Int;
   } else if (len == 4) {
     if (!strcasecmp(str, "bool")) {
-      return BOOL;
+      return Variable::Bool;
     } else if (!strcasecmp(str, "time")) {
-      return TIME;
+      return Variable::Time;
     } else if (!strcasecmp(str, "byte")) {
-      return BYTE;
+      return Variable::Byte;
     } else if (!strcasecmp(str, "rgb8")) {
-      return RGB8;
+      return Variable::RGB8;
     }
   } else if (len == 5) {
     if (!strcasecmp(str, "float")) {
-      return FLOAT;
+      return Variable::Float;
     } else if (!strcasecmp(str, "plkey")) {
-      return PLKEY;
+      return Variable::Key;
     } else if (!strcasecmp(str, "short")) {
-      return SHORT;
+      return Variable::Short;
     }
   } else if (len == 6 && !strcasecmp(str, "point3")) {
-    return POINT3;
-  } else if (len == 7 && !strcasecmp(str, "vector3")) {
-    return VECTOR3;
+    return Variable::Point3;
+  } else if (len == 7) {
+    if (!strcasecmp(str, "vector3")) {
+      return Variable::Vector3;
+    } else if (!strcasecmp(str, "message")) {
+      return Variable::Creatable;
+    }
   } else if (len == 8 && !strcasecmp(str, "string32")) {
-    return STRING32;
+    return Variable::String32;
   } else if (len == 9 && !strcasecmp(str, "creatable")) {
-    return CREATABLE;
+    return Variable::Creatable;
   } else if (len == 10 && !strcasecmp(str, "quaternion")) {
-    return QUATERNION;
+    return Variable::Quaternion;
   } else if (len == 12 && !strcasecmp(str, "agetimeofday")) {
-    return AGETIMEOFDAY;
+    return Variable::AgeTimeOfDay;
   }
-  return INVALID_SDL;
+  return Variable::None;
+}
+
+const char* SDLDesc::Variable::vartype_c_str(sdl_vartype_t t) {
+  switch (t) {
+      case Variable::None:            return "None";
+      case Variable::Int:             return "Int";
+      case Variable::Float:           return "Float";
+      case Variable::Bool:            return "Bool";
+      case Variable::String32:        return "String32";
+      case Variable::Key:             return "Key";
+      case Variable::StateDescriptor: return "StateDescriptor";
+      case Variable::Creatable:       return "Creatable";
+      case Variable::Double:          return "Double";
+      case Variable::Time:            return "Time";
+      case Variable::Byte:            return "Byte";
+      case Variable::Short:           return "Short";
+      case Variable::AgeTimeOfDay:    return "AgeTimeOfDay";
+      case Variable::Vector3:         return "Vector3";
+      case Variable::Point3:          return "Point3";
+      case Variable::RGB:             return "RGB";
+      case Variable::RGBA:            return "RGBA";
+      case Variable::Quaternion:      return "Quaternion";
+      case Variable::RGB8:            return "RGB8";
+      case Variable::RGBA8:           return "RGBA8";
+  default:
+      return "(unknown)";
+  }
+}
+
+const char* SDLDesc::varoptions_c_str(uint32_t t) {
+  // return constant to avoid need to manage dynamic strings
+  switch (t) {
+  case AlwaysNew:          return "AlwaysNew";
+  case Internal:           return "Internal";
+  case AlwaysNew|Internal: return "AlwaysNew|Internal";
+  default:
+    return "";
+  }
 }
 
 uint32_t SDLDesc::name_and_count(std::string &namestr, uint32_t lineno) {
@@ -691,15 +766,170 @@ uint32_t SDLDesc::name_and_count(std::string &namestr, uint32_t lineno) {
       throw parse_error(lineno, "non-numeric variable count");
     }
   }
-  namestr = namestr.substr(0, bracket - s);
+  namestr = namestr.substr(0, (uint32_t) (bracket - s));
   return val;
+}
+
+SDLDesc::Variable::~Variable() {
+  if (m_dispoptions) {
+    delete[] m_dispoptions;
+    m_dispoptions = NULL;
+  }
+}
+
+std::string SDLDesc::Variable::str(sdl_vartype_t t, data_t &d) {
+
+  std::ostringstream out;
+  char ctimebuf[32];
+  char keybuf[64];
+  char *c;
+  time_t timebuf;
+
+  switch (t) {
+  case Int:         out << (int32_t)d.v_int; break;
+  case Byte:        out << (int32_t)d.v_byte; break;
+  case Short:       out << (int32_t)d.v_short; break;
+  case Float:       out << d.v_float; break;
+  case Bool:        out << std::boolalpha << d.v_bool; break;
+  case String32:    out << "\"" << d.v_string << "\""; break;
+
+  case Key:
+    c = d.v_plkey.c_str(keybuf, sizeof(keybuf));
+    out << c;
+    break;
+
+  case Creatable:   out << "Creatable[" << read32(d.v_creatable, 0) << "]"; break;
+
+  case Time:
+    timebuf = std::time(&d.v_time.tv_sec);
+    if (std::strftime(ctimebuf, sizeof(ctimebuf), "%Y-%m-%d %H:%M:%S", std::localtime(&timebuf))) {
+      out << ctimebuf;
+    }
+    break;
+
+  case AgeTimeOfDay:
+    timebuf = std::time(&d.v_agetime.tv_sec);
+    if (std::strftime(ctimebuf, sizeof(ctimebuf), "%Y-%m-%d %H:%M:%S", std::localtime(&timebuf))) {
+      out << ctimebuf;
+    }
+    break;
+
+  case Vector3:     out << "<" << d.v_vector3[0] << ","
+                               << d.v_vector3[1] << ","
+                               << d.v_vector3[2] << ">";
+    break;
+
+  case Point3:      out << "<" << d.v_point3[0] << ","
+                               << d.v_point3[1] << ","
+                               << d.v_point3[2] << ">";
+    break;
+
+  case Quaternion:  out << "<" << d.v_quaternion[0] << ","
+                               << d.v_quaternion[1] << ","
+                               << d.v_quaternion[2] << ","
+                               << d.v_quaternion[3] << ">";
+    break;
+
+  case RGB8:        out << "<" << d.v_rgb8[0] << ","
+                               << d.v_rgb8[1] << ","
+                               << d.v_rgb8[2] << ">";
+  break;
+
+  default:
+    out << "!INVALID!";
+  }
+  return out.str();
+
+}
+
+char* SDLDesc::Variable::c_str(char* buf, size_t buflen, sdl_vartype_t t, SDLDesc::Variable::data_t &d) {
+  return strncpy(buf, SDLDesc::Variable::str(t, d).c_str(), buflen);
+}
+
+std::string SDLDesc::Variable::str() {
+  std::ostringstream out;
+
+  out << m_name << "<" << vartype_c_str(m_type);
+  if (m_count > 1) {
+    out << "[" << m_count << "]";
+  }
+  if (m_varoptions) {
+    out << "#" << varoptions_c_str(m_varoptions);
+  }
+  if (m_dispoptions) {
+    out << "%" << m_dispoptions;
+  }
+  out << ">(" << str(m_type, m_default) << ")";
+
+  m_string = out.str();
+  return m_string;
+}
+
+const char* SDLDesc::Variable::c_str() {
+  m_chars = str().c_str();
+  return m_chars;
+}
+
+std::string SDLDesc::Struct::str(const char *sep) {
+  std::ostringstream out;
+
+  out << m_name << "{";
+  for (uint32_t i = 0; i < m_count; i++) {
+    if (i > 0)
+      out << sep;
+    out << m_data[i].str(sep);
+  }
+  out << "}";
+
+  m_string = out.str();
+  return m_string;
+}
+
+const char* SDLDesc::Struct::c_str(const char *sep) {
+  m_chars = str(sep).c_str();
+  return m_chars;
+}
+
+std::string SDLDesc::str(const char *sep) {
+  std::ostringstream out;
+  std::list<std::string> elements;
+  std::string e;
+  std::vector<Variable*>::iterator vi;
+  std::vector<Struct*>::iterator si;
+
+  elements.clear();
+
+  for (vi = m_vars.begin(); vi != m_vars.end(); vi++) {
+    elements.push_back((*vi)->str());
+  }
+  for (si = m_structs.begin(); si != m_structs.end(); si++) {
+    elements.push_back((*si)->str(sep));
+  }
+
+  out << "{SDLDesc: " << m_name << "-v" << m_version << sep;
+  if (!elements.empty()) {
+    e = elements.back();
+    elements.pop_back();
+  }
+  std::copy(elements.begin(), elements.end(), std::ostream_iterator<std::string>(out, sep));
+  if (!e.empty())
+    out << e;
+  out << "}";
+
+  m_string = out.str();
+  return m_string;
+}
+
+const char* SDLDesc::c_str(const char *sep) {
+  m_chars = str(sep).c_str();
+  return m_chars;
 }
 
 // utility functions
 uint32_t do_message_compression(uint8_t *buf) {
   uint32_t ret = 0;
 
-  if (buf[4] == kCompressionDont) {
+  if (buf[4] == CompressionDont) {
     return 0;
   }
   uint32_t len = read32(buf, 5);
@@ -713,11 +943,11 @@ uint32_t do_message_compression(uint8_t *buf) {
     if (zlib_ret == Z_OK && destlen < len - 2) {
       ret = destlen + 2;
       write32(buf, 0, len);
-      buf[4] = kCompressionZlib;
+      buf[4] = CompressionZlib;
       write32(buf, 5, ret);
       memcpy(buf + 11, buf2, destlen);
     } else if (zlib_ret != Z_OK) {
-      buf[4] = kCompressionFailed;
+      buf[4] = CompressionFailed;
     }
     delete[] buf2;
   }
@@ -756,7 +986,7 @@ int32_t SDLState::read_msg(const uint8_t *buf, size_t bufsize, const std::list<S
   }
   uint32_t uncompressed_len = read32(buf, offset);
   offset += 4;
-  bool compressed = (buf[offset++] == kCompressionZlib);
+  bool compressed = (buf[offset++] == CompressionZlib);
   uint32_t len = read32(buf, offset);
   offset += 4;
   if (read16(buf, offset) != no_plType) {
@@ -841,7 +1071,7 @@ int32_t SDLState::write_msg(uint8_t *buf, size_t bufsize, bool no_compress) {
   uint32_t start_at = offset;
   write32(buf, offset, 0);
   offset += 4;
-  buf[offset++] = kCompressionNone;
+  buf[offset++] = CompressionNone;
   write32(buf, offset, wrote + 2);
   offset += 4;
   write16(buf, offset, no_plType);
@@ -896,7 +1126,7 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
   m_flag = read16(buf, 0);
   // I think m_flag 1 is a "don't keep persistent" flag.
   uint32_t offset = 2;
-  if (buf[offset++] != 0x06) {
+  if (buf[offset++] != IOVersion) {
     // XXX unexpected value
   }
   uint32_t num_vars = buf[offset++];
@@ -913,20 +1143,20 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
     if (bufsize < offset + 1) {
       throw truncated_message("SDL message too short");
     }
-    if (buf[offset++] == 0x02) {
+    if (buf[offset++] & HasNotificationInfo) { // plStateVariable saveFlags (also plStateSimpleVariable)
       if (bufsize < offset + 3) {
         throw truncated_message("SDL message too short");
       }
-      if (buf[offset++] != 0) {
+      if (buf[offset++] != 0) { // NotificationInfo Flags
         // XXX unexpected value
       }
       // now there is an URUSTRING
-      if (read16(buf, offset) != 0xf000) {
-        UruString tagstring(buf + offset, bufsize - offset, true, false, false);
+      if (read16(buf, offset) != 0xf000) { // zero-length ORed with 0xf000
+        UruString hintstring(buf + offset, bufsize - offset, true, false, false);
         // I don't need to keep this string, since I am going to send the
         // original SDL message to other clients, and this structure is only
         // used for persistent information
-        offset += tagstring.arrival_len();
+        offset += hintstring.arrival_len();
       } else {
         offset += 2;
       }
@@ -938,7 +1168,7 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
       throw truncated_message("SDL message too short");
     }
     v->m_flags = buf[offset++];
-    if (v->m_flags & Timestamp) {
+    if (v->m_flags & HasTimeStamp) {
       if (bufsize < offset + 8) {
         throw truncated_message("SDL message too short");
       }
@@ -947,7 +1177,7 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
       v->m_ts.tv_usec = read32(buf, offset);
       offset += 4;
     }
-    if (v->m_flags & Default) {
+    if (v->m_flags & SameAsDefault) {
       continue;
     }
 
@@ -962,7 +1192,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
     }
     v->m_value = new SDLDesc::Variable::data_t[v->m_count];
     switch (d_var->m_type) {
-    case SDLDesc::INT:
+
+    case SDLDesc::Variable::Int:
       if (bufsize < offset + (v->m_count * 4)) {
         throw truncated_message("SDL message too short");
       }
@@ -971,7 +1202,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         offset += 4;
       }
       break;
-    case SDLDesc::FLOAT:
+
+    case SDLDesc::Variable::Float:
       if (bufsize < offset + (v->m_count * 4)) {
         throw truncated_message("SDL message too short");
       }
@@ -981,7 +1213,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         offset += 4;
       }
       break;
-    case SDLDesc::BOOL:
+
+    case SDLDesc::Variable::Bool:
       if (bufsize < offset + (v->m_count)) {
         throw truncated_message("SDL message too short");
       }
@@ -989,7 +1222,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         v->m_value[j].v_bool = (buf[offset++] ? true : false);
       }
       break;
-    case SDLDesc::STRING32:
+
+    case SDLDesc::Variable::String32:
       if (bufsize < offset + (v->m_count * 32)) {
         throw truncated_message("SDL message too short");
       }
@@ -998,16 +1232,19 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         offset += 32;
       }
       break;
-    case SDLDesc::PLKEY:
+
+    case SDLDesc::Variable::Key:
       for (uint32_t j = 0; j < v->m_count; j++) {
         offset += v->m_value[j].v_plkey.read_in(buf + offset, bufsize - offset);
       }
       break;
-    case SDLDesc::CREATABLE:
+
+    case SDLDesc::Variable::Creatable:
       // note this line means we can't store object clones in the save
       // file (they are currently discarded anyway)
-      throw parse_error(idx, std::string("CREATABLE cannot be transmitted"));
-    case SDLDesc::TIME:
+      throw parse_error(idx, std::string("Creatable cannot be transmitted"));
+
+    case SDLDesc::Variable::Time:
       if (bufsize < offset + (v->m_count * 8)) {
         throw truncated_message("SDL message too short");
       }
@@ -1017,7 +1254,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         offset += 8;
       }
       break;
-    case SDLDesc::BYTE:
+
+    case SDLDesc::Variable::Byte:
       if (bufsize < offset + (v->m_count)) {
         throw truncated_message("SDL message too short");
       }
@@ -1025,7 +1263,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         v->m_value[j].v_byte = buf[offset++];
       }
       break;
-    case SDLDesc::SHORT:
+
+    case SDLDesc::Variable::Short:
       if (bufsize < offset + (v->m_count * 2)) {
         throw truncated_message("SDL message too short");
       }
@@ -1034,7 +1273,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         offset += 2;
       }
       break;
-    case SDLDesc::AGETIMEOFDAY:
+
+    case SDLDesc::Variable::AgeTimeOfDay:
       if (bufsize < offset + (v->m_count * 8)) {
         throw truncated_message("SDL message too short");
       }
@@ -1044,13 +1284,14 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         offset += 8;
       }
       break;
-    case SDLDesc::VECTOR3:
-    case SDLDesc::POINT3:
+
+    case SDLDesc::Variable::Vector3:
+    case SDLDesc::Variable::Point3:
       if (bufsize < offset + (v->m_count * 12)) {
         throw truncated_message("SDL message too short");
       }
       for (uint32_t j = 0; j < v->m_count; j++) {
-        float *where = (d_var->m_type == SDLDesc::VECTOR3 ? v->m_value[j].v_vector3 : v->m_value[j].v_point3);
+        float *where = (d_var->m_type == SDLDesc::Variable::Vector3 ? v->m_value[j].v_vector3 : v->m_value[j].v_point3);
         for (uint32_t k = 0; k < 3; k++) {
           uint32_t val = read32(buf, offset);
           memcpy(where + k, &val, 4);
@@ -1058,7 +1299,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         }
       }
       break;
-    case SDLDesc::QUATERNION:
+
+    case SDLDesc::Variable::Quaternion:
       if (bufsize < offset + (v->m_count * 16)) {
         throw truncated_message("SDL message too short");
       }
@@ -1070,7 +1312,8 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         }
       }
       break;
-    case SDLDesc::RGB8:
+
+    case SDLDesc::Variable::RGB8:
       if (bufsize < offset + (v->m_count * 3)) {
         throw truncated_message("SDL message too short");
       }
@@ -1080,6 +1323,7 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
         }
       }
       break;
+
     default:
       // can't happen
       break;
@@ -1127,7 +1371,7 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
       throw truncated_message("SDL message too short");
     }
     s->m_flags = buf[offset++];
-    if (s->m_flags & Timestamp) {
+    if (s->m_flags & HasTimeStamp) {
       if (bufsize < offset + 8) {
         throw truncated_message("SDL message too short");
       }
@@ -1136,7 +1380,7 @@ int32_t SDLState::recursive_parse(const uint8_t *buf, size_t bufsize) {
       s->m_ts.tv_usec = read32(buf, offset);
       offset += 4;
     }
-    if (s->m_flags & Default) {
+    if (s->m_flags & SameAsDefault) {
       continue;
     }
 
@@ -1201,7 +1445,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
   }
   write16(buf, 0, m_flag);
   uint32_t offset = 2;
-  buf[offset++] = 0x06;
+  buf[offset++] = IOVersion;
   // How much to write? In UU, IIRC the server would not send SDLs that
   // were "Default", but in MOUL it pretty much sends them all, but not
   // all (e.g. all are sent for Personal except RewardClothing, and hmm,
@@ -1209,7 +1453,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
   uint32_t num_vars = 0;
   for (uint32_t i = 0; i < m_vars.size(); i++) {
     Variable *v = m_vars[i];
-    if (v && (!(v->m_flags & Default) || (v->m_flags & Timestamp))) {
+    if (v && (!(v->m_flags & SameAsDefault) || (v->m_flags & HasTimeStamp))) {
       num_vars++;
     }
   }
@@ -1217,7 +1461,9 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
   buf[offset++] = num_vars;
   for (uint32_t i = 0; i < m_vars.size(); i++) {
     Variable *v = m_vars[i];
-    if (!v || ((v->m_flags & Default) && !(v->m_flags & Timestamp))) {
+    if (!v
+        || ((v->m_flags & SameAsDefault)
+             && !(v->m_flags & HasTimeStamp))) {
       continue;
     }
     if (has_indices) {
@@ -1229,10 +1475,12 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
     if (bufsize < offset + 5) {
       return -1;
     }
-    write32(buf, offset, 0xf0000002);
-    offset += 4;
-    buf[offset++] = v->m_flags;
-    if (v->m_flags & Timestamp) {
+    buf[offset++] = HasNotificationInfo; // CWE plStateVariable::WriteData()
+    buf[offset++] = 0;                   // CWE plStateVarNotificationInfo::Write(), unused
+    write16(buf, offset, 0xf000);        // zero-length UruString
+    offset += 2;
+    buf[offset++] = v->m_flags;          // saveFlags in plSimpleStateVariable::WriteData()
+    if (v->m_flags & HasTimeStamp) {
       if (bufsize < offset + 8) {
         return -1;
       }
@@ -1240,7 +1488,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
       write32(buf, offset + 4, v->m_ts.tv_usec);
       offset += 8;
     }
-    if (v->m_flags & Default) {
+    if (v->m_flags & SameAsDefault) {
       continue;
     }
 
@@ -1254,7 +1502,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
       offset += 4;
     }
     switch (d_var->m_type) {
-    case SDLDesc::INT:
+
+    case SDLDesc::Variable::Int:
       if (bufsize < offset + (v->m_count * 4)) {
         return -1;
       }
@@ -1263,7 +1512,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += 4;
       }
       break;
-    case SDLDesc::FLOAT:
+
+    case SDLDesc::Variable::Float:
       if (bufsize < offset + (v->m_count * 4)) {
         return -1;
       }
@@ -1274,7 +1524,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += 4;
       }
       break;
-    case SDLDesc::BOOL:
+
+    case SDLDesc::Variable::Bool:
       if (bufsize < offset + (v->m_count)) {
         return -1;
       }
@@ -1282,7 +1533,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         buf[offset++] = (v->m_value[j].v_bool ? 1 : 0);
       }
       break;
-    case SDLDesc::STRING32:
+
+    case SDLDesc::Variable::String32:
       if (bufsize < offset + (v->m_count * 32)) {
         return -1;
       }
@@ -1291,7 +1543,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += 32;
       }
       break;
-    case SDLDesc::PLKEY:
+
+    case SDLDesc::Variable::Key:
       for (uint32_t j = 0; j < v->m_count; j++) {
         PlKey *key = &(v->m_value[j].v_plkey);
         if (bufsize < offset + key->send_len()) {
@@ -1301,12 +1554,14 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += key->send_len();
       }
       break;
-    case SDLDesc::CREATABLE:
+
+    case SDLDesc::Variable::Creatable:
       // writing these values is not supported
       write32(buf, offset, 0);
       offset += 4;
       break;
-    case SDLDesc::TIME:
+
+    case SDLDesc::Variable::Time:
       if (bufsize < offset + (v->m_count * 8)) {
         return -1;
       }
@@ -1316,7 +1571,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += 8;
       }
       break;
-    case SDLDesc::BYTE:
+
+    case SDLDesc::Variable::Byte:
       if (bufsize < offset + (v->m_count)) {
         return -1;
       }
@@ -1324,7 +1580,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         buf[offset++] = v->m_value[j].v_byte;
       }
       break;
-    case SDLDesc::SHORT:
+
+    case SDLDesc::Variable::Short:
       if (bufsize < offset + (v->m_count * 2)) {
         return -1;
       }
@@ -1333,7 +1590,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += 2;
       }
       break;
-    case SDLDesc::AGETIMEOFDAY:
+
+    case SDLDesc::Variable::AgeTimeOfDay:
       if (bufsize < offset + (v->m_count * 8)) {
         return -1;
       }
@@ -1343,13 +1601,14 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         offset += 8;
       }
       break;
-    case SDLDesc::VECTOR3:
-    case SDLDesc::POINT3:
+
+    case SDLDesc::Variable::Vector3:
+    case SDLDesc::Variable::Point3:
       if (bufsize < offset + (v->m_count * 12)) {
         return -1;
       }
       for (uint32_t j = 0; j < v->m_count; j++) {
-        float *where = (d_var->m_type == SDLDesc::VECTOR3 ? v->m_value[j].v_vector3 : v->m_value[j].v_point3);
+        float *where = (d_var->m_type == SDLDesc::Variable::Vector3 ? v->m_value[j].v_vector3 : v->m_value[j].v_point3);
         for (uint32_t k = 0; k < 3; k++) {
           uint32_t val;
           memcpy(&val, where + k, 4);
@@ -1358,7 +1617,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         }
       }
       break;
-    case SDLDesc::QUATERNION:
+
+    case SDLDesc::Variable::Quaternion:
       if (bufsize < offset + (v->m_count * 16)) {
         return -1;
       }
@@ -1371,7 +1631,8 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         }
       }
       break;
-    case SDLDesc::RGB8:
+
+    case SDLDesc::Variable::RGB8:
       if (bufsize < offset + (v->m_count * 3)) {
         return -1;
       }
@@ -1381,6 +1642,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
         }
       }
       break;
+
     default:
       // can't happen
       break;
@@ -1394,7 +1656,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
   num_vars = 0;
   for (uint32_t i = 0; i < m_structs.size(); i++) {
     Struct *s = m_structs[i];
-    if (s && (!(s->m_flags & Default) || (s->m_flags & Timestamp))) {
+    if (s && (!(s->m_flags & SameAsDefault) || (s->m_flags & HasTimeStamp))) {
       num_vars++;
     }
   }
@@ -1402,7 +1664,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
   buf[offset++] = num_vars;
   for (uint32_t i = 0; i < m_structs.size(); i++) {
     Struct *s = m_structs[i];
-    if (!s || ((s->m_flags & Default) && !(s->m_flags & Timestamp))) {
+    if (!s || ((s->m_flags & SameAsDefault) && !(s->m_flags & HasTimeStamp))) {
       continue;
     }
     if (has_indices) {
@@ -1417,7 +1679,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
     write32(buf, offset, 0xf0000002);
     offset += 4;
     buf[offset++] = s->m_flags;
-    if (s->m_flags & Timestamp) {
+    if (s->m_flags & HasTimeStamp) {
       if (bufsize < offset + 8) {
         return -1;
       }
@@ -1425,7 +1687,7 @@ int32_t SDLState::recursive_write(uint8_t *buf, size_t bufsize) const {
       write32(buf, offset + 4, s->m_ts.tv_usec);
       offset += 8;
     }
-    if (s->m_flags & Default) {
+    if (s->m_flags & SameAsDefault) {
       continue;
     }
 
@@ -1474,24 +1736,24 @@ uint32_t SDLState::recursive_len() const {
   uint32_t num_vars = 0;
   for (uint32_t i = 0; i < m_vars.size(); i++) {
     Variable *v = m_vars[i];
-    if (v && (!(v->m_flags & Default) || (v->m_flags & Timestamp))) {
+    if (v && (!(v->m_flags & SameAsDefault) || (v->m_flags & HasTimeStamp))) {
       num_vars++;
     }
   }
   bool has_indices = (num_vars < m_desc->vars().size());
   for (uint32_t i = 0; i < m_vars.size(); i++) {
     Variable *v = m_vars[i];
-    if (!v || ((v->m_flags & Default) && !(v->m_flags & Timestamp))) {
+    if (!v || ((v->m_flags & SameAsDefault) && !(v->m_flags & HasTimeStamp))) {
       continue;
     }
     if (has_indices) {
       total += 1;
     }
     total += 5;
-    if (v->m_flags & Timestamp) {
+    if (v->m_flags & HasTimeStamp) {
       total += 8;
     }
-    if (v->m_flags & Default) {
+    if (v->m_flags & SameAsDefault) {
       continue;
     }
 
@@ -1501,42 +1763,42 @@ uint32_t SDLState::recursive_len() const {
       total += 4;
     }
     switch (d_var->m_type) {
-    case SDLDesc::INT:
-    case SDLDesc::FLOAT:
+    case SDLDesc::Variable::Int:
+    case SDLDesc::Variable::Float:
       total += (v->m_count * 4);
       break;
-    case SDLDesc::BOOL:
-    case SDLDesc::BYTE:
+    case SDLDesc::Variable::Bool:
+    case SDLDesc::Variable::Byte:
       total += v->m_count;
       break;
-    case SDLDesc::STRING32:
+    case SDLDesc::Variable::String32:
       total += (v->m_count * 32);
       break;
-    case SDLDesc::PLKEY:
+    case SDLDesc::Variable::Key:
       for (uint32_t j = 0; j < v->m_count; j++) {
         PlKey *key = &(v->m_value[j].v_plkey);
         total += key->send_len();
       }
       break;
-    case SDLDesc::CREATABLE:
+    case SDLDesc::Variable::Creatable:
       // writing these values is not supported
       total += 4;
       break;
-    case SDLDesc::TIME:
-    case SDLDesc::AGETIMEOFDAY:
+    case SDLDesc::Variable::Time:
+    case SDLDesc::Variable::AgeTimeOfDay:
       total += (v->m_count * 8);
       break;
-    case SDLDesc::SHORT:
+    case SDLDesc::Variable::Short:
       total += (v->m_count * 2);
       break;
-    case SDLDesc::VECTOR3:
-    case SDLDesc::POINT3:
+    case SDLDesc::Variable::Vector3:
+    case SDLDesc::Variable::Point3:
       total += (v->m_count * 12);
       break;
-    case SDLDesc::QUATERNION:
+    case SDLDesc::Variable::Quaternion:
       total += (v->m_count * 16);
       break;
-    case SDLDesc::RGB8:
+    case SDLDesc::Variable::RGB8:
       total += (v->m_count * 3);
       break;
     default:
@@ -1549,24 +1811,24 @@ uint32_t SDLState::recursive_len() const {
   num_vars = 0;
   for (uint32_t i = 0; i < m_structs.size(); i++) {
     Struct *s = m_structs[i];
-    if (s && (!(s->m_flags & Default) || (s->m_flags & Timestamp))) {
+    if (s && (!(s->m_flags & SameAsDefault) || (s->m_flags & HasTimeStamp))) {
       num_vars++;
     }
   }
   has_indices = (num_vars < m_desc->structs().size());
   for (uint32_t i = 0; i < m_structs.size(); i++) {
     Struct *s = m_structs[i];
-    if (!s || ((s->m_flags & Default) && !(s->m_flags & Timestamp))) {
+    if (!s || ((s->m_flags & SameAsDefault) && !(s->m_flags & HasTimeStamp))) {
       continue;
     }
     if (has_indices) {
       total += 1;
     }
     total += 5;
-    if (s->m_flags & Timestamp) {
+    if (s->m_flags & HasTimeStamp) {
       total += 8;
     }
-    if (s->m_flags & Default) {
+    if (s->m_flags & SameAsDefault) {
       continue;
     }
 
@@ -1587,10 +1849,10 @@ uint32_t SDLState::recursive_len() const {
 }
 
 void SDLState::invent_age_key(uint32_t pageid) {
-  m_key.m_pageid = pageid;
-  m_key.m_pagetype = 0x0008;
-  m_key.m_objtype = plSceneObject;
-  m_key.m_prpindex = 1;
+  m_key.m_locsequencenumber = pageid;
+  m_key.m_locflags = 0x0008;
+  m_key.m_classtype = plSceneObject;
+  m_key.m_objectid = 1;
   m_key.m_name = new UruString("AgeSDLHook", false);
 }
 
@@ -1599,36 +1861,76 @@ void SDLState::expand() {
     // XXX programmer error
     return;
   }
+  /**
+   * Expand the state "value" vectors to match the SDLDesc specification
+   * All NULL vars are populated with new Variable()s.
+   *   (since HasDirtyFlag is not set these won't get propogated)
+   *
+   */
   if (m_vars.size() < m_desc->vars().size()) {
-    int32_t i = m_vars.size() - 1;
+    int32_t cur = m_vars.size() - 1;
     m_vars.resize(m_desc->vars().size(), NULL);
-    int32_t fill = m_desc->vars().size() - 1;
+    int32_t maxfill = m_desc->vars().size() - 1;
+    int32_t fill = maxfill;
     while (fill >= 0) {
-      if (i >= 0 && m_vars[i] && m_vars[i]->m_index == (uint32_t) fill) {
-        if (fill != i) {
-          m_vars[fill] = m_vars[i];
+      while (cur >= 0 && m_vars[cur] == NULL)
+        cur--;
+      if (cur >= 0) {
+        if (m_vars[cur]->m_index == (uint32_t) fill) {
+          if (fill != cur) { // In the wrong place ?!?
+            m_vars[fill] = m_vars[cur];
+            m_vars[cur] = NULL;
+          }
+          cur--;
         }
-        i--;
-      } else {
+      }
+      if (m_vars[fill] == NULL) {
         m_vars[fill] = new Variable(fill, m_desc->vars()[fill]->m_type);
       }
       fill--;
     }
+    while (cur >= 0) {
+      if (m_vars[cur]) {
+        fill = m_vars[cur]->m_index;
+        if (fill != cur && fill <= maxfill && m_vars[fill] != NULL) { // In the wrong place ?!?
+          m_vars[fill] = m_vars[cur];
+          m_vars[cur] = NULL;
+        }
+      }
+      cur--;
+    }
   }
   if (m_structs.size() < m_desc->structs().size()) {
-    int32_t i = m_structs.size() - 1;
+    int32_t cur = m_structs.size() - 1;
     m_structs.resize(m_desc->structs().size(), NULL);
     int32_t fill = m_desc->structs().size() - 1;
+    int32_t maxfill = fill;
     while (fill >= 0) {
-      if (i >= 0 && m_structs[i] && m_structs[i]->m_index == (uint32_t) fill) {
-        if (fill != i) {
-          m_structs[fill] = m_structs[i];
+      while (cur >= 0 && m_structs[cur] == NULL)
+        cur--;
+      if (cur >= 0) {
+        if (m_structs[cur]->m_index == (uint32_t)fill) {
+          if (fill != cur) {
+            m_structs[fill] = m_structs[cur];
+            m_structs[cur] = NULL;
+          }
         }
-        i--;
-      } else {
+        cur--;
+      }
+      if (m_structs[fill] == NULL) {
         m_structs[fill] = new Struct(fill, m_desc->structs()[fill]->m_data);
       }
       fill--;
+    }
+    while (cur >= 0) {
+      if (m_structs[cur]) {
+        fill = m_structs[cur]->m_index;
+        if (fill != cur && fill <= maxfill && m_structs[fill] != NULL) { // In the wrong place ?!?
+          m_structs[fill] = m_structs[cur];
+          m_structs[cur] = NULL;
+        }
+      }
+      cur--;
     }
   }
 }
@@ -1640,16 +1942,16 @@ bool SDLState::save_file(std::ofstream &file, std::list<SDLState*> &save) {
   std::list<SDLState*>::iterator iter;
   for (iter = save.begin(); iter != save.end(); iter++) {
     SDLState *s = *iter;
-    // m_flag & 1 is not sufficient for determining whether an object should
+    // m_flag & Volatile is not sufficient for determining whether an object should
     // be discarded from the persistent state: there are objects without this
     // flag set which should not be persistent, the KI light being the big
     // one. So if the plKey has a client ID, it's avatar-related SDL, or a
     // clone, so don't save it either.
     // note this also discards object clones -- if that is changed, the
-    // CREATABLE handling must be updated so that when reading a file a flag
-    // is passed in saying whether it is okay to allow a CREATABLE (it must
+    // Creatable handling must be updated so that when reading a file a flag
+    // is passed in saying whether it is okay to allow a Creatable (it must
     // *only* be allowed reading in the state file)
-    if (s->m_flag & 0x0001 || s->key().m_flags & 0x01) {
+    if ((s->m_flag & Volatile) || (s->key().m_contents & HasUoid)) {
       continue;
     }
 
@@ -1662,20 +1964,12 @@ bool SDLState::save_file(std::ofstream &file, std::list<SDLState*> &save) {
       buf = new uint8_t[buflen];
     }
     // we don't compress in the save file
-#ifndef ALCUGS_FORMAT_OUTPUT
     int32_t wrote = s->write_msg(buf + 4, buflen - 4, true);
-#else
-    int32_t wrote = s->write_msg(buf+4, buflen-4, false);
-#endif
     s->m_saving_to_file = false;
     if (wrote > 0) {
       write32(buf, 0, wrote);
       // write to file
-#ifndef ALCUGS_FORMAT_OUTPUT
       file.write((char*) buf, wrote + 4);
-#else
-      file.write((char*)buf+4, wrote);
-#endif
       if (file.bad()) {
         // XXX need to log or something
         delete[] buf;
@@ -1716,7 +2010,6 @@ bool SDLState::load_file(std::ifstream &file, std::list<SDLState*> &load, std::l
           return false;
         }
       }
-#ifndef ALCUGS_FORMAT
       uint32_t len = read32(buf, offset);
       if (fill < offset + 4 + len) {
         if (len < buflen) {
@@ -1728,23 +2021,15 @@ bool SDLState::load_file(std::ifstream &file, std::list<SDLState*> &load, std::l
         }
       }
       offset += 4;
-#else
-      // no lengths
-      uint32_t len = fill-offset;
-#endif
       s = new SDLState();
       try {
         int32_t read_size = s->read_msg(buf + offset, len, descs);
         if (read_size < 0) {
-          log_err(log, "Unknown SDL found\n");
+          log_err(log, "Unknown SDL found (read_size %d)\n", read_size);
           delete s;
-#ifndef ALCUGS_FORMAT
           if ((uint32_t) (-read_size) != len) {
             log_err(log, "SDL length mismatch, claimed %u, read %d\n", len, (-read_size));
           }
-#else
-    len = (uint32_t)(-read_size);
-#endif
         } else {
           // drop any duplicates that might have snuck in
           const char *new_name = s->get_desc()->name();
@@ -1762,40 +2047,20 @@ bool SDLState::load_file(std::ifstream &file, std::list<SDLState*> &load, std::l
             s->expand();
             load.push_back(s);
           }
-#ifndef ALCUGS_FORMAT
           if ((uint32_t) read_size != len) {
             log_err(log, "SDL length mismatch, claimed %u, read %d\n", len, read_size);
           }
-#else
-    len = (uint32_t)read_size;
-#endif
         }
       } catch (const truncated_message &e) {
-        log_err(log, "SDL truncated\n");
+        log_err(log, "SDL truncated - %s\n", e.what());
         delete s;
-#ifdef ALCUGS_FORMAT
-  if (offset != 0 && fill == buflen) {
-    // we have to assume the buffer is too short
-    offset += len;
-    break;
-  }
-  else {
-    // we can't go on
-    return false;
-  }
-#else
         // this is not supposed to happen, as the lengths are checked up
         // front; if it does happen we certainly can't go on (the file is
         // truly truncated, or misformatted)
         return false;
-#endif
       } catch (const parse_error &e) {
         log_err(log, "SDL parse error: %s\n", e.what());
         delete s;
-#ifdef ALCUGS_FORMAT
-  // we can't go on
-  return false;
-#endif
       }
       offset += len;
     }
@@ -1825,7 +2090,8 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
   }
   struct timeval now;
   gettimeofday(&now, NULL);
-  if (m_vars.size() < m_desc->vars().size() || m_structs.size() < m_desc->structs().size()) {
+  if (m_vars.size() < m_desc->vars().size()
+      || m_structs.size() < m_desc->structs().size()) {
     // XXX programmer error
     expand();
   }
@@ -1849,7 +2115,7 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
   for (uint32_t i = 0; i < newer->m_vars.size(); i++) {
     Variable *from = newer->m_vars[i];
     Variable *to = m_vars[from->m_index];
-    if (!(from->m_flags & Dirty)) {
+    if (!(from->m_flags & HasDirtyFlag)) {
       // don't update the value unless it has this flag set
       if (vault) {
         // don't forward the value to clients
@@ -1862,8 +2128,10 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
       if (vault &&
       // if the newer message has an older timestamp than the current
       // one, discard the newer value (handles global SDL)
-          ((global && (to->m_flags & Timestamp)
-              && (!(from->m_flags & Timestamp) || timeval_lessthan(from->m_ts, to->m_ts)))
+          ((global
+              && (to->m_flags & HasTimeStamp)
+              && (!(from->m_flags & HasTimeStamp)
+                  || timeval_lessthan(from->m_ts, to->m_ts)))
           // if we got a player-vault update and the data is the same, don't
           // update the timestamp or forward
               || (!global && *to == *from))) {
@@ -1874,12 +2142,13 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
       // if it's age load, ignore values with no timestamp (since they
       // are from the loaded file and all server-timestamped, this is
       // correct) but make sure what we keep does have a timestamp
-      if (age_load && !(from->m_flags & Timestamp)) {
-        if (!(to->m_flags & Default) && !(to->m_flags & Timestamp)) {
+      if (age_load
+          && !(from->m_flags & HasTimeStamp)) {
+        if (!(to->m_flags & SameAsDefault) && !(to->m_flags & HasTimeStamp)) {
           // setting this timestamp means that effectively, vault SDL will
           // override global SDL, but only at the time of first link (after
           // that there will be a timestamp in the age SDL saved state)
-          to->m_flags |= Timestamp;
+          to->m_flags |= HasTimeStamp;
           to->m_ts = now;
         }
         continue;
@@ -1887,7 +2156,9 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
       // if it's age load, and to has a timestamp, that means there is
       // a timestamp stored in the vault, so use it (note: we already
       // continued above if from does not have a timestamp)
-      if (age_load && (to->m_flags & Timestamp) && timeval_lessthan(from->m_ts, to->m_ts)) {
+      if (age_load
+          && (to->m_flags & HasTimeStamp)
+          && timeval_lessthan(from->m_ts, to->m_ts)) {
         continue;
       }
     }
@@ -1901,8 +2172,8 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
       newer->m_vars[i] = NULL;
       // make sure there's a timestamp; if it's age load we definitely
       // don't want to modify the timestamps!
-      if (!age_load || !(from->m_flags & Timestamp)) {
-        from->m_flags |= Timestamp;
+      if (!age_load || !(from->m_flags & HasTimeStamp)) {
+        from->m_flags |= HasTimeStamp;
         from->m_ts = now;
       }
     } else {
@@ -1913,8 +2184,8 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
       }
       *to = *from;
       // make sure there's a timestamp if there wasn't one already
-      if (!age_load || !(to->m_flags & Timestamp)) {
-        to->m_flags |= Timestamp;
+      if (!age_load || !(to->m_flags & HasTimeStamp)) {
+        to->m_flags |= HasTimeStamp;
         to->m_ts = now;
       }
     }
@@ -1930,8 +2201,9 @@ void SDLState::update_from(SDLState *newer, bool vault, bool global, bool age_lo
     // be unused for structs, and there shouldn't be any in vault SDL
     if (to) {
       if (vault
-          && ((global && (to->m_flags & Timestamp)
-              && (!(from->m_flags & Timestamp) || timeval_lessthan(from->m_ts, to->m_ts))))) {
+          && ((global
+              && (to->m_flags & HasTimeStamp)
+              && (!(from->m_flags & HasTimeStamp)|| timeval_lessthan(from->m_ts, to->m_ts))))) {
         delete from;
         newer->m_structs[i] = NULL;
         continue;
@@ -1963,33 +2235,178 @@ bool SDLState::name_equals(const char *name) {
 bool SDLState::is_avatar_sdl() const {
   const char *sdl_name = m_desc->name();
   uint32_t name_len = strlen(sdl_name);
-  return ((name_len == 5 && !strcasecmp(sdl_name, "Layer")) || (name_len == 6 && !strcasecmp(sdl_name, "avatar"))
-      || (name_len == 8 && (!strcasecmp(sdl_name, "clothing") || !strcasecmp(sdl_name, "AGMaster")))
-      || (name_len == 12 && !strcasecmp(sdl_name, "CloneMessage"))
-      || (name_len == 13 && !strcasecmp(sdl_name, "MorphSequence"))
-      || (name_len == 14 && !strcasecmp(sdl_name, "avatarPhysical")));
+  return ((name_len == 5 && !strcasecmp(sdl_name, "Layer"))
+          || (name_len == 6 && !strcasecmp(sdl_name, "avatar"))
+          || (name_len == 8 && (!strcasecmp(sdl_name, "clothing") || !strcasecmp(sdl_name, "AGMaster")))
+          || (name_len == 12 && !strcasecmp(sdl_name, "CloneMessage"))
+          || (name_len == 13 && !strcasecmp(sdl_name, "MorphSequence"))
+          || (name_len == 14 && !strcasecmp(sdl_name, "avatarPhysical")));
+}
+
+char* SDLState::sdl_flag_c_str_alloc(uint32_t t) {
+  std::list<std::string> elements;
+  std::string e;
+  std::ostringstream out;
+
+  // Assemble a string of <flag1[|flag2...]>
+
+  elements.clear();
+
+  if (t & HasUoid)              elements.push_back("HasUoid");
+  if (t & HasNotificationInfo)  elements.push_back("HasNotificationInfo");
+  if (t & HasTimeStamp)         elements.push_back("HasTimeStamp");
+  if (t & SameAsDefault)        elements.push_back("SameAsDefault");
+  if (t & HasDirtyFlag)         elements.push_back("HasDirtyFlag");
+  if (t & WantTimeStamp)        elements.push_back("WantTimeStamp");
+  if (t & AddedVarLengthIO)     elements.push_back("AddedVarLengthIO");
+
+  if (!elements.empty()) {
+    e = elements.back();
+    elements.pop_back();
+  }
+  std::copy(elements.begin(), elements.end(), std::ostream_iterator<std::string>(out, "|"));
+  out << e;
+
+  // caller must free return pointer
+  return strdup(out.str().c_str());
+}
+
+std::string SDLState::Variable::str() {
+  std::ostringstream out;
+  char *s;
+
+  out << "<" << SDLDesc::Variable::vartype_c_str(m_type) << ">";
+  if (m_count > 1)
+    out << "[";
+  for (int32_t i = 0; i < m_count; i++) {
+    out << SDLDesc::Variable::str(m_type, m_value[i]);
+    if (i > 0)
+      out << ",";
+  }
+  if (m_count > 1)
+    out << "]";
+  s = (char*) sdl_flag_c_str_alloc(m_flags);
+  out << "<" << s << ">";
+  free(s);
+
+  m_string = out.str();
+  return m_string;
+}
+
+const char* SDLState::Variable::c_str() {
+  m_chars = str().c_str();
+  return m_chars;
+}
+
+std::string SDLState::str(const char *sep) {
+  std::ostringstream out;
+  std::vector<SDLState::Variable*>::const_iterator vi;
+  std::vector<SDLState::Struct*>::const_iterator si;
+  std::list<std::string> elements;
+  std::string str;
+  std::string e;
+  char *c;
+  char keybuf[64];
+
+  out << "{SDLState: " << m_desc->name() << "-v" << m_desc->version();
+  c = m_key.c_str(keybuf, sizeof(keybuf));
+  if (c) {
+    out << " " << c;
+  }
+  out << sep;
+
+  elements.clear();
+  for (vi = m_vars.begin(); vi != m_vars.end(); vi++) {
+    if (*vi) {
+      SDLState::Variable *v = *vi;
+      SDLDesc::Variable *d = m_desc->vars()[v->m_index];
+
+      str = d->str();
+      str += ": ";
+
+      if (v->m_count > 1)
+        str += "[ ";
+
+      for (uint32_t i = 0; i < v->m_count; i++) {
+        if (v->m_flags & SDLState::SameAsDefault) {
+          str += SDLDesc::Variable::str(d->m_type, d->m_default);
+        } else {
+          str += SDLDesc::Variable::str(d->m_type, v->m_value[i]);
+        }
+        if (i < v->m_count - 1) {
+          str += " ";
+        }
+      }
+
+      if (v->m_count > 1)
+        str += " ]";
+
+      if (v->m_flags & SDLState::HasTimeStamp) {
+        char buf[64];
+        char timebuf[32];
+        struct tm *ts = localtime(&v->m_ts.tv_sec);
+        strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", ts);
+        snprintf(buf, sizeof(buf), "%s %u.%06u",timebuf, v->m_ts.tv_sec, v->m_ts.tv_usec);
+        str += " [" + std::string(buf) + "]";
+      }
+
+      str += "  <";
+      c = SDLState::sdl_flag_c_str_alloc(v->m_flags);
+      if (c) {
+        str += c;
+        free(c);
+      }
+      str += ">";
+
+      elements.push_back(str);
+    }
+  }
+  for (si = m_structs.begin(); si != m_structs.end(); si++) {
+    if (*si) {
+      SDLState::Struct *s = *si;
+      SDLDesc::Struct *d = m_desc->structs()[s->m_index];
+      elements.push_back(d->str(sep));
+    }
+  }
+  if (!elements.empty()) {
+    e = elements.back();
+    elements.pop_back();
+  }
+  std::copy(elements.begin(), elements.end(), std::ostream_iterator<std::string>(out, sep));
+  if (!e.empty())
+    out << e;
+  out << "}";
+
+  m_string = out.str();
+  return m_string;
+}
+const char* SDLState::c_str(const char *sep) {
+  m_chars = str(sep).c_str();
+  // returning c_str() is OK because we keep ref in m_chars for destructor
+  return m_chars;
 }
 
 bool SDLState::Variable::operator==(const SDLState::Variable &other) {
   // these are expected to be true before operator== is used, but be safe
-  if (m_type != other.m_type || m_index != other.m_index) {
+  if (m_type != other.m_type
+      || m_index != other.m_index) {
     return false;
   }
   // make sure to exclude the timestamp, the question is, are the *values*
   // equal?
-  if ((m_flags & ~Timestamp) != (other.m_flags & ~Timestamp)) {
+  if ((m_flags & ~HasTimeStamp) != (other.m_flags & ~HasTimeStamp)) {
     return false;
   }
   if (m_count != other.m_count) {
     return false;
   }
-  if (m_type == SDLDesc::PLKEY) {
+  if (m_type == SDLDesc::Variable::Key) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_plkey != other.m_value[j].v_plkey) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::CREATABLE) {
+  } else if (m_type == SDLDesc::Variable::Creatable) {
     if (!m_value[0].v_creatable && !other.m_value[0].v_creatable) {
     } else if (!m_value[0].v_creatable || !other.m_value[0].v_creatable) {
       return false;
@@ -2002,66 +2419,66 @@ bool SDLState::Variable::operator==(const SDLState::Variable &other) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::STRING32) {
+  } else if (m_type == SDLDesc::Variable::String32) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (memcmp(m_value[j].v_string, other.m_value[j].v_string, 32)) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::INT) {
+  } else if (m_type == SDLDesc::Variable::Int) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_int != other.m_value[j].v_int) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::FLOAT) {
+  } else if (m_type == SDLDesc::Variable::Float) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_float != other.m_value[j].v_float) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::BOOL) {
+  } else if (m_type == SDLDesc::Variable::Bool) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_bool != other.m_value[j].v_bool) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::BOOL) {
+  } else if (m_type == SDLDesc::Variable::Bool) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_bool != other.m_value[j].v_bool) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::TIME) {
+  } else if (m_type == SDLDesc::Variable::Time) {
     for (uint32_t j = 0; j < m_count; j++) {
       if ((m_value[j].v_time.tv_sec != other.m_value[j].v_time.tv_sec)
           || (m_value[j].v_time.tv_usec != other.m_value[j].v_time.tv_usec)) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::BYTE) {
+  } else if (m_type == SDLDesc::Variable::Byte) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_byte != other.m_value[j].v_byte) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::SHORT) {
+  } else if (m_type == SDLDesc::Variable::Short) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (m_value[j].v_short != other.m_value[j].v_short) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::AGETIMEOFDAY) {
+  } else if (m_type == SDLDesc::Variable::AgeTimeOfDay) {
     for (uint32_t j = 0; j < m_count; j++) {
       if ((m_value[j].v_time.tv_sec != other.m_value[j].v_time.tv_sec)
           || (m_value[j].v_time.tv_usec != other.m_value[j].v_time.tv_usec)) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::VECTOR3 || m_type == SDLDesc::POINT3) {
+  } else if (m_type == SDLDesc::Variable::Vector3 || m_type == SDLDesc::Variable::Point3) {
     for (uint32_t j = 0; j < m_count; j++) {
       float *here, *there;
-      if (m_type == SDLDesc::VECTOR3) {
+      if (m_type == SDLDesc::Variable::Vector3) {
         here = m_value[j].v_vector3;
         there = other.m_value[j].v_vector3;
       } else {
@@ -2072,13 +2489,13 @@ bool SDLState::Variable::operator==(const SDLState::Variable &other) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::QUATERNION) {
+  } else if (m_type == SDLDesc::Variable::Quaternion) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (memcmp(m_value[j].v_quaternion, other.m_value[j].v_quaternion, 4 * sizeof(float))) {
         return false;
       }
     }
-  } else if (m_type == SDLDesc::RGB8) {
+  } else if (m_type == SDLDesc::Variable::RGB8) {
     for (uint32_t j = 0; j < m_count; j++) {
       if (memcmp(m_value[j].v_rgb8, other.m_value[j].v_rgb8, 3)) {
         return false;
@@ -2092,12 +2509,12 @@ bool SDLState::Variable::operator==(const SDLState::Variable &other) {
 }
 
 SDLState::Variable::~Variable() {
-  if (m_type == SDLDesc::PLKEY) {
+  if (m_type == SDLDesc::Variable::Key) {
     for (uint32_t j = 0; j < m_count; j++) {
       m_value[j].v_plkey.delete_name();
     }
   }
-  if (m_type == SDLDesc::CREATABLE) {
+  if (m_type == SDLDesc::Variable::Creatable) {
     if (m_value[0].v_creatable) {
       delete[] m_value[0].v_creatable;
       m_value[0].v_creatable = NULL;
@@ -2110,28 +2527,30 @@ SDLState::Variable&
 SDLState::Variable::operator=(const SDLState::Variable &other) {
 
   if (this != &other) {
-    if ((!(other.m_flags & Default) || (m_count < other.m_count)) && (!(m_flags & Default))) {
+    if ((!(other.m_flags & SameAsDefault)
+         || (m_count < other.m_count))
+        && (!(m_flags & SameAsDefault))) {
       delete[] m_value;
       m_value = NULL;
     }
-    if (!(other.m_flags & Default) && !m_value) {
+    if (!(other.m_flags & SameAsDefault) && !m_value) {
       m_value = new SDLDesc::Variable::data_t[other.m_count];
     }
     m_index = other.m_index;
     m_flags = other.m_flags;
     m_ts = other.m_ts;
     m_count = other.m_count;
-    if (!(m_flags & Default)) {
+    if (!(m_flags & SameAsDefault)) {
       memcpy(m_value, other.m_value, sizeof(SDLDesc::Variable::data_t) * m_count);
     }
     m_type = other.m_type;
-    if (m_type == SDLDesc::PLKEY) {
+    if (m_type == SDLDesc::Variable::Key) {
       for (uint32_t j = 0; j < m_count; j++) {
         // the pointer was copied, make a new string
         m_value[j].v_plkey.m_name = new UruString(*other.m_value[j].v_plkey.m_name, true);
       }
     }
-    if (m_type == SDLDesc::CREATABLE) {
+    if (m_type == SDLDesc::Variable::Creatable) {
       // the pointer was copied, make a new buffer
       uint32_t len = read32(other.m_value[0].v_creatable, 0);
       m_value[0].v_creatable = new uint8_t[len + 5];
@@ -2146,8 +2565,8 @@ SDLState::Struct::operator=(const SDLState::Struct &other) {
 
   if (this != &other) {
     /* XXX this is the invariant
-     assert(m_index == other.m_index);
-     if (!(m_flags & Default)) {
+     assert(m_cloneid == other.m_cloneid);
+     if (!(m_contents & Default)) {
      assert(m_desc == other.m_desc);
      }
      */
@@ -2156,7 +2575,7 @@ SDLState::Struct::operator=(const SDLState::Struct &other) {
     m_ts = other.m_ts;
     m_count = other.m_count;
     m_desc = other.m_desc;
-    if (!(m_flags & Default)) {
+    if (!(m_flags & SameAsDefault)) {
       // deep copy
       if (m_child) {
         delete m_child;
@@ -2169,7 +2588,7 @@ SDLState::Struct::operator=(const SDLState::Struct &other) {
 }
 
 AgeDesc::Page::Page(const char *name) :
-    m_name(NULL), m_owned(false), m_owner(0) {
+    m_name(NULL), m_owned(false), m_owner(0), m_conditional_load(0), m_pagenum(0) {
   m_name = strdup(name); // XXX check return value
 }
 
@@ -2271,4 +2690,11 @@ AgeDesc* AgeDesc::parse_file(std::ifstream &file) {
   }
 
   return age;
+}
+
+const char* AgeDesc::c_str() {
+  return "";
+}
+std::string AgeDesc::str() {
+  return std::string("");
 }

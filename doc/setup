@@ -68,11 +68,14 @@ are added files in the Mac manifest, but if you don't have them to generate
 a proper manifest from, just copy or symlink External.mbm to macExternal.mbm.
 If you do have the files, generate the manifest using support/macExternal.txt.
 
+Note:  AdamJohnson (Hoikas) has developed a Python manifest creator tool that 
+       can create manifests for both the H'uru dirtsand server and MOSS.  That
+       tool can be obtained at https://github.com/Hoikas/UruManifest.
 
 Auth Server Data
 ----------------
 The auth server directory, auth_download_dir in the config file, must contain
-the Python and SDL as sent to the client. 
+the Python and SDL as sent to the client.
 
 Different sets of these files can be sent to holders of different accounts; a
 directory in the auth_download_dir must be present for every set of files to be
@@ -80,7 +83,7 @@ sent and at a minimum there must be a directory named "default". The name of
 the directory to be used (on a per-account basis) is controlled by the "class"
 column in the "accounts" table in the DB. The "default" directory will be used
 if no class is configured or a class in the DB does not have a corresponding
-directory. 
+directory.
 
 In each directory there must be a Python and SDL directory each containing the
 encrypted files. There must also be an encryption.key file containing the

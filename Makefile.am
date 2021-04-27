@@ -13,6 +13,7 @@ libmoss_la_SOURCES = \
 	util.h \
 	util.c \
 	msg_typecodes.h \
+	msg_typecodes.c \
 	NetworkMessage.h \
 	NetworkMessage.cc \
 	MessageQueue.h \
@@ -22,6 +23,7 @@ libmoss_la_SOURCES = \
 	moss_serv.cc \
 	protocol.h \
 	typecodes.h \
+	typecodes.c \
 	Buffer.h \
 	UruString.h \
 	UruString.cc \
@@ -29,7 +31,10 @@ libmoss_la_SOURCES = \
 	VaultNode.cc \
 	backend_typecodes.h \
 	BackendMessage.h \
-	BackendMessage.cc
+	BackendMessage.cc \
+        strcasestr.h \
+        strcasestr.c
+
 EXTRA_libmoss_la_SOURCES_rc4 = \
 	rc4.h \
 	rc4.c
@@ -66,10 +71,8 @@ bin_PROGRAMS += moss_serv
 endif
 
 moss_SOURCES = ThreadManager.h dispatcher.cc
-if !OLD_PROTOCOL
 moss_SOURCES += GatekeeperServer.h GatekeeperServer.cc \
 	GatekeeperMessage.h GatekeeperMessage.cc
-endif
 moss_LDADD = libmoss.la libmoss_serv.la -lz @ssl_libs@
 
 moss_backend_SOURCES = moss_backend.h moss_backend.cc backend_all.cc \
