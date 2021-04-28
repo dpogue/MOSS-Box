@@ -31,7 +31,7 @@
 #include <stdarg.h>
 #include <iconv.h>
 
-#include <time.h>
+#include <sys/time.h>
 #include <dirent.h>
 
 #include <stdexcept>
@@ -52,7 +52,6 @@
 #include "constants.h"
 #include "protocol.h"
 #include "util.h"
-#include "strcasestr.h"
 #include "UruString.h"
 #include "PlKey.h"
 
@@ -115,7 +114,7 @@ void SDLDesc::parse_file(std::list<SDLDesc*> &sdls, std::ifstream &file) {
 
 // Formatter for dirent struct
 char* f_dirent(char *out, size_t outsize, struct dirent *d) {
-  snprintf(out, outsize, "{ino=%lu name=%s}",
+  snprintf(out, outsize, "{ino=%u name=%s}",
       (uint32_t)(d->d_ino), (char *)(d->d_name));
   return out;
 }
@@ -2346,7 +2345,7 @@ std::string SDLState::str(const char *sep) {
         char timebuf[32];
         struct tm *ts = localtime(&v->m_ts.tv_sec);
         strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", ts);
-        snprintf(buf, sizeof(buf), "%s %u.%06u",timebuf, v->m_ts.tv_sec, v->m_ts.tv_usec);
+        snprintf(buf, sizeof(buf), "%s %lu.%06lu",timebuf, v->m_ts.tv_sec, v->m_ts.tv_usec);
         str += " [" + std::string(buf) + "]";
       }
 

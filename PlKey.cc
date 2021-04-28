@@ -152,27 +152,37 @@ char* PlKey::c_str(char *buf, size_t bufsize) {
   char *f = flagbuf;
 
   if (m_locflags & LocalOnly) {
-    f += strncpy(f, "LocalOnly", sizeof(flagbuf) - (f - flagbuf));
+    strncpy(f, "LocalOnly", sizeof(flagbuf) - (f - flagbuf));
+    while (*f)
+      f += 1;
   }
   if (m_locflags & Volatile) {
     if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
       *f++ = '|';
-    f += strncpy(f, "Volatile", sizeof(flagbuf) - (f - flagbuf));
+    strncpy(f, "Volatile", sizeof(flagbuf) - (f - flagbuf));
+    while (*f)
+      f += 1;
   }
   if (m_locflags & Reserved) {
     if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
       *f++ = '|';
-    f += strncpy(f, "Reserved", sizeof(flagbuf) - (f - flagbuf));
+    strncpy(f, "Reserved", sizeof(flagbuf) - (f - flagbuf));
+    while (*f)
+      f += 1;
   }
   if (m_locflags & BuiltIn) {
     if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
       *f++ = '|';
-    f += strncpy(f, "BuiltIn", sizeof(flagbuf) - (f - flagbuf));
+    strncpy(f, "BuiltIn", sizeof(flagbuf) - (f - flagbuf));
+    while (*f)
+      f += 1;
   }
   if (m_locflags & Itinerant) {
     if ((f - flagbuf) > 0 && (f - flagbuf) < sizeof(flagbuf))
       *f++ = '|';
-    f += strncpy(f, "Itinerant", sizeof(flagbuf) - (f - flagbuf));
+    strncpy(f, "Itinerant", sizeof(flagbuf) - (f - flagbuf));
+    while (*f)
+      f += 1;
   }
   *f = 0;
   snprintf(buf, bufsize, "(0x%08x:0x%x<%s>:%s:C:[0x%x,0x%x])",

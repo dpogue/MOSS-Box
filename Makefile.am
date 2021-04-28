@@ -31,9 +31,7 @@ libmoss_la_SOURCES = \
 	VaultNode.cc \
 	backend_typecodes.h \
 	BackendMessage.h \
-	BackendMessage.cc \
-        strcasestr.h \
-        strcasestr.c
+	BackendMessage.cc 
 
 EXTRA_libmoss_la_SOURCES_rc4 = \
 	rc4.h \
