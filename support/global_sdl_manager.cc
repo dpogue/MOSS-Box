@@ -551,7 +551,7 @@ void print_state(SDLState *st, int indent) {
         char ftimebuf[30];
         struct tm *ts = localtime(&v->m_ts.tv_sec);
         strftime(ftimebuf, sizeof(ftimebuf), "%Y-%m-%d %H:%M:%S", ts);
-        printf(" [%s %d.%06d]", ftimebuf, v->m_ts.tv_sec, v->m_ts.tv_usec);
+        printf(" [%s %lu.%06lu]", ftimebuf, v->m_ts.tv_sec, v->m_ts.tv_usec);
       }
       printf("  <%s>\n", (t = SDLState::sdl_flag_c_str_alloc(v->m_flags)));
       if (t)
