@@ -216,7 +216,7 @@ Server::reason_t GatekeeperServer::message_read(Connection *conn,
     log_debug(m_log, "received <0x%08x>\"%s\"\n", in->type(), m);
     free(m);
 
-    switch (in->type()) {
+    switch (static_cast<uint32_t>(in->type())) {
     case (ADMIN_HELLO|FROM_SERVER):
       {
   Hello_BackendMessage *msg = (Hello_BackendMessage *)in;
@@ -276,7 +276,7 @@ Server::reason_t GatekeeperServer::message_read(Connection *conn,
       client->enqueue(reply);
     }
       break;
-    case -1:
+    case uint32_t(-1):
       // unrecognized message
       log_err(m_log, "Unrecognized backend message received\n");
       if (m_log) {

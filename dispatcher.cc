@@ -1448,7 +1448,7 @@ Server::reason_t Dispatcher::message_read(Connection *conn, NetworkMessage *msg)
         m_log->dump_contents(Logger::LOG_ERR, msg->buffer(), msg->message_len());
       }
     } else {
-      switch (msg_type) {
+      switch (static_cast<uint32_t>(msg_type)) {
 
       case (ADMIN_HELLO | FROM_SERVER): {
         Hello_BackendMessage *hello = (Hello_BackendMessage*) msg;

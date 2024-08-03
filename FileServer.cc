@@ -28,6 +28,7 @@
 #endif
 
 #include <stdarg.h>
+#include <pthread.h>
 #include <signal.h>
 #include <iconv.h>
 #include <sys/mman.h> /* for mmap() */

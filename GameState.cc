@@ -1594,7 +1594,7 @@ bool MarkerGameMgr::process_backend_message(NetworkMessage *in, GameServer *serv
   // and the usual assumption that BackendMessages are correct applies
 
   Logger *log = server->log();
-  switch (in->type()) {
+  switch (static_cast<uint32_t>(in->type())) {
 
   case MARKER_NEWGAME | FROM_SERVER:
     if (m_state != START) {
